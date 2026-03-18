@@ -1,0 +1,68 @@
+services:
+  diva_server:
+    image: diva_server:dev
+    container_name: diva_server_dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["make", "watch"]
+    restart: unless-stopped
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - SERVER_ENV=${SERVER_ENV}
+      - PORT=${PORT}
+      - DOMAIN=${DOMAIN}
+      - DEBUG=${DEBUG}
+      - DB_DRIVER=${DB_DRIVER}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SCHEMA=${DB_SCHEMA}
+      - JWT_SECRET=${JWT_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
+      - ROOT_USERNAME=${ROOT_USERNAME}
+      - ROOT_PASSWORD=${ROOT_PASSWORD}
+      - ROOT_EMAIL=${ROOT_EMAIL}
+    volumes:
+      - ./cmd:/app/cmd
+      - ./server:/app/server
+      - ./internal:/app/internal
+      - ./storage:/app/storage
+      - ./concurrency:/app/concurrency
+      - ./sqlc.yaml:/app/sqlc.yaml
+    depends_on:
+      diva_db:
+        condition: service_healthy
+    networks:
+      - net
+  diva_db:
+    container_name: diva_db_dev
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - net
+volumes:
+  db_data:
+    driver: local
+networks:
+  net:
+    driver: bridge
