@@ -70,9 +70,19 @@ FROM diva_permissions
 WHERE id = $1
 `
 
-func (q *Queries) GetPermissionByID(ctx context.Context, id pgtype.UUID) (DivaPermission, error) {
+type GetPermissionByIDRow struct {
+	ID          pgtype.UUID
+	Name        string
+	Description string
+	RoleLevel   string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
+func (q *Queries) GetPermissionByID(ctx context.Context, id pgtype.UUID) (GetPermissionByIDRow, error) {
 	row := q.db.QueryRow(ctx, getPermissionByID, id)
-	var i DivaPermission
+	var i GetPermissionByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -105,15 +115,25 @@ type ListPermissionsParams struct {
 	Offset int32
 }
 
-func (q *Queries) ListPermissions(ctx context.Context, arg ListPermissionsParams) ([]DivaPermission, error) {
+type ListPermissionsRow struct {
+	ID          pgtype.UUID
+	Name        string
+	Description string
+	RoleLevel   string
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
+}
+
+func (q *Queries) ListPermissions(ctx context.Context, arg ListPermissionsParams) ([]ListPermissionsRow, error) {
 	rows, err := q.db.Query(ctx, listPermissions, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []DivaPermission
+	var items []ListPermissionsRow
 	for rows.Next() {
-		var i DivaPermission
+		var i ListPermissionsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

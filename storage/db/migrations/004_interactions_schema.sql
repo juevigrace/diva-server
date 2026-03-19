@@ -1,5 +1,5 @@
--- +migrate Up
-
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS diva_post_interaction (
     id UUID NOT NULL PRIMARY KEY,
     post_id UUID NOT NULL,
@@ -62,8 +62,9 @@ CREATE TABLE IF NOT EXISTS diva_collection_comment (
     FOREIGN KEY (reply_to) REFERENCES diva_collection_comment(interaction_id) ON DELETE RESTRICT
 );
 
--- +migrate Down
-
+-- +goose StatementEnd
+-- +goose Down
+-- +goose StatementBegin
 DROP TABLE IF EXISTS diva_collection_comment;
 DROP TABLE IF EXISTS diva_collection_share;
 DROP TABLE IF EXISTS diva_post_comment;
@@ -71,3 +72,4 @@ DROP TABLE IF EXISTS diva_post_share;
 DROP TABLE IF EXISTS diva_message_interaction;
 DROP TABLE IF EXISTS diva_collection_interaction;
 DROP TABLE IF EXISTS diva_post_interaction;
+-- +goose StatementEnd

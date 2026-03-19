@@ -10,11 +10,15 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
+	github.com/pquerna/otp v1.5.0
 	github.com/pressly/goose/v3 v3.27.0
+	github.com/resend/resend-go/v2 v2.28.0
 	golang.org/x/crypto v0.48.0
 )
 
 require (
+	github.com/a-h/templ v0.3.1001 // indirect
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect

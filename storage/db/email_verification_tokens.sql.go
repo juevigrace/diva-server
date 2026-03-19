@@ -11,100 +11,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createEmailVerificationToken = `-- name: CreateEmailVerificationToken :exec
-INSERT INTO diva_email_verification_tokens(
-    user_id,
-    token,
-    expires_at
-) VALUES ($1, $2, $3)
+const create = `-- name: Create :exec
+INSERT INTO diva_email_verification_tokens (user_id, token, expires_at, created_at)
+VALUES ($1, $2, $3, $4)
 `
 
-type CreateEmailVerificationTokenParams struct {
+type CreateParams struct {
 	UserID    pgtype.UUID
 	Token     string
 	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) CreateEmailVerificationToken(ctx context.Context, arg CreateEmailVerificationTokenParams) error {
-	_, err := q.db.Exec(ctx, createEmailVerificationToken, arg.UserID, arg.Token, arg.ExpiresAt)
+func (q *Queries) Create(ctx context.Context, arg CreateParams) error {
+	_, err := q.db.Exec(ctx, create,
+		arg.UserID,
+		arg.Token,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
 	return err
 }
 
-const deleteEmailVerificationToken = `-- name: DeleteEmailVerificationToken :exec
-DELETE FROM diva_email_verification_tokens
-WHERE user_id = $1
+const deleteByToken = `-- name: DeleteByToken :exec
+delete from diva_email_verification_tokens
+where token = $1
 `
 
-func (q *Queries) DeleteEmailVerificationToken(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteEmailVerificationToken, userID)
+func (q *Queries) DeleteByToken(ctx context.Context, token string) error {
+	_, err := q.db.Exec(ctx, deleteByToken, token)
 	return err
 }
 
-const deleteEmailVerificationTokenByToken = `-- name: DeleteEmailVerificationTokenByToken :exec
-DELETE FROM diva_email_verification_tokens
-WHERE token = $1
+const getByToken = `-- name: GetByToken :one
+select user_id, token, expires_at, created_at
+from diva_email_verification_tokens
+where token = $1
 `
 
-func (q *Queries) DeleteEmailVerificationTokenByToken(ctx context.Context, token string) error {
-	_, err := q.db.Exec(ctx, deleteEmailVerificationTokenByToken, token)
-	return err
-}
-
-const getEmailVerificationTokenByToken = `-- name: GetEmailVerificationTokenByToken :one
-SELECT
-    user_id AS user_id,
-    token,
-    expires_at AS expires_at,
-    created_at AS created_at,
-    used_at AS used_at
-FROM diva_email_verification_tokens
-WHERE token = $1
-`
-
-func (q *Queries) GetEmailVerificationTokenByToken(ctx context.Context, token string) (DivaEmailVerificationToken, error) {
-	row := q.db.QueryRow(ctx, getEmailVerificationTokenByToken, token)
+func (q *Queries) GetByToken(ctx context.Context, token string) (DivaEmailVerificationToken, error) {
+	row := q.db.QueryRow(ctx, getByToken, token)
 	var i DivaEmailVerificationToken
 	err := row.Scan(
 		&i.UserID,
 		&i.Token,
 		&i.ExpiresAt,
 		&i.CreatedAt,
-		&i.UsedAt,
 	)
 	return i, err
-}
-
-const getEmailVerificationTokenByUserID = `-- name: GetEmailVerificationTokenByUserID :one
-SELECT
-    user_id AS user_id,
-    token,
-    expires_at AS expires_at,
-    created_at AS created_at,
-    used_at AS used_at
-FROM diva_email_verification_tokens
-WHERE user_id = $1
-`
-
-func (q *Queries) GetEmailVerificationTokenByUserID(ctx context.Context, userID pgtype.UUID) (DivaEmailVerificationToken, error) {
-	row := q.db.QueryRow(ctx, getEmailVerificationTokenByUserID, userID)
-	var i DivaEmailVerificationToken
-	err := row.Scan(
-		&i.UserID,
-		&i.Token,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-		&i.UsedAt,
-	)
-	return i, err
-}
-
-const markEmailVerificationTokenAsUsed = `-- name: MarkEmailVerificationTokenAsUsed :exec
-UPDATE diva_email_verification_tokens
-SET used_at = NOW()
-WHERE user_id = $1
-`
-
-func (q *Queries) MarkEmailVerificationTokenAsUsed(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, markEmailVerificationTokenAsUsed, userID)
-	return err
 }

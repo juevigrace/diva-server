@@ -78,7 +78,6 @@ type DivaEmailVerificationToken struct {
 	Token     string
 	ExpiresAt pgtype.Timestamptz
 	CreatedAt pgtype.Timestamptz
-	UsedAt    pgtype.Timestamptz
 }
 
 type DivaFollow struct {
@@ -153,6 +152,8 @@ type DivaPermission struct {
 	ID          pgtype.UUID
 	Name        string
 	Description string
+	Resource    string
+	Action      string
 	RoleLevel   string
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz

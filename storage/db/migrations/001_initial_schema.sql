@@ -1,5 +1,5 @@
--- +migrate Up
-
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS diva_user (
     id UUID NOT NULL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -75,7 +75,6 @@ CREATE TABLE IF NOT EXISTS diva_email_verification_tokens (
     token TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    used_at TIMESTAMPTZ DEFAULT NULL,
     FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );
 
@@ -186,8 +185,10 @@ CREATE TABLE IF NOT EXISTS diva_collection_media (
 CREATE INDEX IF NOT EXISTS idx_diva_user_permissions_user_id ON diva_user_permissions (user_id);
 CREATE INDEX IF NOT EXISTS idx_diva_user_permissions_permission_id ON diva_user_permissions (permission_id);
 
--- +migrate Down
 
+-- +goose StatementEnd
+-- +goose Down
+-- +goose StatementBegin
 DROP INDEX IF EXISTS idx_diva_user_permissions_user_id;
 DROP INDEX IF EXISTS idx_diva_user_permissions_permission_id;
 DROP TABLE IF EXISTS diva_collection_media;
@@ -205,3 +206,4 @@ DROP TABLE IF EXISTS diva_permissions;
 DROP TABLE IF EXISTS diva_session;
 DROP TABLE IF EXISTS diva_user_preferences;
 DROP TABLE IF EXISTS diva_user;
+-- +goose StatementEnd

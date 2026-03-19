@@ -12,7 +12,8 @@ import (
 )
 
 const count = `-- name: Count :one
-SELECT COUNT(*) FROM diva_user
+select count(*)
+from diva_user
 `
 
 func (q *Queries) Count(ctx context.Context) (int64, error) {
@@ -69,22 +70,95 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const getAllUsers = `-- name: GetAllUsers :many
+select
+    u.id,
+    u.email,
+    u.username,
+    u.password_hash as password_hash,
+    u.alias,
+    u.avatar,
+    u.bio,
+    u.user_verified as user_verified,
+    u.role,
+    u.created_at as created_at,
+    u.updated_at as updated_at,
+    u.deleted_at as deleted_at
+from diva_user u
+where u.deleted_at is null
+limit $1
+offset $2
+`
+
+type GetAllUsersParams struct {
+	Limit  int32
+	Offset int32
+}
+
+type GetAllUsersRow struct {
+	ID           pgtype.UUID
+	Email        string
+	Username     string
+	PasswordHash string
+	Alias        string
+	Avatar       string
+	Bio          string
+	UserVerified bool
+	Role         string
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]GetAllUsersRow, error) {
+	rows, err := q.db.Query(ctx, getAllUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllUsersRow
+	for rows.Next() {
+		var i GetAllUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Username,
+			&i.PasswordHash,
+			&i.Alias,
+			&i.Avatar,
+			&i.Bio,
+			&i.UserVerified,
+			&i.Role,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByID = `-- name: GetUserByID :one
-SELECT
-  u.id,
-  u.email,
-  u.username,
-  u.password_hash AS password_hash,
-  u.alias,
-  u.avatar,
-  u.bio,
-  u.user_verified AS user_verified,
-  u.role,
-  u.created_at AS created_at,
-  u.updated_at AS updated_at,
-  u.deleted_at AS deleted_at
-FROM diva_user u
-WHERE u.id = $1 AND u.deleted_at IS NULL
+select
+    u.id,
+    u.email,
+    u.username,
+    u.password_hash as password_hash,
+    u.alias,
+    u.avatar,
+    u.bio,
+    u.user_verified as user_verified,
+    u.role,
+    u.created_at as created_at,
+    u.updated_at as updated_at,
+    u.deleted_at as deleted_at
+from diva_user u
+where u.id = $1 and u.deleted_at is null
 `
 
 type GetUserByIDRow struct {
@@ -123,21 +197,21 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT
-  id,
-  email,
-  username,
-  password_hash AS password_hash,
-  alias,
-  avatar,
-  bio,
-  user_verified AS user_verified,
-  role,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
-FROM diva_user
-WHERE username = $1 OR email = $2 AND deleted_at IS NULL
+select
+    id,
+    email,
+    username,
+    password_hash as password_hash,
+    alias,
+    avatar,
+    bio,
+    user_verified as user_verified,
+    role,
+    created_at as created_at,
+    updated_at as updated_at,
+    deleted_at as deleted_at
+from diva_user
+where username = $1 or email = $2 and deleted_at is null
 `
 
 type GetUserByUsernameParams struct {
@@ -180,81 +254,10 @@ func (q *Queries) GetUserByUsername(ctx context.Context, arg GetUserByUsernamePa
 	return i, err
 }
 
-const listUsers = `-- name: ListUsers :many
-SELECT
-  u.id,
-  u.email,
-  u.username,
-  u.password_hash AS password_hash,
-  u.alias,
-  u.avatar,
-  u.bio,
-  u.user_verified AS user_verified,
-  u.role,
-  u.created_at AS created_at,
-  u.updated_at AS updated_at,
-  u.deleted_at AS deleted_at
-FROM diva_user u
-WHERE u.deleted_at IS NULL
-LIMIT $1 OFFSET $2
-`
-
-type ListUsersParams struct {
-	Limit  int32
-	Offset int32
-}
-
-type ListUsersRow struct {
-	ID           pgtype.UUID
-	Email        string
-	Username     string
-	PasswordHash string
-	Alias        string
-	Avatar       string
-	Bio          string
-	UserVerified bool
-	Role         string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	DeletedAt    pgtype.Timestamptz
-}
-
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
-	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListUsersRow
-	for rows.Next() {
-		var i ListUsersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.Username,
-			&i.PasswordHash,
-			&i.Alias,
-			&i.Avatar,
-			&i.Bio,
-			&i.UserVerified,
-			&i.Role,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateEmail = `-- name: UpdateEmail :exec
 UPDATE diva_user
-SET email = $1
+SET email = $1,
+    updated_at = NOW()
 WHERE id = $2 AND deleted_at IS NULL
 `
 
@@ -270,7 +273,8 @@ func (q *Queries) UpdateEmail(ctx context.Context, arg UpdateEmailParams) error 
 
 const updatePassword = `-- name: UpdatePassword :exec
 UPDATE diva_user
-SET password_hash = $1
+SET password_hash = $1,
+    updated_at = NOW()
 WHERE id = $2 AND deleted_at IS NULL
 `
 
@@ -286,7 +290,8 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 
 const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
 UPDATE diva_user
-SET phone_number = $1
+SET phone_number = $1,
+    updated_at = NOW()
 WHERE id = $2 AND deleted_at IS NULL
 `
 
@@ -300,21 +305,21 @@ func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberPa
 	return err
 }
 
-const updateUser = `-- name: UpdateUser :exec
+const updateProfile = `-- name: UpdateProfile :exec
 UPDATE diva_user 
 SET alias = $1, avatar = $2, bio = $3, updated_at = NOW()
 WHERE id = $4 AND deleted_at IS NULL
 `
 
-type UpdateUserParams struct {
+type UpdateProfileParams struct {
 	Alias  string
 	Avatar string
 	Bio    string
 	ID     pgtype.UUID
 }
 
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
-	_, err := q.db.Exec(ctx, updateUser,
+func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) error {
+	_, err := q.db.Exec(ctx, updateProfile,
 		arg.Alias,
 		arg.Avatar,
 		arg.Bio,
@@ -325,7 +330,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 
 const updateUsername = `-- name: UpdateUsername :exec
 UPDATE diva_user
-SET username = $1
+SET username = $1,
+    updated_at = NOW()
 WHERE id = $2 AND deleted_at IS NULL
 `
 
@@ -341,7 +347,8 @@ func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) 
 
 const updateVerified = `-- name: UpdateVerified :exec
 UPDATE diva_user
-SET user_verified = $1
+SET user_verified = $1,
+    updated_at = NOW()
 WHERE id = $2 AND deleted_at IS NULL
 `
 

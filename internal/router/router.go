@@ -46,18 +46,3 @@ func NewServerRouter(db storage.Storage) *ServerRouter {
 		db:  db,
 	}
 }
-
-func (s *ServerRouter) Routes() {
-	s.Chi.Route("/api", func(api chi.Router) {
-		api.Route("/v1", func(v1 chi.Router) {
-		})
-	})
-
-	s.Chi.Route("/health", func(rc chi.Router) {
-		// rc.Use(middlewares.SessionMiddleware(s.sessionService.GetById))
-		rc.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			res := responses.RespondOk("healthy", "Success")
-			responses.WriteJSON(w, res)
-		})
-	})
-}

@@ -91,6 +91,31 @@ clean:
 	@docker system prune -f
 	@echo "Clean completed!"
 
+templ-install:
+	@if ! command -v templ > /dev/null; then \
+		echo "Installing templ..."; \
+		go install github.com/a-h/templ/cmd/templ@latest; \
+	fi
+
+templ-build: templ-install
+	@echo "Generating templ code..."
+	@templ generate
+	@echo "Templ code generated!"
+
+tailwind-install:
+	@echo "Installing tailwindcss..."
+	@mkdir -p $(BINARY_DIR)
+	@if [ ! -f $(BINARY_DIR)/tailwindcss ]; then \
+		curl -sL https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 -o $(BINARY_DIR)/tailwindcss; \
+		chmod +x $(BINARY_DIR)/tailwindcss; \
+	fi
+	@echo "Tailwindcss installed!"
+
+tailwind-build: tailwind-install
+	@echo "Building CSS..."
+	@$(BINARY_DIR)/tailwindcss -i ./web/styles/styles.css -o ./web/assets/css/style.css
+	@echo "CSS built!"
+
 ps:
 	@echo "Running containers:"
 	@docker ps -a

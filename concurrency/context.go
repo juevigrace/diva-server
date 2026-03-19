@@ -13,7 +13,7 @@ func WithTimeout(ctx context.Context, timeout time.Duration, fn func(ctx context
 	done := make(chan error, 1)
 	go func() {
 		if err := fn(timeoutCtx); err != nil {
-			done <- nil
+			done <- err
 		}
 		close(done)
 	}()

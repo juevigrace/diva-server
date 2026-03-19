@@ -1,5 +1,5 @@
--- +migrate Up
-
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS diva_follow (
     user_id UUID NOT NULL,
     followed UUID NOT NULL,
@@ -35,8 +35,10 @@ CREATE TABLE IF NOT EXISTS diva_post_attachment (
     )
 );
 
--- +migrate Down
-
+-- +goose StatementEnd
+-- +goose Down
+-- +goose StatementBegin
 DROP TABLE IF EXISTS diva_post_attachment;
 DROP TABLE IF EXISTS diva_post;
 DROP TABLE IF EXISTS diva_follow;
+-- +goose StatementEnd

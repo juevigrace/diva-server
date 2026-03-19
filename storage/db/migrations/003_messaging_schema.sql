@@ -1,5 +1,5 @@
--- +migrate Up
-
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS diva_chat (
     id UUID NOT NULL PRIMARY KEY,
     created_by UUID NOT NULL,
@@ -52,9 +52,11 @@ CREATE TABLE IF NOT EXISTS diva_message_media (
     FOREIGN KEY (media_id) REFERENCES diva_media(id) ON DELETE CASCADE
 );
 
--- +migrate Down
-
+-- +goose StatementEnd
+-- +goose Down
+-- +goose StatementBegin
 DROP TABLE IF EXISTS diva_message_media;
 DROP TABLE IF EXISTS diva_message;
 DROP TABLE IF EXISTS diva_chat_participant;
 DROP TABLE IF EXISTS diva_chat;
+-- +goose StatementEnd

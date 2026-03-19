@@ -9,8 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/concurrency"
+	"github.com/juevigrace/diva-server/internal/handler"
+	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/router"
 	"github.com/juevigrace/diva-server/storage"
 )
@@ -21,6 +25,7 @@ type Server struct {
 
 	database storage.Storage
 	router   *router.ServerRouter
+	mail     *mail.Client
 }
 
 func NewServer(config models.Config) (*Server, error) {
@@ -41,7 +46,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	done := make(chan error, 1)
 	go func() {
 		s.printBanner()
-		s.router.Routes()
+		s.routes()
 		if err := s.srv.ListenAndServe(); err != http.ErrServerClosed {
 			done <- err
 		}
@@ -57,7 +62,28 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
+func (s *Server) routes() {
+	queries := s.database.Queries()
+
+	verificationHandler := handler.NewVerificationHandler(queries, s.mail)
+	uHandler := handler.NewUserHandler(queries, verificationHandler)
+
+	s.router.Chi.Route("/api", func(api chi.Router) {
+		verificationHandler.Routes(api)
+		uHandler.Routes(api)
+	})
+
+	s.router.Chi.Route("/health", func(rc chi.Router) {
+		rc.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			res := responses.RespondOk(s.database.Health(context.Background()), "Success")
+			responses.WriteJSON(w, res)
+		})
+	})
+}
+
 func (s *Server) setup() error {
+	s.mail = mail.NewClient(s.config.ResendAPIKey, s.config.ResendFromEmail)
+
 	if err := s.createStorage(); err != nil {
 		return err
 	}
@@ -73,8 +99,8 @@ func (s *Server) setup() error {
 }
 
 func (s *Server) createStorage() error {
-	databaseConf := storage.NewDatabaseConf()
-	database, err := storage.New(databaseConf)
+	conf := storage.NewDatabaseConf()
+	database, err := storage.New(conf)
 	if err != nil {
 		return fmt.Errorf("failed to create storage: %w", err)
 	}
