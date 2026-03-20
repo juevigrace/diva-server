@@ -18,22 +18,22 @@ WHERE id = $1;
 -- name: GetSessionByID :one
 SELECT
   s.id,
-  s.access_token AS access_token,
-  s.refresh_token AS refresh_token,
+  s.access_token,
+  s.refresh_token,
   s.device,
   s.status,
-  s.ip_address AS ip_address,
-  s.user_agent AS user_agent,
-  s.expires_at AS expires_at,
-  s.created_at AS created_at,
-  s.updated_at AS updated_at,
+  s.ip_address,
+  s.user_agent,
+  s.expires_at,
+  s.created_at,
+  s.updated_at,
   u.id AS user_id,
   u.email,
   u.username,
   u.user_verified,
   u.role,
-  u.created_at AS u_created_at,
-  u.updated_at AS u_updated_at
+  u.created_at,
+  u.updated_at
 FROM diva_session s
 LEFT JOIN diva_user u ON s.user_id = u.id
 WHERE s.id = $1 AND u.deleted_at IS NULL;

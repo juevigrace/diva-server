@@ -13,9 +13,15 @@ type SignUpDto struct {
 
 type SessionDataDto struct {
 	Device    string `json:"device" validate:"required"`
+	IpAddress string `json:"-"`
 	UserAgent string `json:"user_agent" validate:"required"`
 }
 
-type PasswordUpdateDto struct {
-	NewPassword string `json:"new_password" validate:"required,min=4"`
+type ForgotPasswordRequestDto struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type ForgotPasswordConfirmDto struct {
+	Token       string          `json:"token" validate:"required"`
+	SessionData *SessionDataDto `json:"session_data" validate:"required"`
 }

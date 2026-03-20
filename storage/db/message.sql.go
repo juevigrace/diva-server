@@ -21,7 +21,7 @@ type CreateMessageParams struct {
 	ChatID      pgtype.UUID
 	SenderID    pgtype.UUID
 	Content     string
-	MessageType string
+	MessageType MessageTypeType
 	ReplyToID   pgtype.UUID
 }
 
@@ -49,7 +49,7 @@ func (q *Queries) DeleteMessage(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getMessageByID = `-- name: GetMessageByID :one
-SELECT id, chat_id AS chat_id, sender_id AS sender_id, content, message_type AS message_type, reply_to_id AS reply_to_id, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at, edited_at AS edited_at FROM diva_message 
+SELECT id, chat_id, sender_id, content, message_type, reply_to_id, created_at, updated_at, deleted_at, edited_at FROM diva_message 
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -58,7 +58,7 @@ type GetMessageByIDRow struct {
 	ChatID      pgtype.UUID
 	SenderID    pgtype.UUID
 	Content     string
-	MessageType string
+	MessageType MessageTypeType
 	ReplyToID   pgtype.UUID
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
@@ -85,7 +85,7 @@ func (q *Queries) GetMessageByID(ctx context.Context, id pgtype.UUID) (GetMessag
 }
 
 const getMessagesByChat = `-- name: GetMessagesByChat :many
-SELECT id, chat_id AS chat_id, sender_id AS sender_id, content, message_type AS message_type, reply_to_id AS reply_to_id, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at, edited_at AS edited_at FROM diva_message 
+SELECT id, chat_id, sender_id, content, message_type, reply_to_id, created_at, updated_at, deleted_at, edited_at FROM diva_message 
 WHERE chat_id = $1 AND deleted_at IS NULL 
 ORDER BY created_at ASC
 `
@@ -95,7 +95,7 @@ type GetMessagesByChatRow struct {
 	ChatID      pgtype.UUID
 	SenderID    pgtype.UUID
 	Content     string
-	MessageType string
+	MessageType MessageTypeType
 	ReplyToID   pgtype.UUID
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
@@ -135,7 +135,7 @@ func (q *Queries) GetMessagesByChat(ctx context.Context, chatID pgtype.UUID) ([]
 }
 
 const getMessagesBySender = `-- name: GetMessagesBySender :many
-SELECT id, chat_id AS chat_id, sender_id AS sender_id, content, message_type AS message_type, reply_to_id AS reply_to_id, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at, edited_at AS edited_at FROM diva_message 
+SELECT id, chat_id, sender_id, content, message_type, reply_to_id, created_at, updated_at, deleted_at, edited_at FROM diva_message 
 WHERE sender_id = $1 AND deleted_at IS NULL 
 ORDER BY created_at DESC
 `
@@ -145,7 +145,7 @@ type GetMessagesBySenderRow struct {
 	ChatID      pgtype.UUID
 	SenderID    pgtype.UUID
 	Content     string
-	MessageType string
+	MessageType MessageTypeType
 	ReplyToID   pgtype.UUID
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
@@ -185,7 +185,7 @@ func (q *Queries) GetMessagesBySender(ctx context.Context, senderID pgtype.UUID)
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, chat_id AS chat_id, sender_id AS sender_id, content, message_type AS message_type, reply_to_id AS reply_to_id, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at, edited_at AS edited_at FROM diva_message 
+SELECT id, chat_id, sender_id, content, message_type, reply_to_id, created_at, updated_at, deleted_at, edited_at FROM diva_message 
 WHERE deleted_at IS NULL 
 ORDER BY created_at DESC
 `
@@ -195,7 +195,7 @@ type ListMessagesRow struct {
 	ChatID      pgtype.UUID
 	SenderID    pgtype.UUID
 	Content     string
-	MessageType string
+	MessageType MessageTypeType
 	ReplyToID   pgtype.UUID
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz

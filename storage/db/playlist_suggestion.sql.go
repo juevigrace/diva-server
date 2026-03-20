@@ -20,7 +20,7 @@ type CreatePlaylistSuggestionParams struct {
 	CollectionID pgtype.UUID
 	SuggesterID  pgtype.UUID
 	MediaID      pgtype.UUID
-	Status       string
+	Status       ModerationStatusType
 }
 
 func (q *Queries) CreatePlaylistSuggestion(ctx context.Context, arg CreatePlaylistSuggestionParams) error {
@@ -40,7 +40,7 @@ WHERE collection_id = $2 AND suggester_id = $3 AND media_id = $4
 `
 
 type UpdatePlaylistSuggestionParams struct {
-	Status       string
+	Status       ModerationStatusType
 	CollectionID pgtype.UUID
 	SuggesterID  pgtype.UUID
 	MediaID      pgtype.UUID

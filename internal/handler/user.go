@@ -1,62 +1,67 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/middlewares"
-	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/repo"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserHandler struct {
-	repo         *repo.UserRepository
+	uRepo        *repo.UserRepository
+	sRepo        *repo.SessionRepository
+	uMeHandler   *UserMeHandler
+	uPermHandler *UserPermissionHandler
 	verification *VerificationHandler
 }
 
-func NewUserHandler(queries *db.Queries, verification *VerificationHandler) *UserHandler {
+func NewUserHandler(
+	uRepo *repo.UserRepository,
+	sRepo *repo.SessionRepository,
+	uMeHandler *UserMeHandler,
+	uPermHandler *UserPermissionHandler,
+	verification *VerificationHandler,
+) *UserHandler {
 	return &UserHandler{
-		repo:         repo.NewUserRepository(queries),
+		uRepo:        uRepo,
+		sRepo:        sRepo,
 		verification: verification,
+		uMeHandler:   uMeHandler,
+		uPermHandler: uPermHandler,
 	}
 }
 
 func (h *UserHandler) Routes(r chi.Router) {
 	r.Route("/user", func(user chi.Router) {
-		user.Route("/verify", func(verify chi.Router) {
-			// verify.Use(middlewares.SessionMiddleware(h.))
-			verify.Post("/email", h.verifyUserEmail)
+		user.Get("/", func(w http.ResponseWriter, r *http.Request) {})
+		user.Route("/:id", func(uid chi.Router) {
+			uid.Get("/:id", func(w http.ResponseWriter, r *http.Request) {})
+			uid.Group(func(admin chi.Router) {
+				admin.Use(middlewares.SessionMiddleware(h.sRepo.GetByID))
+				// root admin only routes, for now only check if the user stored in the session is admin
+				// later this will need to implement permissions
+				admin.Put("/:id", func(w http.ResponseWriter, r *http.Request) {})
+				admin.Delete("/:id", func(w http.ResponseWriter, r *http.Request) {})
+			})
+		})
+
+		user.Group(func(admin chi.Router) {
+			admin.Use(middlewares.SessionMiddleware(h.sRepo.GetByID))
+			// root admin only routes, for now only check if the user stored in the session is admin
+			// later this will need to implement permissions
+			admin.Post("/", func(w http.ResponseWriter, r *http.Request) {})
+		})
+
+		user.Group(func(auth chi.Router) {
+			auth.Use(middlewares.SessionMiddleware(h.sRepo.GetByID))
+
+			auth.Route("/verify", func(verify chi.Router) {
+				verify.Post("/email", func(w http.ResponseWriter, r *http.Request) {})
+			})
+
+			h.uMeHandler.Routes(auth)
+			h.uPermHandler.Routes(auth)
 		})
 	})
-}
-
-func (h *UserHandler) verifyUserEmail(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "authenticate first"))
-		return
-	}
-
-	var body *dtos.EmailTokenDto
-	body, err := middlewares.ValidateBody(body, r)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	err = h.verification.Verify(r.Context(), body.Token)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.repo.VerifyUser(context.Background(), session.User); err != nil {
-		responses.WriteJSON(w, responses.RespondInternalServerError(nil, "failed to verify user"))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "user verified"))
 }

@@ -22,3 +22,7 @@ type UpdateUsernameDto struct {
 type UserEmailDto struct {
 	Email string `json:"email" validate:"required,email"`
 }
+
+type UpdatePasswordDto struct {
+	NewPassword string `json:"new_password" validate:"required,min=4"`
+}

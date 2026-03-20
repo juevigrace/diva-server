@@ -18,11 +18,11 @@ SET deleted_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: GetCollectionByID :one
-SELECT id, owner, cover_media_id AS cover_media_id, name, description, collection_type AS collection_type, visibility, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at FROM diva_collection 
+SELECT id, owner, cover_media_id, name, description, collection_type, visibility, created_at, updated_at, deleted_at FROM diva_collection 
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListCollections :many
-SELECT id, owner, cover_media_id AS cover_media_id, name, description, collection_type AS collection_type, visibility, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at FROM diva_collection 
+SELECT id, owner, cover_media_id, name, description, collection_type, visibility, created_at, updated_at, deleted_at FROM diva_collection 
 WHERE deleted_at IS NULL 
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;

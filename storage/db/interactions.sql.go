@@ -39,7 +39,7 @@ type CreateCollectionInteractionParams struct {
 	ID           pgtype.UUID
 	CollectionID pgtype.UUID
 	UserID       pgtype.UUID
-	ReactionType string
+	ReactionType ReactionTypeType
 }
 
 // Collection Interactions
@@ -61,7 +61,7 @@ VALUES ($1, $2, $3)
 
 type CreateCollectionShareParams struct {
 	InteractionID pgtype.UUID
-	ShareType     string
+	ShareType     ShareTypeType
 	Caption       string
 }
 
@@ -81,7 +81,7 @@ type CreateMessageInteractionParams struct {
 	ID           pgtype.UUID
 	MessageID    pgtype.UUID
 	UserID       pgtype.UUID
-	ReactionType string
+	ReactionType ReactionTypeType
 }
 
 // Message Interactions
@@ -123,7 +123,7 @@ type CreatePostInteractionParams struct {
 	ID           pgtype.UUID
 	PostID       pgtype.UUID
 	UserID       pgtype.UUID
-	ReactionType string
+	ReactionType ReactionTypeType
 }
 
 // Post Interactions
@@ -145,7 +145,7 @@ VALUES ($1, $2, $3)
 
 type CreatePostShareParams struct {
 	InteractionID pgtype.UUID
-	ShareType     string
+	ShareType     ShareTypeType
 	Caption       string
 }
 

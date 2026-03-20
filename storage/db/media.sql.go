@@ -34,12 +34,12 @@ type CreateMediaParams struct {
 	SubmittedBy      pgtype.UUID
 	Url              string
 	AltText          string
-	MediaType        string
+	MediaType        MediaTypeType
 	FileSize         int64
 	Width            int32
 	Height           int32
 	Duration         int32
-	Visibility       string
+	Visibility       VisibilityType
 	SensitiveContent bool
 	AdultContent     bool
 }
@@ -76,21 +76,21 @@ func (q *Queries) DeleteMedia(ctx context.Context, id pgtype.UUID) error {
 const getMediaByID = `-- name: GetMediaByID :one
 SELECT 
   id,
-  submitted_by AS submitted_by,
+  submitted_by,
   url,
-  alt_text AS alt_text,
-  media_type AS media_type,
-  file_size AS file_size,
+  alt_text,
+  media_type,
+  file_size,
   width,
   height,
   duration,
   visibility,
-  sensitive_content AS sensitive_content,
-  adult_content AS adult_content,
-  published_at AS published_at,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  sensitive_content,
+  adult_content,
+  published_at,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_media
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -122,21 +122,21 @@ func (q *Queries) GetMediaByID(ctx context.Context, id pgtype.UUID) (DivaMedium,
 const listMedia = `-- name: ListMedia :many
 SELECT 
   id,
-  submitted_by AS submitted_by,
+  submitted_by,
   url,
-  alt_text AS alt_text,
-  media_type AS media_type,
-  file_size AS file_size,
+  alt_text,
+  media_type,
+  file_size,
   width,
   height,
   duration,
   visibility,
-  sensitive_content AS sensitive_content,
-  adult_content AS adult_content,
-  published_at AS published_at,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  sensitive_content,
+  adult_content,
+  published_at,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_media
 WHERE deleted_at IS NULL 
 ORDER BY created_at DESC
@@ -194,12 +194,12 @@ WHERE id = $11 AND deleted_at IS NULL
 type UpdateMediaParams struct {
 	Url              string
 	AltText          string
-	MediaType        string
+	MediaType        MediaTypeType
 	FileSize         int64
 	Width            int32
 	Height           int32
 	Duration         int32
-	Visibility       string
+	Visibility       VisibilityType
 	SensitiveContent bool
 	AdultContent     bool
 	ID               pgtype.UUID

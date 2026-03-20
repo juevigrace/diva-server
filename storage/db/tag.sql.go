@@ -51,7 +51,7 @@ func (q *Queries) DeleteTag(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getTagByID = `-- name: GetTagByID :one
-SELECT id, tag_name AS tag_name, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at FROM diva_tag 
+SELECT id, tag_name, created_at, updated_at, deleted_at FROM diva_tag 
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -69,7 +69,7 @@ func (q *Queries) GetTagByID(ctx context.Context, id pgtype.UUID) (DivaTag, erro
 }
 
 const listTags = `-- name: ListTags :many
-SELECT id, tag_name AS tag_name, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at FROM diva_tag
+SELECT id, tag_name, created_at, updated_at, deleted_at FROM diva_tag
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2

@@ -4,8 +4,8 @@ from diva_user
 ;
 
 -- name: CreateUser :exec
-INSERT INTO diva_user (id, email, username, password_hash, birth_date, phone_number, alias, avatar, bio, user_verified, role)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+INSERT INTO diva_user (id, email, username, password_hash, birth_date, alias)
+VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: UpdateProfile :exec
 UPDATE diva_user 
@@ -52,15 +52,16 @@ select
     u.id,
     u.email,
     u.username,
-    u.password_hash as password_hash,
+    u.password_hash,
+    u.phone_number,
     u.alias,
     u.avatar,
     u.bio,
-    u.user_verified as user_verified,
+    u.user_verified,
     u.role,
-    u.created_at as created_at,
-    u.updated_at as updated_at,
-    u.deleted_at as deleted_at
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.deleted_at is null
 limit $1
@@ -72,15 +73,16 @@ select
     u.id,
     u.email,
     u.username,
-    u.password_hash as password_hash,
+    u.password_hash,
+    u.phone_number,
     u.alias,
     u.avatar,
     u.bio,
-    u.user_verified as user_verified,
+    u.user_verified,
     u.role,
-    u.created_at as created_at,
-    u.updated_at as updated_at,
-    u.deleted_at as deleted_at
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.id = $1 and u.deleted_at is null
 ;
@@ -90,15 +92,54 @@ select
     id,
     email,
     username,
-    password_hash as password_hash,
+    password_hash,
+    phone_number,
     alias,
     avatar,
     bio,
-    user_verified as user_verified,
+    user_verified,
     role,
-    created_at as created_at,
-    updated_at as updated_at,
-    deleted_at as deleted_at
+    created_at,
+    updated_at,
+    deleted_at
 from diva_user
-where username = $1 or email = $2 and deleted_at is null
+where username = $1 and deleted_at is null
+;
+
+-- name: GetUserByEmail :one
+select
+    id,
+    email,
+    username,
+    password_hash,
+    phone_number,
+    alias,
+    avatar,
+    bio,
+    user_verified,
+    role,
+    created_at,
+    updated_at,
+    deleted_at
+from diva_user
+where email = $1 and deleted_at is null
+;
+
+-- name: GetUserByUsernameOrEmail :one
+select
+    id,
+    email,
+    username,
+    password_hash,
+    phone_number,
+    alias,
+    avatar,
+    bio,
+    user_verified,
+    role,
+    created_at,
+    updated_at,
+    deleted_at
+from diva_user
+where (username = $1 or email = $2) and deleted_at is null
 ;

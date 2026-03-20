@@ -2,16 +2,18 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/mail"
+	"github.com/juevigrace/diva-server/internal/middlewares"
+	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/repo"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type VerificationHandler struct {
@@ -19,18 +21,18 @@ type VerificationHandler struct {
 	mail *mail.Client
 }
 
-func NewVerificationHandler(queries *db.Queries, mail *mail.Client) *VerificationHandler {
+func NewVerificationHandler(repo *repo.VerificationRepository, mail *mail.Client) *VerificationHandler {
 	return &VerificationHandler{
-		repo: repo.NewVerificationRepository(queries),
+		repo: repo,
 		mail: mail,
 	}
 }
 
 func (h *VerificationHandler) Routes(r chi.Router) {
-	r.Post("/verify", func(w http.ResponseWriter, r *http.Request) {})
+	r.Post("/verify", h.Verify)
 }
 
-func (h *VerificationHandler) GenerateAndSend(ctx context.Context, userID *uuid.UUID, email string) error {
+func (h *VerificationHandler) GenerateAndSend(ctx context.Context, userID uuid.UUID, email string) error {
 	u, err := h.repo.Create(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("create verification: %w", err)
@@ -43,24 +45,25 @@ func (h *VerificationHandler) GenerateAndSend(ctx context.Context, userID *uuid.
 	return nil
 }
 
-func (h *VerificationHandler) Verify(ctx context.Context, token string) error {
-	record, err := h.repo.GetByToken(ctx, token)
+func (h *VerificationHandler) Verify(w http.ResponseWriter, r *http.Request) {
+	var dto *dtos.EmailTokenDto
+	dto, err := middlewares.ValidateBody(dto, r)
 	if err != nil {
-		return errors.New("invalid token")
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
 	}
-	defer func() {
-		if record != nil {
-			h.repo.DeleteByToken(context.Background(), token)
+
+	_, err = h.repo.Verify(r.Context(), dto.Token)
+	if err != nil {
+		var res *responses.APIResponse
+		if errors.Is(sql.ErrNoRows, err) {
+			res = responses.RespondNotFound(nil, err.Error())
+		} else {
+			res = responses.RespondBadRequest(nil, err.Error())
 		}
-	}()
-
-	if record.ExpiresAt.Before(time.Now()) {
-		return errors.New("token expired")
+		responses.WriteJSON(w, res)
+		return
 	}
 
-	return nil
-}
-
-func (h *VerificationHandler) DeleteByToken(ctx context.Context, token string) error {
-	return h.repo.DeleteByToken(ctx, token)
+	responses.WriteJSON(w, responses.RespondOk(nil, "Success"))
 }

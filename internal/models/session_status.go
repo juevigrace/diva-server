@@ -1,5 +1,7 @@
 package models
 
+import "github.com/juevigrace/diva-server/storage/db"
+
 type SessionStatus int
 
 const (
@@ -11,23 +13,49 @@ const (
 func (s SessionStatus) String() string {
 	switch s {
 	case SESSION_CLOSED:
-		return "closed"
+		return "CLOSED"
 	case SESSION_EXPIRED:
-		return "expired"
+		return "EXPIRED"
 	case SESSION_ACTIVE:
-		return "active"
+		return "ACTIVE"
 	default:
-		return "active"
+		return "ACTIVE"
+	}
+}
+
+func (s SessionStatus) ToDB() db.SessionStatusType {
+	switch s {
+	case SESSION_CLOSED:
+		return db.SessionStatusTypeCLOSED
+	case SESSION_EXPIRED:
+		return db.SessionStatusTypeEXPIRED
+	case SESSION_ACTIVE:
+		return db.SessionStatusTypeACTIVE
+	default:
+		return db.SessionStatusTypeACTIVE
 	}
 }
 
 func SessionStatusFromString(status string) SessionStatus {
 	switch status {
-	case "closed":
+	case "CLOSED":
 		return SESSION_CLOSED
-	case "expired":
+	case "EXPIRED":
 		return SESSION_EXPIRED
-	case "active":
+	case "ACTIVE":
+		return SESSION_ACTIVE
+	default:
+		return SESSION_ACTIVE
+	}
+}
+
+func SessionStatusFromDB(s db.SessionStatusType) SessionStatus {
+	switch s {
+	case db.SessionStatusTypeCLOSED:
+		return SESSION_CLOSED
+	case db.SessionStatusTypeEXPIRED:
+		return SESSION_EXPIRED
+	case db.SessionStatusTypeACTIVE:
 		return SESSION_ACTIVE
 	default:
 		return SESSION_ACTIVE

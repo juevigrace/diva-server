@@ -22,7 +22,7 @@ type CreateSessionParams struct {
 	AccessToken  string
 	RefreshToken string
 	Device       string
-	Status       string
+	Status       SessionStatusType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -66,22 +66,22 @@ func (q *Queries) DeleteSessionByUserID(ctx context.Context, userID pgtype.UUID)
 const getSessionByID = `-- name: GetSessionByID :one
 SELECT
   s.id,
-  s.access_token AS access_token,
-  s.refresh_token AS refresh_token,
+  s.access_token,
+  s.refresh_token,
   s.device,
   s.status,
-  s.ip_address AS ip_address,
-  s.user_agent AS user_agent,
-  s.expires_at AS expires_at,
-  s.created_at AS created_at,
-  s.updated_at AS updated_at,
+  s.ip_address,
+  s.user_agent,
+  s.expires_at,
+  s.created_at,
+  s.updated_at,
   u.id AS user_id,
   u.email,
   u.username,
   u.user_verified,
   u.role,
-  u.created_at AS u_created_at,
-  u.updated_at AS u_updated_at
+  u.created_at,
+  u.updated_at
 FROM diva_session s
 LEFT JOIN diva_user u ON s.user_id = u.id
 WHERE s.id = $1 AND u.deleted_at IS NULL
@@ -92,7 +92,7 @@ type GetSessionByIDRow struct {
 	AccessToken  string
 	RefreshToken string
 	Device       string
-	Status       string
+	Status       SessionStatusType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -102,9 +102,9 @@ type GetSessionByIDRow struct {
 	Email        pgtype.Text
 	Username     pgtype.Text
 	UserVerified pgtype.Bool
-	Role         pgtype.Text
-	UCreatedAt   pgtype.Timestamptz
-	UUpdatedAt   pgtype.Timestamptz
+	Role         NullRoleType
+	CreatedAt_2  pgtype.Timestamptz
+	UpdatedAt_2  pgtype.Timestamptz
 }
 
 func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessionByIDRow, error) {
@@ -126,8 +126,8 @@ func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessio
 		&i.Username,
 		&i.UserVerified,
 		&i.Role,
-		&i.UCreatedAt,
-		&i.UUpdatedAt,
+		&i.CreatedAt_2,
+		&i.UpdatedAt_2,
 	)
 	return i, err
 }
@@ -142,7 +142,7 @@ type UpdateSessionParams struct {
 	AccessToken  string
 	RefreshToken string
 	Device       string
-	Status       string
+	Status       SessionStatusType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz

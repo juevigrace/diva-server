@@ -20,42 +20,42 @@ WHERE id = $1 AND deleted_at IS NULL;
 -- name: GetMediaByID :one
 SELECT 
   id,
-  submitted_by AS submitted_by,
+  submitted_by,
   url,
-  alt_text AS alt_text,
-  media_type AS media_type,
-  file_size AS file_size,
+  alt_text,
+  media_type,
+  file_size,
   width,
   height,
   duration,
   visibility,
-  sensitive_content AS sensitive_content,
-  adult_content AS adult_content,
-  published_at AS published_at,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  sensitive_content,
+  adult_content,
+  published_at,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_media
 WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListMedia :many
 SELECT 
   id,
-  submitted_by AS submitted_by,
+  submitted_by,
   url,
-  alt_text AS alt_text,
-  media_type AS media_type,
-  file_size AS file_size,
+  alt_text,
+  media_type,
+  file_size,
   width,
   height,
   duration,
   visibility,
-  sensitive_content AS sensitive_content,
-  adult_content AS adult_content,
-  published_at AS published_at,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  sensitive_content,
+  adult_content,
+  published_at,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_media
 WHERE deleted_at IS NULL 
 ORDER BY created_at DESC

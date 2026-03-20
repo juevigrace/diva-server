@@ -24,8 +24,8 @@ func (q *Queries) Count(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO diva_user (id, email, username, password_hash, birth_date, phone_number, alias, avatar, bio, user_verified, role)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO diva_user (id, email, username, password_hash, birth_date, alias)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateUserParams struct {
@@ -34,12 +34,7 @@ type CreateUserParams struct {
 	Username     string
 	PasswordHash string
 	BirthDate    pgtype.Timestamptz
-	PhoneNumber  string
 	Alias        string
-	Avatar       string
-	Bio          string
-	UserVerified bool
-	Role         string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -49,12 +44,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Username,
 		arg.PasswordHash,
 		arg.BirthDate,
-		arg.PhoneNumber,
 		arg.Alias,
-		arg.Avatar,
-		arg.Bio,
-		arg.UserVerified,
-		arg.Role,
 	)
 	return err
 }
@@ -75,15 +65,16 @@ select
     u.id,
     u.email,
     u.username,
-    u.password_hash as password_hash,
+    u.password_hash,
+    u.phone_number,
     u.alias,
     u.avatar,
     u.bio,
-    u.user_verified as user_verified,
+    u.user_verified,
     u.role,
-    u.created_at as created_at,
-    u.updated_at as updated_at,
-    u.deleted_at as deleted_at
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.deleted_at is null
 limit $1
@@ -100,11 +91,12 @@ type GetAllUsersRow struct {
 	Email        string
 	Username     string
 	PasswordHash string
+	PhoneNumber  string
 	Alias        string
 	Avatar       string
 	Bio          string
 	UserVerified bool
-	Role         string
+	Role         RoleType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -124,6 +116,7 @@ func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]Get
 			&i.Email,
 			&i.Username,
 			&i.PasswordHash,
+			&i.PhoneNumber,
 			&i.Alias,
 			&i.Avatar,
 			&i.Bio,
@@ -143,20 +136,77 @@ func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]Get
 	return items, nil
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+select
+    id,
+    email,
+    username,
+    password_hash,
+    phone_number,
+    alias,
+    avatar,
+    bio,
+    user_verified,
+    role,
+    created_at,
+    updated_at,
+    deleted_at
+from diva_user
+where email = $1 and deleted_at is null
+`
+
+type GetUserByEmailRow struct {
+	ID           pgtype.UUID
+	Email        string
+	Username     string
+	PasswordHash string
+	PhoneNumber  string
+	Alias        string
+	Avatar       string
+	Bio          string
+	UserVerified bool
+	Role         RoleType
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PasswordHash,
+		&i.PhoneNumber,
+		&i.Alias,
+		&i.Avatar,
+		&i.Bio,
+		&i.UserVerified,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 select
     u.id,
     u.email,
     u.username,
-    u.password_hash as password_hash,
+    u.password_hash,
+    u.phone_number,
     u.alias,
     u.avatar,
     u.bio,
-    u.user_verified as user_verified,
+    u.user_verified,
     u.role,
-    u.created_at as created_at,
-    u.updated_at as updated_at,
-    u.deleted_at as deleted_at
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.id = $1 and u.deleted_at is null
 `
@@ -166,11 +216,12 @@ type GetUserByIDRow struct {
 	Email        string
 	Username     string
 	PasswordHash string
+	PhoneNumber  string
 	Alias        string
 	Avatar       string
 	Bio          string
 	UserVerified bool
-	Role         string
+	Role         RoleType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -184,6 +235,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.Email,
 		&i.Username,
 		&i.PasswordHash,
+		&i.PhoneNumber,
 		&i.Alias,
 		&i.Avatar,
 		&i.Bio,
@@ -201,47 +253,106 @@ select
     id,
     email,
     username,
-    password_hash as password_hash,
+    password_hash,
+    phone_number,
     alias,
     avatar,
     bio,
-    user_verified as user_verified,
+    user_verified,
     role,
-    created_at as created_at,
-    updated_at as updated_at,
-    deleted_at as deleted_at
+    created_at,
+    updated_at,
+    deleted_at
 from diva_user
-where username = $1 or email = $2 and deleted_at is null
+where username = $1 and deleted_at is null
 `
-
-type GetUserByUsernameParams struct {
-	Username string
-	Email    string
-}
 
 type GetUserByUsernameRow struct {
 	ID           pgtype.UUID
 	Email        string
 	Username     string
 	PasswordHash string
+	PhoneNumber  string
 	Alias        string
 	Avatar       string
 	Bio          string
 	UserVerified bool
-	Role         string
+	Role         RoleType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
 }
 
-func (q *Queries) GetUserByUsername(ctx context.Context, arg GetUserByUsernameParams) (GetUserByUsernameRow, error) {
-	row := q.db.QueryRow(ctx, getUserByUsername, arg.Username, arg.Email)
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
 	var i GetUserByUsernameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
 		&i.Username,
 		&i.PasswordHash,
+		&i.PhoneNumber,
+		&i.Alias,
+		&i.Avatar,
+		&i.Bio,
+		&i.UserVerified,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
+select
+    id,
+    email,
+    username,
+    password_hash,
+    phone_number,
+    alias,
+    avatar,
+    bio,
+    user_verified,
+    role,
+    created_at,
+    updated_at,
+    deleted_at
+from diva_user
+where (username = $1 or email = $2) and deleted_at is null
+`
+
+type GetUserByUsernameOrEmailParams struct {
+	Username string
+	Email    string
+}
+
+type GetUserByUsernameOrEmailRow struct {
+	ID           pgtype.UUID
+	Email        string
+	Username     string
+	PasswordHash string
+	PhoneNumber  string
+	Alias        string
+	Avatar       string
+	Bio          string
+	UserVerified bool
+	Role         RoleType
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByUsernameOrEmail, arg.Username, arg.Email)
+	var i GetUserByUsernameOrEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PasswordHash,
+		&i.PhoneNumber,
 		&i.Alias,
 		&i.Avatar,
 		&i.Bio,

@@ -22,10 +22,10 @@ SELECT
   id,
   name,
   description,
-  role_level AS role_level,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  role_level,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_permissions
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
@@ -36,9 +36,9 @@ SELECT
   id,
   name,
   description,
-  role_level AS role_level,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  role_level,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_permissions
 WHERE id = $1;

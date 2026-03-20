@@ -32,7 +32,7 @@ VALUES ($1, $2, $3, $4, $5, $6)
 type CreateChatParams struct {
 	ID          pgtype.UUID
 	CreatedBy   pgtype.UUID
-	ChatType    string
+	ChatType    ChatTypeType
 	Name        string
 	Description string
 	Avatar      pgtype.UUID
@@ -88,7 +88,7 @@ WHERE diva_chat.id = $1 AND diva_chat.deleted_at IS NULL
 
 type GetChatByIDRow struct {
 	ID          pgtype.UUID
-	ChatType    string
+	ChatType    ChatTypeType
 	Name        string
 	Description string
 	Avatar      pgtype.UUID
@@ -118,14 +118,14 @@ func (q *Queries) GetChatByID(ctx context.Context, id pgtype.UUID) (GetChatByIDR
 const listChats = `-- name: ListChats :many
 SELECT 
   id,
-  chat_type AS chat_type,
+  chat_type,
   name,
   description,
   avatar,
-  created_by AS created_by,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  created_by,
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_chat
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
@@ -139,7 +139,7 @@ type ListChatsParams struct {
 
 type ListChatsRow struct {
 	ID          pgtype.UUID
-	ChatType    string
+	ChatType    ChatTypeType
 	Name        string
 	Description string
 	Avatar      pgtype.UUID

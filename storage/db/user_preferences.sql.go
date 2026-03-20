@@ -19,7 +19,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 type CreateUserPreferencesParams struct {
 	ID                  pgtype.UUID
 	UserID              pgtype.UUID
-	Theme               string
+	Theme               ThemeType
 	OnboardingCompleted bool
 	Language            string
 	CreatedAt           pgtype.Timestamptz
@@ -46,7 +46,7 @@ WHERE id = $5
 `
 
 type UpdateUserPreferencesParams struct {
-	Theme               string
+	Theme               ThemeType
 	OnboardingCompleted bool
 	Language            string
 	UpdatedAt           pgtype.Timestamptz

@@ -60,12 +60,12 @@ func (q *Queries) DeletePost(ctx context.Context, id pgtype.UUID) error {
 const getPostByID = `-- name: GetPostByID :one
 SELECT 
   id,
-  author_id AS author_id,
+  author_id,
   text,
   visibility,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_post
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -88,12 +88,12 @@ func (q *Queries) GetPostByID(ctx context.Context, id pgtype.UUID) (DivaPost, er
 const listPosts = `-- name: ListPosts :many
 SELECT 
   id,
-  author_id AS author_id,
+  author_id,
   text,
   visibility,
-  created_at AS created_at,
-  updated_at AS updated_at,
-  deleted_at AS deleted_at
+  created_at,
+  updated_at,
+  deleted_at
 FROM diva_post
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC

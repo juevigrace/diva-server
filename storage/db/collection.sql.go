@@ -35,8 +35,8 @@ type CreateCollectionParams struct {
 	CoverMediaID   pgtype.UUID
 	Name           string
 	Description    string
-	CollectionType string
-	Visibility     string
+	CollectionType CollectionTypeType
+	Visibility     VisibilityType
 }
 
 func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionParams) error {
@@ -64,7 +64,7 @@ func (q *Queries) DeleteCollection(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getCollectionByID = `-- name: GetCollectionByID :one
-SELECT id, owner, cover_media_id AS cover_media_id, name, description, collection_type AS collection_type, visibility, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at FROM diva_collection 
+SELECT id, owner, cover_media_id, name, description, collection_type, visibility, created_at, updated_at, deleted_at FROM diva_collection 
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -87,7 +87,7 @@ func (q *Queries) GetCollectionByID(ctx context.Context, id pgtype.UUID) (DivaCo
 }
 
 const listCollections = `-- name: ListCollections :many
-SELECT id, owner, cover_media_id AS cover_media_id, name, description, collection_type AS collection_type, visibility, created_at AS created_at, updated_at AS updated_at, deleted_at AS deleted_at FROM diva_collection 
+SELECT id, owner, cover_media_id, name, description, collection_type, visibility, created_at, updated_at, deleted_at FROM diva_collection 
 WHERE deleted_at IS NULL 
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -139,7 +139,7 @@ type UpdateCollectionParams struct {
 	CoverMediaID pgtype.UUID
 	Name         string
 	Description  string
-	Visibility   string
+	Visibility   VisibilityType
 	ID           pgtype.UUID
 }
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/concurrency"
-	"github.com/juevigrace/diva-server/internal/handler"
+	"github.com/juevigrace/diva-server/internal/di"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
@@ -65,12 +65,12 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 func (s *Server) routes() {
 	queries := s.database.Queries()
 
-	verificationHandler := handler.NewVerificationHandler(queries, s.mail)
-	uHandler := handler.NewUserHandler(queries, verificationHandler)
+	repoModule := di.NewRepoModule(queries)
+	handlerModule := di.NewHandlerModule(repoModule, s.mail)
 
 	s.router.Chi.Route("/api", func(api chi.Router) {
-		verificationHandler.Routes(api)
-		uHandler.Routes(api)
+		handlerModule.Verification.Routes(api)
+		handlerModule.User.Routes(api)
 	})
 
 	s.router.Chi.Route("/health", func(rc chi.Router) {

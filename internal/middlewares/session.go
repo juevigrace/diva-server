@@ -17,7 +17,7 @@ type contextKey string
 
 const sessionContextKey contextKey = "session"
 
-type SessionCall func(sessionId uuid.UUID) (*models.Session, error)
+type SessionCall func(ctx context.Context, sessionId uuid.UUID) (*models.Session, error)
 
 func SessionMiddleware(session SessionCall) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
@@ -46,7 +46,7 @@ func extractSession(sessionCall SessionCall, r *http.Request) (*models.Session, 
 		return nil, err
 	}
 
-	session, err := sessionCall(claims.SessionID)
+	session, err := sessionCall(r.Context(), claims.SessionID)
 	if err != nil {
 		return nil, err
 	}

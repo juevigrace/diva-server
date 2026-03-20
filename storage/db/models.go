@@ -5,13 +5,546 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ChatTypeType string
+
+const (
+	ChatTypeTypeDIRECT      ChatTypeType = "DIRECT"
+	ChatTypeTypeGROUP       ChatTypeType = "GROUP"
+	ChatTypeTypeUNSPECIFIED ChatTypeType = "UNSPECIFIED"
+)
+
+func (e *ChatTypeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ChatTypeType(s)
+	case string:
+		*e = ChatTypeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ChatTypeType: %T", src)
+	}
+	return nil
+}
+
+type NullChatTypeType struct {
+	ChatTypeType ChatTypeType
+	Valid        bool // Valid is true if ChatTypeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullChatTypeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ChatTypeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ChatTypeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullChatTypeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ChatTypeType), nil
+}
+
+type CollectionTypeType string
+
+const (
+	CollectionTypeTypeALBUM       CollectionTypeType = "ALBUM"
+	CollectionTypeTypePLAYLIST    CollectionTypeType = "PLAYLIST"
+	CollectionTypeTypeMIX         CollectionTypeType = "MIX"
+	CollectionTypeTypeFAVORITES   CollectionTypeType = "FAVORITES"
+	CollectionTypeTypeFEATURED    CollectionTypeType = "FEATURED"
+	CollectionTypeTypeTRENDING    CollectionTypeType = "TRENDING"
+	CollectionTypeTypeUNSPECIFIED CollectionTypeType = "UNSPECIFIED"
+)
+
+func (e *CollectionTypeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CollectionTypeType(s)
+	case string:
+		*e = CollectionTypeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CollectionTypeType: %T", src)
+	}
+	return nil
+}
+
+type NullCollectionTypeType struct {
+	CollectionTypeType CollectionTypeType
+	Valid              bool // Valid is true if CollectionTypeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCollectionTypeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CollectionTypeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CollectionTypeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCollectionTypeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CollectionTypeType), nil
+}
+
+type MediaTypeType string
+
+const (
+	MediaTypeTypeAUDIO       MediaTypeType = "AUDIO"
+	MediaTypeTypeIMAGE       MediaTypeType = "IMAGE"
+	MediaTypeTypeVIDEO       MediaTypeType = "VIDEO"
+	MediaTypeTypeUNSPECIFIED MediaTypeType = "UNSPECIFIED"
+)
+
+func (e *MediaTypeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MediaTypeType(s)
+	case string:
+		*e = MediaTypeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MediaTypeType: %T", src)
+	}
+	return nil
+}
+
+type NullMediaTypeType struct {
+	MediaTypeType MediaTypeType
+	Valid         bool // Valid is true if MediaTypeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMediaTypeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MediaTypeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MediaTypeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMediaTypeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MediaTypeType), nil
+}
+
+type MessageTypeType string
+
+const (
+	MessageTypeTypeTEXT        MessageTypeType = "TEXT"
+	MessageTypeTypeMEDIA       MessageTypeType = "MEDIA"
+	MessageTypeTypeSYSTEM      MessageTypeType = "SYSTEM"
+	MessageTypeTypeUNSPECIFIED MessageTypeType = "UNSPECIFIED"
+)
+
+func (e *MessageTypeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MessageTypeType(s)
+	case string:
+		*e = MessageTypeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MessageTypeType: %T", src)
+	}
+	return nil
+}
+
+type NullMessageTypeType struct {
+	MessageTypeType MessageTypeType
+	Valid           bool // Valid is true if MessageTypeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMessageTypeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MessageTypeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MessageTypeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMessageTypeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MessageTypeType), nil
+}
+
+type ModerationStatusType string
+
+const (
+	ModerationStatusTypePENDING     ModerationStatusType = "PENDING"
+	ModerationStatusTypeAPPROVED    ModerationStatusType = "APPROVED"
+	ModerationStatusTypeREJECTED    ModerationStatusType = "REJECTED"
+	ModerationStatusTypeHIDDEN      ModerationStatusType = "HIDDEN"
+	ModerationStatusTypeUNSPECIFIED ModerationStatusType = "UNSPECIFIED"
+)
+
+func (e *ModerationStatusType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ModerationStatusType(s)
+	case string:
+		*e = ModerationStatusType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ModerationStatusType: %T", src)
+	}
+	return nil
+}
+
+type NullModerationStatusType struct {
+	ModerationStatusType ModerationStatusType
+	Valid                bool // Valid is true if ModerationStatusType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullModerationStatusType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ModerationStatusType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ModerationStatusType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullModerationStatusType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ModerationStatusType), nil
+}
+
+type ParticipantRoleType string
+
+const (
+	ParticipantRoleTypeOWNER       ParticipantRoleType = "OWNER"
+	ParticipantRoleTypeADMIN       ParticipantRoleType = "ADMIN"
+	ParticipantRoleTypeMEMBER      ParticipantRoleType = "MEMBER"
+	ParticipantRoleTypeUNSPECIFIED ParticipantRoleType = "UNSPECIFIED"
+)
+
+func (e *ParticipantRoleType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ParticipantRoleType(s)
+	case string:
+		*e = ParticipantRoleType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ParticipantRoleType: %T", src)
+	}
+	return nil
+}
+
+type NullParticipantRoleType struct {
+	ParticipantRoleType ParticipantRoleType
+	Valid               bool // Valid is true if ParticipantRoleType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullParticipantRoleType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ParticipantRoleType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ParticipantRoleType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullParticipantRoleType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ParticipantRoleType), nil
+}
+
+type ReactionTypeType string
+
+const (
+	ReactionTypeTypeLIKE        ReactionTypeType = "LIKE"
+	ReactionTypeTypeCOMMENT     ReactionTypeType = "COMMENT"
+	ReactionTypeTypeBOOKMARK    ReactionTypeType = "BOOKMARK"
+	ReactionTypeTypeSHARE       ReactionTypeType = "SHARE"
+	ReactionTypeTypeUNSPECIFIED ReactionTypeType = "UNSPECIFIED"
+)
+
+func (e *ReactionTypeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ReactionTypeType(s)
+	case string:
+		*e = ReactionTypeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ReactionTypeType: %T", src)
+	}
+	return nil
+}
+
+type NullReactionTypeType struct {
+	ReactionTypeType ReactionTypeType
+	Valid            bool // Valid is true if ReactionTypeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullReactionTypeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ReactionTypeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ReactionTypeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullReactionTypeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ReactionTypeType), nil
+}
+
+type RoleType string
+
+const (
+	RoleTypeUSER      RoleType = "USER"
+	RoleTypeMODERATOR RoleType = "MODERATOR"
+	RoleTypeADMIN     RoleType = "ADMIN"
+)
+
+func (e *RoleType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RoleType(s)
+	case string:
+		*e = RoleType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RoleType: %T", src)
+	}
+	return nil
+}
+
+type NullRoleType struct {
+	RoleType RoleType
+	Valid    bool // Valid is true if RoleType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRoleType) Scan(value interface{}) error {
+	if value == nil {
+		ns.RoleType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RoleType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRoleType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RoleType), nil
+}
+
+type SessionStatusType string
+
+const (
+	SessionStatusTypeACTIVE  SessionStatusType = "ACTIVE"
+	SessionStatusTypeEXPIRED SessionStatusType = "EXPIRED"
+	SessionStatusTypeCLOSED  SessionStatusType = "CLOSED"
+)
+
+func (e *SessionStatusType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SessionStatusType(s)
+	case string:
+		*e = SessionStatusType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SessionStatusType: %T", src)
+	}
+	return nil
+}
+
+type NullSessionStatusType struct {
+	SessionStatusType SessionStatusType
+	Valid             bool // Valid is true if SessionStatusType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSessionStatusType) Scan(value interface{}) error {
+	if value == nil {
+		ns.SessionStatusType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SessionStatusType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSessionStatusType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SessionStatusType), nil
+}
+
+type ShareTypeType string
+
+const (
+	ShareTypeTypeDIRECT      ShareTypeType = "DIRECT"
+	ShareTypeTypeEXTERNAL    ShareTypeType = "EXTERNAL"
+	ShareTypeTypeEMBED       ShareTypeType = "EMBED"
+	ShareTypeTypeDOWNLOAD    ShareTypeType = "DOWNLOAD"
+	ShareTypeTypeUNSPECIFIED ShareTypeType = "UNSPECIFIED"
+)
+
+func (e *ShareTypeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ShareTypeType(s)
+	case string:
+		*e = ShareTypeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ShareTypeType: %T", src)
+	}
+	return nil
+}
+
+type NullShareTypeType struct {
+	ShareTypeType ShareTypeType
+	Valid         bool // Valid is true if ShareTypeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullShareTypeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ShareTypeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ShareTypeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullShareTypeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ShareTypeType), nil
+}
+
+type ThemeType string
+
+const (
+	ThemeTypeLIGHT  ThemeType = "LIGHT"
+	ThemeTypeDARK   ThemeType = "DARK"
+	ThemeTypeSYSTEM ThemeType = "SYSTEM"
+)
+
+func (e *ThemeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ThemeType(s)
+	case string:
+		*e = ThemeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ThemeType: %T", src)
+	}
+	return nil
+}
+
+type NullThemeType struct {
+	ThemeType ThemeType
+	Valid     bool // Valid is true if ThemeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullThemeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ThemeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ThemeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullThemeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ThemeType), nil
+}
+
+type VisibilityType string
+
+const (
+	VisibilityTypePUBLIC      VisibilityType = "PUBLIC"
+	VisibilityTypePRIVATE     VisibilityType = "PRIVATE"
+	VisibilityTypeFRIENDS     VisibilityType = "FRIENDS"
+	VisibilityTypeUNSPECIFIED VisibilityType = "UNSPECIFIED"
+)
+
+func (e *VisibilityType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = VisibilityType(s)
+	case string:
+		*e = VisibilityType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for VisibilityType: %T", src)
+	}
+	return nil
+}
+
+type NullVisibilityType struct {
+	VisibilityType VisibilityType
+	Valid          bool // Valid is true if VisibilityType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullVisibilityType) Scan(value interface{}) error {
+	if value == nil {
+		ns.VisibilityType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.VisibilityType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullVisibilityType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.VisibilityType), nil
+}
 
 type DivaChat struct {
 	ID            pgtype.UUID
 	CreatedBy     pgtype.UUID
-	ChatType      string
+	ChatType      ChatTypeType
 	Name          string
 	Description   string
 	Avatar        pgtype.UUID
@@ -24,7 +557,7 @@ type DivaChat struct {
 type DivaChatParticipant struct {
 	ChatID     pgtype.UUID
 	UserID     pgtype.UUID
-	Role       string
+	Role       ParticipantRoleType
 	JoinedAt   pgtype.Timestamptz
 	LastReadAt pgtype.Timestamptz
 	AddedBy    pgtype.UUID
@@ -36,8 +569,8 @@ type DivaCollection struct {
 	CoverMediaID   pgtype.UUID
 	Name           string
 	Description    string
-	CollectionType string
-	Visibility     string
+	CollectionType CollectionTypeType
+	Visibility     VisibilityType
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 	DeletedAt      pgtype.Timestamptz
@@ -54,7 +587,7 @@ type DivaCollectionInteraction struct {
 	ID           pgtype.UUID
 	CollectionID pgtype.UUID
 	UserID       pgtype.UUID
-	ReactionType string
+	ReactionType ReactionTypeType
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -69,7 +602,7 @@ type DivaCollectionMedium struct {
 
 type DivaCollectionShare struct {
 	InteractionID pgtype.UUID
-	ShareType     string
+	ShareType     ShareTypeType
 	Caption       string
 }
 
@@ -96,12 +629,12 @@ type DivaMedium struct {
 	SubmittedBy      pgtype.UUID
 	Url              string
 	AltText          string
-	MediaType        string
+	MediaType        MediaTypeType
 	FileSize         int64
 	Width            int32
 	Height           int32
 	Duration         int32
-	Visibility       string
+	Visibility       VisibilityType
 	SensitiveContent bool
 	AdultContent     bool
 	PublishedAt      pgtype.Timestamptz
@@ -115,7 +648,7 @@ type DivaMessage struct {
 	ChatID      pgtype.UUID
 	SenderID    pgtype.UUID
 	Content     string
-	MessageType string
+	MessageType MessageTypeType
 	ReplyToID   pgtype.UUID
 	EditedAt    pgtype.Timestamptz
 	CreatedAt   pgtype.Timestamptz
@@ -127,7 +660,7 @@ type DivaMessageInteraction struct {
 	ID           pgtype.UUID
 	MessageID    pgtype.UUID
 	UserID       pgtype.UUID
-	ReactionType string
+	ReactionType ReactionTypeType
 	CreatedAt    pgtype.Timestamptz
 }
 
@@ -154,7 +687,7 @@ type DivaPermission struct {
 	Description string
 	Resource    string
 	Action      string
-	RoleLevel   string
+	RoleLevel   RoleType
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 	DeletedAt   pgtype.Timestamptz
@@ -175,7 +708,7 @@ type DivaPlaylistSuggestion struct {
 	CollectionID pgtype.UUID
 	SuggesterID  pgtype.UUID
 	MediaID      pgtype.UUID
-	Status       string
+	Status       ModerationStatusType
 	SuggestedAt  pgtype.Timestamptz
 }
 
@@ -207,13 +740,13 @@ type DivaPostInteraction struct {
 	ID           pgtype.UUID
 	PostID       pgtype.UUID
 	UserID       pgtype.UUID
-	ReactionType string
+	ReactionType ReactionTypeType
 	CreatedAt    pgtype.Timestamptz
 }
 
 type DivaPostShare struct {
 	InteractionID pgtype.UUID
-	ShareType     string
+	ShareType     ShareTypeType
 	Caption       string
 }
 
@@ -223,7 +756,7 @@ type DivaSession struct {
 	AccessToken  string
 	RefreshToken string
 	Device       string
-	Status       string
+	Status       SessionStatusType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -250,7 +783,7 @@ type DivaUser struct {
 	Avatar       string
 	Bio          string
 	UserVerified bool
-	Role         string
+	Role         RoleType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -269,7 +802,7 @@ type DivaUserPermission struct {
 type DivaUserPreference struct {
 	ID                  pgtype.UUID
 	UserID              pgtype.UUID
-	Theme               string
+	Theme               ThemeType
 	OnboardingCompleted bool
 	Language            string
 	LastSyncAt          pgtype.Timestamptz

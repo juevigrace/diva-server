@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS diva_chat (
     id UUID NOT NULL PRIMARY KEY,
     created_by UUID NOT NULL,
-    chat_type VARCHAR(50) NOT NULL,
+    chat_type chat_type_type NOT NULL,
     name VARCHAR(255) NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
     avatar UUID DEFAULT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS diva_chat (
 CREATE TABLE IF NOT EXISTS diva_chat_participant (
     chat_id UUID NOT NULL,
     user_id UUID NOT NULL,
-    role VARCHAR(50) NOT NULL,
+    role participant_role_type NOT NULL,
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_read_at TIMESTAMPTZ DEFAULT NULL,
     added_by UUID NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS diva_message (
     chat_id UUID NOT NULL,
     sender_id UUID NOT NULL,
     content TEXT NOT NULL DEFAULT '',
-    message_type VARCHAR(50) NOT NULL,
+    message_type message_type_type NOT NULL,
     reply_to_id UUID DEFAULT NULL,
     edited_at TIMESTAMPTZ DEFAULT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

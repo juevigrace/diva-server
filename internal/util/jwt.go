@@ -94,14 +94,21 @@ func ValidateJWT(tokenString string) (*JWTClaims, error) {
 		return nil, errors.New("invalid reset token")
 	}
 
-	if len(claims.Audience) > 1 || claims.
-		Audience[0] != "api" {
-		return nil, errors.New("permision denied")
+	if len(claims.Audience) > 1 || claims.Audience[0] != "api" {
+		return nil, errors.New("permission denied")
 	}
 
 	if claims.Issuer != Issuer {
-		return nil, errors.New("permision denied")
+		return nil, errors.New("permission denied")
 	}
 
 	return claims, nil
+}
+
+func GetTokenExpiration(tokenString string) (*time.Time, error) {
+	claims, err := ValidateJWT(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return &claims.ExpiresAt.Time, nil
 }

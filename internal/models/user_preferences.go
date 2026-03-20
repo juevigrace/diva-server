@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 type UserPreferences struct {
 	ID                  uuid.UUID
 	UserID              uuid.UUID
-	Theme               string
+	Theme               Theme
 	OnboardingCompleted bool
 	Language            string
 	LastSyncAt          int64

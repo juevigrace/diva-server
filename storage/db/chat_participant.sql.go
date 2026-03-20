@@ -19,7 +19,7 @@ VALUES ($1, $2, $3, $4)
 type CreateChatParticipantParams struct {
 	ChatID  pgtype.UUID
 	UserID  pgtype.UUID
-	Role    string
+	Role    ParticipantRoleType
 	AddedBy pgtype.UUID
 }
 
@@ -55,7 +55,7 @@ WHERE chat_id = $3 AND user_id = $4
 `
 
 type UpdateChatParticipantParams struct {
-	Role       string
+	Role       ParticipantRoleType
 	LastReadAt pgtype.Timestamptz
 	ChatID     pgtype.UUID
 	UserID     pgtype.UUID
