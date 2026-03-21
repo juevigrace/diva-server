@@ -10,6 +10,7 @@ type UserResponse struct {
 	Avatar       string `json:"avatar"`
 	Bio          string `json:"bio"`
 	UserVerified bool   `json:"user_verified"`
+	Role         string `json:"role"`
 	CreatedAt    int64  `json:"created_at"`
 	UpdatedAt    int64  `json:"updated_at"`
 	DeletedAt    *int64 `json:"deleted_at"`

@@ -2,12 +2,10 @@ package repo
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -19,62 +17,58 @@ func NewUserPermissionRepository(queries *db.Queries) *UserPermissionRepository 
 	return &UserPermissionRepository{queries: queries}
 }
 
-func (r *UserPermissionRepository) Create(ctx context.Context, dto *dtos.UserPermissionDto) error {
-	permissionID, err := uuid.Parse(dto.PermissionId)
+func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID) ([]*models.UserPermission, error) {
+	rows, err := r.queries.GetUserPermissions(ctx, pgtype.UUID{Bytes: *id, Valid: true})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	userID, err := uuid.Parse(dto.UserId)
-	if err != nil {
-		return err
-	}
-	now := time.Now().UTC()
-	grantedBy := pgtype.UUID{}
-	if dto.GrantedBy != "" {
-		gb, err := uuid.Parse(dto.GrantedBy)
-		if err != nil {
-			return err
+
+	perms := make([]*models.UserPermission, len(rows))
+	for _, row := range rows {
+		var grantedBy *uuid.UUID = nil
+		if row.GrantedBy.Valid {
+			parsed, err := uuid.ParseBytes(row.GrantedBy.Bytes[:])
+			if err != nil {
+				return nil, err
+			}
+			grantedBy = &parsed
 		}
-		grantedBy = pgtype.UUID{Bytes: gb, Valid: true}
+
+		var grandedAt *int64 = nil
+		if row.GrantedAt.Valid {
+			var time = row.GrantedAt.Time.UnixMilli()
+			grandedAt = &time
+		}
+
+		var expiresAt *int64 = nil
+		if row.ExpiresAt.Valid {
+			var time = row.GrantedAt.Time.UnixMilli()
+			expiresAt = &time
+
+		}
+
+		perms = append(perms, &models.UserPermission{
+			Permission: row.PermissionID.Bytes,
+			User:       row.UserID.Bytes,
+			GrantedBy:  grantedBy,
+			Granted:    row.Granted,
+			GrantedAt:  grandedAt,
+			ExpiresAt:  expiresAt,
+			UpdatedAt:  row.GrantedAt.Time.UnixMilli(),
+		})
 	}
-	params := db.CreateUserPermissionParams{
-		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
-		GrantedBy:    grantedBy,
-		Granted:      dto.Granted,
-		GrantedAt:    pgtype.Timestamptz{Time: now, Valid: true},
-		ExpiresAt:    models.ToTimestamptzPtr(dto.ExpiresAt),
-	}
-	return r.queries.CreateUserPermission(ctx, params)
+	return perms, nil
 }
 
-func (r *UserPermissionRepository) Update(ctx context.Context, dto *dtos.UserPermissionDto) error {
-	permissionID, err := uuid.Parse(dto.PermissionId)
-	if err != nil {
-		return err
-	}
-	userID, err := uuid.Parse(dto.UserId)
-	if err != nil {
-		return err
-	}
-	params := db.UpdateUserPermissionParams{
-		Granted:      dto.Granted,
-		ExpiresAt:    models.ToTimestamptzPtr(dto.ExpiresAt),
-		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
-	}
-	return r.queries.UpdateUserPermission(ctx, params)
+func (r *UserPermissionRepository) Create(ctx context.Context, params *db.CreateUserPermissionParams) error {
+	return r.queries.CreateUserPermission(ctx, *params)
 }
 
-func (r *UserPermissionRepository) Delete(ctx context.Context, dto *dtos.DeleteUserPermissionDto) error {
-	permissionID, err := uuid.Parse(dto.PermissionId)
-	if err != nil {
-		return err
-	}
-	userID, err := uuid.Parse(dto.UserId)
-	if err != nil {
-		return err
-	}
+func (r *UserPermissionRepository) Update(ctx context.Context, params *db.UpdateUserPermissionParams) error {
+	return r.queries.UpdateUserPermission(ctx, *params)
+}
+
+func (r *UserPermissionRepository) Delete(ctx context.Context, userID, permissionID uuid.UUID) error {
 	return r.queries.DeleteUserPermission(ctx, db.DeleteUserPermissionParams{
 		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
 		UserID:       pgtype.UUID{Bytes: userID, Valid: true},

@@ -1,7 +1,13 @@
 package handler
 
-import "github.com/juevigrace/diva-server/internal/repo"
+import (
+	"github.com/juevigrace/diva-server/internal/service"
+)
 
 type SessionHandler struct {
-	Repo *repo.SessionRepository
+	Service *service.SessionService
+}
+
+func NewSessionHandler(svc *service.SessionService) *SessionHandler {
+	return &SessionHandler{Service: svc}
 }

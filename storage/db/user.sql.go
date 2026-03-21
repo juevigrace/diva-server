@@ -67,6 +67,7 @@ select
     u.username,
     u.password_hash,
     u.phone_number,
+    u.birth_date,
     u.alias,
     u.avatar,
     u.bio,
@@ -92,6 +93,7 @@ type GetAllUsersRow struct {
 	Username     string
 	PasswordHash string
 	PhoneNumber  string
+	BirthDate    pgtype.Timestamptz
 	Alias        string
 	Avatar       string
 	Bio          string
@@ -117,6 +119,7 @@ func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]Get
 			&i.Username,
 			&i.PasswordHash,
 			&i.PhoneNumber,
+			&i.BirthDate,
 			&i.Alias,
 			&i.Avatar,
 			&i.Bio,
@@ -143,6 +146,7 @@ select
     username,
     password_hash,
     phone_number,
+    birth_date,
     alias,
     avatar,
     bio,
@@ -161,6 +165,7 @@ type GetUserByEmailRow struct {
 	Username     string
 	PasswordHash string
 	PhoneNumber  string
+	BirthDate    pgtype.Timestamptz
 	Alias        string
 	Avatar       string
 	Bio          string
@@ -180,6 +185,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Username,
 		&i.PasswordHash,
 		&i.PhoneNumber,
+		&i.BirthDate,
 		&i.Alias,
 		&i.Avatar,
 		&i.Bio,
@@ -199,6 +205,7 @@ select
     u.username,
     u.password_hash,
     u.phone_number,
+    u.birth_date,
     u.alias,
     u.avatar,
     u.bio,
@@ -217,6 +224,7 @@ type GetUserByIDRow struct {
 	Username     string
 	PasswordHash string
 	PhoneNumber  string
+	BirthDate    pgtype.Timestamptz
 	Alias        string
 	Avatar       string
 	Bio          string
@@ -236,6 +244,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.Username,
 		&i.PasswordHash,
 		&i.PhoneNumber,
+		&i.BirthDate,
 		&i.Alias,
 		&i.Avatar,
 		&i.Bio,
@@ -255,6 +264,7 @@ select
     username,
     password_hash,
     phone_number,
+    birth_date,
     alias,
     avatar,
     bio,
@@ -273,6 +283,7 @@ type GetUserByUsernameRow struct {
 	Username     string
 	PasswordHash string
 	PhoneNumber  string
+	BirthDate    pgtype.Timestamptz
 	Alias        string
 	Avatar       string
 	Bio          string
@@ -292,6 +303,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.Username,
 		&i.PasswordHash,
 		&i.PhoneNumber,
+		&i.BirthDate,
 		&i.Alias,
 		&i.Avatar,
 		&i.Bio,
@@ -311,6 +323,7 @@ select
     username,
     password_hash,
     phone_number,
+    birth_date,
     alias,
     avatar,
     bio,
@@ -334,6 +347,7 @@ type GetUserByUsernameOrEmailRow struct {
 	Username     string
 	PasswordHash string
 	PhoneNumber  string
+	BirthDate    pgtype.Timestamptz
 	Alias        string
 	Avatar       string
 	Bio          string
@@ -353,6 +367,7 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUse
 		&i.Username,
 		&i.PasswordHash,
 		&i.PhoneNumber,
+		&i.BirthDate,
 		&i.Alias,
 		&i.Avatar,
 		&i.Bio,

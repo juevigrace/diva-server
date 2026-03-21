@@ -6,7 +6,7 @@ type User struct {
 	ID           uuid.UUID
 	Email        string
 	Username     string
-	PasswordHash *string
+	PasswordHash string
 	BirthDate    int64
 	PhoneNumber  string
 	Alias        string

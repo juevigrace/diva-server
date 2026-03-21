@@ -8,11 +8,10 @@ type CreateUserDto struct {
 }
 
 type UpdateProfileDto struct {
-	Alias       string `json:"alias" validate:"required"`
-	Bio         string `json:"bio" validate:"omitempty,max=500"`
-	Avatar      string `json:"avatar" validate:"omitempty,url"`
-	BirthDate   int64  `json:"birth_date"`
-	PhoneNumber string `json:"phone_number" validate:"omitempty,e164"`
+	Alias     string `json:"alias" validate:"required"`
+	Bio       string `json:"bio" validate:"omitempty,max=500"`
+	Avatar    string `json:"avatar" validate:"omitempty,url"`
+	BirthDate int64  `json:"birth_date"`
 }
 
 type UpdateUsernameDto struct {
@@ -21,6 +20,10 @@ type UpdateUsernameDto struct {
 
 type UserEmailDto struct {
 	Email string `json:"email" validate:"required,email"`
+}
+
+type UpdatePhoneNumberDto struct {
+	PhoneNumber string `json:"phone_number" validate:"required"`
 }
 
 type UpdatePasswordDto struct {

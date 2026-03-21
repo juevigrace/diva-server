@@ -44,8 +44,8 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 }
 
 const deleteSession = `-- name: DeleteSession :exec
-DELETE FROM diva_session
-WHERE id = $1
+delete from diva_session
+where id = $1
 `
 
 func (q *Queries) DeleteSession(ctx context.Context, id pgtype.UUID) error {
@@ -54,8 +54,8 @@ func (q *Queries) DeleteSession(ctx context.Context, id pgtype.UUID) error {
 }
 
 const deleteSessionByUserID = `-- name: DeleteSessionByUserID :exec
-DELETE FROM diva_session
-WHERE user_id = $1
+delete from diva_session
+where user_id = $1
 `
 
 func (q *Queries) DeleteSessionByUserID(ctx context.Context, userID pgtype.UUID) error {
@@ -64,27 +64,27 @@ func (q *Queries) DeleteSessionByUserID(ctx context.Context, userID pgtype.UUID)
 }
 
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT
-  s.id,
-  s.access_token,
-  s.refresh_token,
-  s.device,
-  s.status,
-  s.ip_address,
-  s.user_agent,
-  s.expires_at,
-  s.created_at,
-  s.updated_at,
-  u.id AS user_id,
-  u.email,
-  u.username,
-  u.user_verified,
-  u.role,
-  u.created_at,
-  u.updated_at
-FROM diva_session s
-LEFT JOIN diva_user u ON s.user_id = u.id
-WHERE s.id = $1 AND u.deleted_at IS NULL
+select
+    s.id,
+    s.access_token,
+    s.refresh_token,
+    s.device,
+    s.status,
+    s.ip_address,
+    s.user_agent,
+    s.expires_at,
+    s.created_at,
+    s.updated_at,
+    u.id as user_id,
+    u.email,
+    u.username,
+    u.user_verified,
+    u.role,
+    u.created_at,
+    u.updated_at
+from diva_session s
+left join diva_user u on s.user_id = u.id
+where s.id = $1 and u.deleted_at is null
 `
 
 type GetSessionByIDRow struct {
@@ -160,5 +160,21 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) er
 		arg.ExpiresAt,
 		arg.ID,
 	)
+	return err
+}
+
+const updateSessionStatus = `-- name: UpdateSessionStatus :exec
+UPDATE diva_session 
+SET  status = $1, updated_at = NOW() 
+WHERE id = $2
+`
+
+type UpdateSessionStatusParams struct {
+	Status SessionStatusType
+	ID     pgtype.UUID
+}
+
+func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) error {
+	_, err := q.db.Exec(ctx, updateSessionStatus, arg.Status, arg.ID)
 	return err
 }

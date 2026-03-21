@@ -11,20 +11,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const create = `-- name: Create :exec
+const createVerification = `-- name: CreateVerification :exec
 INSERT INTO diva_email_verification_tokens (user_id, token, expires_at, created_at)
 VALUES ($1, $2, $3, $4)
 `
 
-type CreateParams struct {
+type CreateVerificationParams struct {
 	UserID    pgtype.UUID
 	Token     string
 	ExpiresAt pgtype.Timestamptz
 	CreatedAt pgtype.Timestamptz
 }
 
-func (q *Queries) Create(ctx context.Context, arg CreateParams) error {
-	_, err := q.db.Exec(ctx, create,
+func (q *Queries) CreateVerification(ctx context.Context, arg CreateVerificationParams) error {
+	_, err := q.db.Exec(ctx, createVerification,
 		arg.UserID,
 		arg.Token,
 		arg.ExpiresAt,
@@ -43,14 +43,32 @@ func (q *Queries) DeleteByToken(ctx context.Context, token string) error {
 	return err
 }
 
-const getByToken = `-- name: GetByToken :one
+const getVerificationByToken = `-- name: GetVerificationByToken :one
 select user_id, token, expires_at, created_at
 from diva_email_verification_tokens
 where token = $1
 `
 
-func (q *Queries) GetByToken(ctx context.Context, token string) (DivaEmailVerificationToken, error) {
-	row := q.db.QueryRow(ctx, getByToken, token)
+func (q *Queries) GetVerificationByToken(ctx context.Context, token string) (DivaEmailVerificationToken, error) {
+	row := q.db.QueryRow(ctx, getVerificationByToken, token)
+	var i DivaEmailVerificationToken
+	err := row.Scan(
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getVerificationByUser = `-- name: GetVerificationByUser :one
+select user_id, token, expires_at, created_at
+from diva_email_verification_tokens
+where user_id = $1
+`
+
+func (q *Queries) GetVerificationByUser(ctx context.Context, userID pgtype.UUID) (DivaEmailVerificationToken, error) {
+	row := q.db.QueryRow(ctx, getVerificationByUser, userID)
 	var i DivaEmailVerificationToken
 	err := row.Scan(
 		&i.UserID,

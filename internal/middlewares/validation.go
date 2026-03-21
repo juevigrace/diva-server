@@ -11,15 +11,15 @@ var (
 	v *models.XValidator = models.NewXValidator()
 )
 
-func ValidateBody[T any](body *T, r *http.Request) (*T, error) {
+func ValidateBody[T any](body *T, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(body); err != nil {
-		return nil, err
+		return err
 	}
 
 	err := v.Validate(body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return body, nil
+	return nil
 }

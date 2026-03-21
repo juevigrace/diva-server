@@ -1,0 +1,2 @@
+- /internal/handler
+  - Fix response statuses given the error received

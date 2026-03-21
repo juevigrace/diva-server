@@ -66,11 +66,13 @@ func (s *Server) routes() {
 	queries := s.database.Queries()
 
 	repoModule := di.NewRepoModule(queries)
-	handlerModule := di.NewHandlerModule(repoModule, s.mail)
+	serviceModule := di.NewServiceModule(repoModule, s.mail)
+	handlerModule := di.NewHandlerModule(serviceModule)
 
 	s.router.Chi.Route("/api", func(api chi.Router) {
-		handlerModule.Verification.Routes(api)
+		handlerModule.Auth.Routes(api)
 		handlerModule.User.Routes(api)
+		handlerModule.Verification.Routes(api)
 	})
 
 	s.router.Chi.Route("/health", func(rc chi.Router) {

@@ -1,7 +1,7 @@
 package responses
 
 type UserPermissionResponse struct {
-	PermissionId string  `json:"permission_id"`
+	PermissionID string  `json:"permission_id"`
 	GrantedBy    *string `json:"granted_by"`
 	Granted      bool    `json:"granted"`
 	GrantedAt    *int64  `json:"granted_at"`

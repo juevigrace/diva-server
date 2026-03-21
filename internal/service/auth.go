@@ -1,0 +1,181 @@
+package service
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/responses"
+	"github.com/juevigrace/diva-server/internal/util"
+)
+
+type AuthService struct {
+	userService         *UserService
+	sessionService      *SessionService
+	verificationService *VerificationService
+}
+
+func NewAuthService(
+	userService *UserService,
+	sessionService *SessionService,
+	verificationService *VerificationService,
+) *AuthService {
+	return &AuthService{
+		userService:         userService,
+		sessionService:      sessionService,
+		verificationService: verificationService,
+	}
+}
+
+func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*responses.AuthResponse, error) {
+	userID, err := s.userService.Create(ctx, &dto.User)
+	if err != nil {
+		return nil, err
+	}
+
+	actions := make([]models.Action, 1)
+	if err := s.verificationService.GenerateAndSend(ctx, userID, dto.User.Email); err != nil {
+		return nil, err
+	}
+
+	actions = append(actions, models.ActionUserVerification)
+
+	session, err := s.sessionService.Create(ctx, userID, &dto.SessionData)
+	if err != nil {
+		return nil, err
+	}
+
+	return &responses.AuthResponse{
+		Session: toSessionResponse(session),
+		Actions: toActionResponse(actions),
+	}, nil
+}
+
+func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.AuthResponse, error) {
+	user, err := s.userService.GetByUsername(ctx, dto.Username)
+	if err != nil {
+		return nil, models.ErrInvalidCredentials
+	}
+
+	if !util.ValidatePassword(dto.Password, user.PasswordHash) {
+		return nil, models.ErrInvalidCredentials
+	}
+
+	actions := make([]models.Action, 1)
+	if !user.UserVerified {
+		if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
+			return nil, err
+		}
+		actions = append(actions, models.ActionUserVerification)
+	}
+
+	session, err := s.sessionService.Create(ctx, user.ID, &dto.SessionData)
+	if err != nil {
+		return nil, err
+	}
+
+	return &responses.AuthResponse{
+		Session: toSessionResponse(session),
+		Actions: toActionResponse(actions),
+	}, nil
+}
+
+func (s *AuthService) SignOut(ctx context.Context, sessionID *uuid.UUID) error {
+	return s.sessionService.Close(ctx, sessionID)
+}
+
+func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto *dtos.SessionDataDto) (*responses.SessionResponse, error) {
+	if session.Device != dto.Device || session.UserAgent != dto.UserAgent {
+		if err := s.sessionService.Close(ctx, &session.ID); err != nil {
+			return nil, err
+		}
+		return nil, models.ErrSessionInvalid
+	}
+	updated, err := s.sessionService.Update(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+	return toSessionResponse(updated), nil
+}
+
+func (s *AuthService) ForgotPasswordRequest(ctx context.Context, email string) ([]*responses.ActionResponse, error) {
+	actions := make([]models.Action, 1)
+	user, err := s.userService.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	if !user.UserVerified {
+		if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
+			return nil, err
+		}
+		actions = append(actions, models.ActionUserVerification)
+		return toActionResponse(actions), nil
+	}
+
+	if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
+		return nil, err
+	}
+	actions = append(actions, models.ActionPasswordVerification)
+
+	return toActionResponse(actions), nil
+}
+
+func (s *AuthService) ForgotPasswordConfirm(
+	ctx context.Context,
+	token string,
+	dto *dtos.SessionDataDto,
+) (*responses.SessionResponse, error) {
+	verification, err := s.verificationService.Verify(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := s.sessionService.Create(ctx, verification.UserID, dto)
+	if err != nil {
+		return nil, err
+	}
+
+	return toSessionResponse(session), nil
+}
+
+func (s *AuthService) ForgotPasswordUpdate(
+	ctx context.Context,
+	session *models.Session,
+	dto *dtos.UpdatePasswordDto,
+) error {
+	if err := s.userService.UpdatePassword(ctx, session, dto.NewPassword); err != nil {
+		return err
+	}
+
+	if err := s.sessionService.Delete(ctx, session.ID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func toSessionResponse(s *models.Session) *responses.SessionResponse {
+	return &responses.SessionResponse{
+		SessionId:    s.ID.String(),
+		UserId:       s.User.ID.String(),
+		AccessToken:  s.AccessToken,
+		RefreshToken: s.RefreshToken,
+		Status:       s.Status.String(),
+		Device:       s.Device,
+		Ip:           s.IpAddress,
+		Agent:        s.UserAgent,
+		ExpiresAt:    s.ExpiresAt,
+		CreatedAt:    s.CreatedAt,
+		UpdatedAt:    s.UpdatedAt,
+	}
+}
+
+func toActionResponse(actions []models.Action) []*responses.ActionResponse {
+	result := make([]*responses.ActionResponse, len(actions))
+	for _, a := range actions {
+		result = append(result, &responses.ActionResponse{ActionName: a.String()})
+	}
+	return result
+}

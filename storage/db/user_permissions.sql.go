@@ -38,8 +38,8 @@ func (q *Queries) CreateUserPermission(ctx context.Context, arg CreateUserPermis
 }
 
 const deleteUserPermission = `-- name: DeleteUserPermission :exec
-DELETE FROM diva_user_permissions
-WHERE permission_id = $1 AND user_id = $2
+delete from diva_user_permissions
+where permission_id = $1 and user_id = $2
 `
 
 type DeleteUserPermissionParams struct {
@@ -50,6 +50,40 @@ type DeleteUserPermissionParams struct {
 func (q *Queries) DeleteUserPermission(ctx context.Context, arg DeleteUserPermissionParams) error {
 	_, err := q.db.Exec(ctx, deleteUserPermission, arg.PermissionID, arg.UserID)
 	return err
+}
+
+const getUserPermissions = `-- name: GetUserPermissions :many
+select permission_id, user_id, granted_by, granted, granted_at, expires_at, updated_at
+from diva_user_permissions
+where user_id = $1
+`
+
+func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([]DivaUserPermission, error) {
+	rows, err := q.db.Query(ctx, getUserPermissions, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DivaUserPermission
+	for rows.Next() {
+		var i DivaUserPermission
+		if err := rows.Scan(
+			&i.PermissionID,
+			&i.UserID,
+			&i.GrantedBy,
+			&i.Granted,
+			&i.GrantedAt,
+			&i.ExpiresAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateUserPermission = `-- name: UpdateUserPermission :exec

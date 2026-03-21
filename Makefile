@@ -6,7 +6,7 @@ BINARY_DIR = ./bin
 SERVER_BINARY = $(BINARY_DIR)/diva-server
 SERVER_MAIN = ./cmd/server/main.go
 
-.PHONY: help build run test itest clean watch sqlc dev-build dev-up dev-down dev-logs dev-shell prod-build prod-up prod-down prod-logs prod-shell db-shell rebuild ps
+.PHONY: help build run test itest clean watch sqlc dev-build dev-up dev-down dev-logs dev-shell prod-build prod-up prod-down prod-logs prod-shell db-shell-dev db-shell-prod rebuild ps
 
 # Default target
 help:
@@ -38,7 +38,8 @@ help:
 	@echo "Utilities:"
 	@echo "  clean        Clean up containers, volumes, and images"
 	@echo "  ps           Show running containers"
-	@echo "  db-shell     Access database shell"
+	@echo "  db-shell-dev Access dev database shell"
+	@echo "  db-shell-prod Access prod database shell"
 	@echo "  rebuild      Force rebuild without cache"
 
 # Build targets
@@ -86,8 +87,8 @@ clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BINARY_DIR)
 	@echo "Cleaning Docker resources..."
-	@docker compose -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
-	@docker compose -f docker-compose.yml down -v --remove-orphans 2>/dev/null || true
+	@docker compose -p diva-dev -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
+	@docker compose -p diva-prod -f docker-compose.yml down -v --remove-orphans 2>/dev/null || true
 	@docker system prune -f
 	@echo "Clean completed!"
 
@@ -120,57 +121,61 @@ ps:
 	@echo "Running containers:"
 	@docker ps -a
 
-db-shell:
-	@echo "Accessing database shell..."
-	@docker compose -f docker-compose.dev.yml exec diva_db psql -U ${DB_USER} -d ${DB_NAME}
+db-shell-dev:
+	@echo "Accessing dev database shell..."
+	@docker compose -p diva-dev -f docker-compose.dev.yml exec diva_db_dev psql -U ${DB_USER} -d ${DB_NAME}
+
+db-shell-prod:
+	@echo "Accessing prod database shell..."
+	@docker compose -p diva-prod -f docker-compose.yml exec diva_db psql -U ${DB_USER} -d ${DB_NAME}
 
 rebuild:
 	@echo "Force rebuilding without cache..."
-	@docker compose -f docker-compose.dev.yml build --no-cache
-	@docker compose -f docker-compose.yml build --no-cache
+	@docker compose -p diva-dev -f docker-compose.dev.yml build --no-cache
+	@docker compose -p diva-prod -f docker-compose.yml build --no-cache
 
 # Development Commands
 dev-build:
 	@echo "Building development image..."
-	@docker compose -f docker-compose.dev.yml build
+	@docker compose -p diva-dev -f docker-compose.dev.yml build
 
 dev-up:
 	@echo "Starting development environment..."
 	@sqlc generate
-	@docker compose -f docker-compose.dev.yml --env-file .env.dev up -d --build
+	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev up -d --build
 	@echo "Development environment started!"
 
 dev-down:
 	@echo "Stopping development environment..."
-	@docker compose -f docker-compose.dev.yml down
+	@docker compose -p diva-dev -f docker-compose.dev.yml down
 
 dev-logs:
 	@echo "Following development logs..."
-	@docker compose -f docker-compose.dev.yml logs -f
+	@docker compose -p diva-dev -f docker-compose.dev.yml logs -f
 
 dev-shell:
 	@echo "Accessing development container shell..."
-	@docker compose -f docker-compose.dev.yml exec diva_server sh
+	@docker compose -p diva-dev -f docker-compose.dev.yml exec diva_server_dev sh
 
 # Production Commands
 prod-build:
 	@echo "Building production image..."
-	@docker compose -f docker-compose.yml build
+	@docker compose -p diva-prod -f docker-compose.yml build
 
 prod-up:
 	@echo "Starting production environment..."
 	@sqlc generate
-	@docker compose -f docker-compose.yml --env-file .env up -d --build
+	@docker compose -p diva-prod -f docker-compose.yml --env-file .env up -d --build
 	@echo "Production environment started!"
 
 prod-down:
 	@echo "Stopping production environment..."
-	@docker compose -f docker-compose.yml down
+	@docker compose -p diva-prod -f docker-compose.yml down
 
 prod-logs:
 	@echo "Following production logs..."
-	@docker compose -f docker-compose.yml logs -f
+	@docker compose -p diva-prod -f docker-compose.yml logs -f
 
 prod-shell:
 	@echo "Accessing production container shell..."
-	@docker compose -f docker-compose.yml exec diva_server sh
+	@docker compose -p diva-prod -f docker-compose.yml exec diva_server sh

@@ -49,6 +49,10 @@ func RespondUnauthorized(data any, message string) *APIResponse {
 	return Respond(http.StatusUnauthorized, &data, message)
 }
 
+func RespondForbidden(data any, message string) *APIResponse {
+	return Respond(http.StatusForbidden, &data, message)
+}
+
 func RespondForbbiden(data any, message string) *APIResponse {
 	return Respond(http.StatusForbidden, &data, message)
 }
@@ -59,6 +63,10 @@ func RespondNotFound(data any, message string) *APIResponse {
 
 func RespondNotAllowed(data any, message string) *APIResponse {
 	return Respond(http.StatusMethodNotAllowed, &data, message)
+}
+
+func RespondConflict(data any, message string) *APIResponse {
+	return Respond(http.StatusConflict, &data, message)
 }
 
 func RespondInternalServerError(data any, message string) *APIResponse {

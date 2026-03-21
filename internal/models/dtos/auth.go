@@ -1,14 +1,14 @@
 package dtos
 
 type SignInDto struct {
-	Username    string          `json:"username" validate:"required"`
-	Password    string          `json:"password" validate:"required"`
-	SessionData *SessionDataDto `json:"session_data" validate:"required"`
+	Username    string         `json:"username" validate:"required"`
+	Password    string         `json:"password" validate:"required"`
+	SessionData SessionDataDto `json:"session_data" validate:"required"`
 }
 
 type SignUpDto struct {
-	User        *CreateUserDto  `json:"user" validate:"required"`
-	SessionData *SessionDataDto `json:"session_data" validate:"required"`
+	User        CreateUserDto  `json:"user" validate:"required"`
+	SessionData SessionDataDto `json:"session_data" validate:"required"`
 }
 
 type SessionDataDto struct {
@@ -22,6 +22,6 @@ type ForgotPasswordRequestDto struct {
 }
 
 type ForgotPasswordConfirmDto struct {
-	Token       string          `json:"token" validate:"required"`
-	SessionData *SessionDataDto `json:"session_data" validate:"required"`
+	Token       string         `json:"token" validate:"required"`
+	SessionData SessionDataDto `json:"session_data" validate:"required"`
 }
