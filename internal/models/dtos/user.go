@@ -11,21 +11,17 @@ type UpdateProfileDto struct {
 	Alias     string `json:"alias" validate:"required"`
 	Bio       string `json:"bio" validate:"omitempty,max=500"`
 	Avatar    string `json:"avatar" validate:"omitempty,url"`
-	BirthDate int64  `json:"birth_date"`
+	BirthDate int64  `json:"birth_date" validate:"omitempty"`
 }
 
 type UpdateUsernameDto struct {
 	Username string `json:"username" validate:"required,min=3,max=50"`
 }
 
-type UserEmailDto struct {
-	Email string `json:"email" validate:"required,email"`
-}
-
 type UpdatePhoneNumberDto struct {
 	PhoneNumber string `json:"phone_number" validate:"required"`
 }
 
-type UpdatePasswordDto struct {
-	NewPassword string `json:"new_password" validate:"required,min=4"`
+type UserEmailDto struct {
+	Email string `json:"email" validate:"required,email"`
 }

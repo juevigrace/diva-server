@@ -146,7 +146,7 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) forgotPasswordRequest(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.ForgotPasswordRequestDto
+	var dto dtos.UserEmailDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -173,7 +173,7 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	res, err := h.authService.ForgotPasswordConfirm(r.Context(), dto.Token, &dto.SessionData)
+	res, err := h.authService.ForgotPasswordConfirm(r.Context(), dto.Verification.Token, &dto.SessionData)
 	if err != nil {
 		if errors.Is(err, models.ErrTokenInvalid) {
 			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))

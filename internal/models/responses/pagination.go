@@ -8,18 +8,18 @@ type PaginationInfo struct {
 }
 
 type PaginatedResponse[T any] struct {
-	Data       T               `json:"data"`
-	Pagination *PaginationInfo `json:"pagination"`
+	Items      []T             `json:"items"`
+	Pagination *PaginationInfo `json:"pagination_info"`
 }
 
-func NewPaginatedResponse[T any](data T, page, limit int, totalItems int64) *PaginatedResponse[T] {
+func NewPaginatedResponse[T any](data []T, page, limit int, totalItems int64) *PaginatedResponse[T] {
 	totalPages := int(totalItems) / limit
 	if int(totalItems)%limit > 0 {
 		totalPages++
 	}
 
 	return &PaginatedResponse[T]{
-		Data: data,
+		Items: data,
 		Pagination: &PaginationInfo{
 			Page:       page,
 			Limit:      limit,

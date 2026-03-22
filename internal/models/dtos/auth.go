@@ -17,11 +17,11 @@ type SessionDataDto struct {
 	UserAgent string `json:"user_agent" validate:"required"`
 }
 
-type ForgotPasswordRequestDto struct {
-	Email string `json:"email" validate:"required,email"`
+type ForgotPasswordConfirmDto struct {
+	Verification EmailTokenDto  `json:"verification" validate:"required"`
+	SessionData  SessionDataDto `json:"session_data" validate:"required"`
 }
 
-type ForgotPasswordConfirmDto struct {
-	Token       string         `json:"token" validate:"required"`
-	SessionData SessionDataDto `json:"session_data" validate:"required"`
+type UpdatePasswordDto struct {
+	NewPassword string `json:"new_password" validate:"required,min=4"`
 }
