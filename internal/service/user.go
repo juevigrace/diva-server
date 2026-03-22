@@ -115,6 +115,10 @@ func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.Us
 	return s.repo.GetByID(ctx, userID)
 }
 
-func (s *UserService) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
-	return s.repo.GetAll(ctx, limit, offset)
+func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination) ([]*models.User, error) {
+	return s.repo.GetAll(ctx, pagination.GetLimit(), pagination.GetOffset())
+}
+
+func (s *UserService) Count(ctx context.Context) (int64, error) {
+	return s.repo.Count(ctx)
 }

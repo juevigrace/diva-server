@@ -87,35 +87,31 @@ func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit := 50
-	offset := 0
-	if l := r.URL.Query().Get("limit"); l != "" {
-		parsedLimit, err := strconv.Atoi(l)
-		if err != nil || parsedLimit < 1 {
-			responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid limit"))
-			return
+	pagination := models.NewPagination(1, 50).WithMaxLimit(100)
+
+	if p := r.URL.Query().Get("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed >= 1 {
+			pagination.Page = parsed
 		}
-		if parsedLimit > 100 {
-			parsedLimit = 100
-		}
-		limit = parsedLimit
 	}
-	if o := r.URL.Query().Get("offset"); o != "" {
-		parsedOffset, err := strconv.Atoi(o)
-		if err != nil || parsedOffset < 0 {
-			responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid offset"))
-			return
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed >= 1 {
+			pagination.Limit = parsed
 		}
-		offset = parsedOffset
 	}
 
-	users, err := h.userService.GetAll(r.Context(), limit, offset)
+	total, err := h.userService.Count(r.Context())
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	// TODO: change for pagination response
+	users, err := h.userService.GetAll(r.Context(), pagination)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
 	res := make([]*responses.UserResponse, len(users))
 	for _, u := range users {
 		res = append(res, &responses.UserResponse{
@@ -135,7 +131,8 @@ func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(res, "Users retrieved"))
+	paginatedRes := responses.NewPaginatedResponse(res, pagination.GetPage(), pagination.GetLimit(), total)
+	responses.WriteJSON(w, responses.RespondOk(paginatedRes, "Users retrieved"))
 }
 
 func (h *UserHandler) checkUsername(w http.ResponseWriter, r *http.Request) {
