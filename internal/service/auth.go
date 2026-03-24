@@ -14,45 +14,49 @@ type AuthService struct {
 	userService         *UserService
 	sessionService      *SessionService
 	verificationService *VerificationService
+	actionService       *ActionService
 }
 
 func NewAuthService(
 	userService *UserService,
 	sessionService *SessionService,
 	verificationService *VerificationService,
+	actionService *ActionService,
 ) *AuthService {
 	return &AuthService{
 		userService:         userService,
 		sessionService:      sessionService,
 		verificationService: verificationService,
+		actionService:       actionService,
 	}
 }
 
-func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*responses.AuthResponse, error) {
+func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*responses.SessionResponse, error) {
 	userID, err := s.userService.Create(ctx, &dto.User)
 	if err != nil {
 		return nil, err
 	}
 
-	actions := make([]models.Action, 1)
 	if err := s.verificationService.GenerateAndSend(ctx, userID, dto.User.Email); err != nil {
 		return nil, err
 	}
 
-	actions = append(actions, models.ActionUserVerification)
+	if err := s.actionService.Create(ctx, &models.UserAction{
+		UserID: userID,
+		Action: models.ActionUserVerification,
+	}); err != nil {
+		return nil, err
+	}
 
 	session, err := s.sessionService.Create(ctx, userID, &dto.SessionData)
 	if err != nil {
 		return nil, err
 	}
 
-	return &responses.AuthResponse{
-		Session: toSessionResponse(session),
-		Actions: toActionResponse(actions),
-	}, nil
+	return toSessionResponse(session), nil
 }
 
-func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.AuthResponse, error) {
+func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.SessionResponse, error) {
 	user, err := s.userService.GetByUsername(ctx, dto.Username)
 	if err != nil {
 		return nil, models.ErrInvalidCredentials
@@ -62,23 +66,12 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*respons
 		return nil, models.ErrInvalidCredentials
 	}
 
-	actions := make([]models.Action, 1)
-	if !user.UserVerified {
-		if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
-			return nil, err
-		}
-		actions = append(actions, models.ActionUserVerification)
-	}
-
 	session, err := s.sessionService.Create(ctx, user.ID, &dto.SessionData)
 	if err != nil {
 		return nil, err
 	}
 
-	return &responses.AuthResponse{
-		Session: toSessionResponse(session),
-		Actions: toActionResponse(actions),
-	}, nil
+	return toSessionResponse(session), nil
 }
 
 func (s *AuthService) SignOut(ctx context.Context, sessionID *uuid.UUID) error {
@@ -99,27 +92,17 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 	return toSessionResponse(updated), nil
 }
 
-func (s *AuthService) ForgotPasswordRequest(ctx context.Context, email string) ([]*responses.ActionResponse, error) {
-	actions := make([]models.Action, 1)
+func (s *AuthService) ForgotPasswordRequest(ctx context.Context, email string) error {
 	user, err := s.userService.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, err
-	}
-
-	if !user.UserVerified {
-		if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
-			return nil, err
-		}
-		actions = append(actions, models.ActionUserVerification)
-		return toActionResponse(actions), nil
+		return err
 	}
 
 	if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
-		return nil, err
+		return err
 	}
-	actions = append(actions, models.ActionPasswordVerification)
 
-	return toActionResponse(actions), nil
+	return nil
 }
 
 func (s *AuthService) ForgotPasswordConfirm(
@@ -153,6 +136,10 @@ func (s *AuthService) ForgotPasswordUpdate(
 		return err
 	}
 
+	if err := s.sessionService.CloseAll(ctx, session.User.ID); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -170,12 +157,4 @@ func toSessionResponse(s *models.Session) *responses.SessionResponse {
 		CreatedAt:    s.CreatedAt,
 		UpdatedAt:    s.UpdatedAt,
 	}
-}
-
-func toActionResponse(actions []models.Action) []*responses.ActionResponse {
-	result := make([]*responses.ActionResponse, len(actions))
-	for _, a := range actions {
-		result = append(result, &responses.ActionResponse{ActionName: a.String()})
-	}
-	return result
 }

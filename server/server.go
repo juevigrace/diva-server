@@ -72,7 +72,6 @@ func (s *Server) routes() {
 	s.router.Chi.Route("/api", func(api chi.Router) {
 		handlerModule.Auth.Routes(api)
 		handlerModule.User.Routes(api)
-		handlerModule.Verification.Routes(api)
 	})
 
 	s.router.Chi.Route("/health", func(rc chi.Router) {

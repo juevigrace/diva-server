@@ -789,6 +789,11 @@ type DivaUser struct {
 	DeletedAt    pgtype.Timestamptz
 }
 
+type DivaUserPendingAction struct {
+	UserID     pgtype.UUID
+	ActionName string
+}
+
 type DivaUserPermission struct {
 	PermissionID pgtype.UUID
 	UserID       pgtype.UUID

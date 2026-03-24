@@ -5,20 +5,33 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/middlewares"
+	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
 )
 
 type UserMeHandler struct {
-	userService *service.UserService
-	pHandler    *UserPreferencesHandler
+	actionService       *service.ActionService
+	userService         *service.UserService
+	verificationService *service.VerificationService
+	pHandler            *UserPreferencesHandler
+	aHandler            *ActionHandler
 }
 
-func NewUserMeHandler(userService *service.UserService, pHandler *UserPreferencesHandler) *UserMeHandler {
+func NewUserMeHandler(
+	actionService *service.ActionService,
+	userService *service.UserService,
+	verificationService *service.VerificationService,
+	pHandler *UserPreferencesHandler,
+	aHandler *ActionHandler,
+) *UserMeHandler {
 	return &UserMeHandler{
-		userService: userService,
-		pHandler:    pHandler,
+		actionService:       actionService,
+		userService:         userService,
+		verificationService: verificationService,
+		pHandler:            pHandler,
+		aHandler:            aHandler,
 	}
 }
 
@@ -26,10 +39,49 @@ func (h *UserMeHandler) Routes(r chi.Router) {
 	r.Route("/me", func(me chi.Router) {
 		me.Put("/", h.updateMe)
 		me.Delete("/", h.deleteMe)
-		// TODO:  email update routes
+		me.Route("/email", func(verify chi.Router) {
+			verify.Post("/verify", h.verifyEmail)
+
+			// TODO:  email update routes
+		})
 
 		h.pHandler.Routes(me)
+		h.aHandler.Routes(me)
 	})
+}
+
+func (h *UserMeHandler) verifyEmail(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	var dto dtos.EmailTokenDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if _, err := h.verificationService.Verify(r.Context(), dto.Token); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.userService.UpdateVerified(r.Context(), &session.User.ID); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.actionService.Delete(r.Context(), &models.UserAction{
+		UserID: session.User.ID,
+		Action: models.ActionUserVerification,
+	}); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "user verified"))
 }
 
 func (h *UserMeHandler) updateMe(w http.ResponseWriter, r *http.Request) {

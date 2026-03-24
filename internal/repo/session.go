@@ -37,6 +37,31 @@ func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.queries.DeleteSession(ctx, pgtype.UUID{Bytes: id, Valid: true})
 }
 
+func (r *SessionRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
+	rows, err := r.queries.GetSessionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]*models.Session, len(rows))
+	for i := range rows {
+		sessions[i] = &models.Session{
+			ID:           rows[i].ID.Bytes,
+			AccessToken:  rows[i].AccessToken,
+			RefreshToken: rows[i].RefreshToken,
+			Device:       rows[i].Device,
+			Status:       models.SessionStatusFromDB(rows[i].Status),
+			IpAddress:    rows[i].IpAddress,
+			UserAgent:    rows[i].UserAgent,
+			ExpiresAt:    rows[i].ExpiresAt.Time.UnixMilli(),
+			CreatedAt:    rows[i].CreatedAt.Time.UnixMilli(),
+			UpdatedAt:    rows[i].UpdatedAt.Time.UnixMilli(),
+		}
+	}
+
+	return sessions, nil
+}
+
 func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Session, error) {
 	row, err := r.queries.GetSessionByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -104,4 +105,29 @@ func (s *SessionService) Delete(ctx context.Context, sessionID uuid.UUID) error 
 
 func (s *SessionService) GetByID(ctx context.Context, sessionID uuid.UUID) (*models.Session, error) {
 	return s.repo.GetByID(ctx, sessionID)
+}
+
+func (s *SessionService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
+	return s.repo.GetByUser(ctx, userID)
+}
+
+func (s *SessionService) CloseAll(ctx context.Context, userID uuid.UUID) error {
+	sessions, err := s.GetByUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	errs := make([]error, 0)
+
+	for _, session := range sessions {
+		if err := s.Close(ctx, &session.ID); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
 }

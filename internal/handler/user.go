@@ -15,24 +15,23 @@ import (
 )
 
 type UserHandler struct {
-	sessionService      *service.SessionService
-	userService         *service.UserService
-	verificationService *service.VerificationService
-	userMeHandler       *UserMeHandler
-	userPermHandler     *UserPermissionHandler
+	sessionService  *service.SessionService
+	userService     *service.UserService
+	userMeHandler   *UserMeHandler
+	userPermHandler *UserPermissionHandler
 }
 
 func NewUserHandler(
+	sessionService *service.SessionService,
 	userService *service.UserService,
-	verificationService *service.VerificationService,
 	userMeHandler *UserMeHandler,
 	userPermHandler *UserPermissionHandler,
 ) *UserHandler {
 	return &UserHandler{
-		userService:         userService,
-		verificationService: verificationService,
-		userMeHandler:       userMeHandler,
-		userPermHandler:     userPermHandler,
+		sessionService:  sessionService,
+		userService:     userService,
+		userMeHandler:   userMeHandler,
+		userPermHandler: userPermHandler,
 	}
 }
 
@@ -64,11 +63,6 @@ func (h *UserHandler) Routes(r chi.Router) {
 
 		user.Group(func(auth chi.Router) {
 			auth.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-
-			auth.Route("/verify", func(verify chi.Router) {
-				verify.Post("/email", h.verifyEmail)
-			})
-
 			h.userMeHandler.Routes(auth)
 			h.userPermHandler.Routes(auth)
 		})
@@ -113,8 +107,8 @@ func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := make([]*responses.UserResponse, len(users))
-	for _, u := range users {
-		res = append(res, &responses.UserResponse{
+	for i, u := range users {
+		res[i] = &responses.UserResponse{
 			ID:           u.ID.String(),
 			Email:        u.Email,
 			Username:     u.Username,
@@ -128,7 +122,7 @@ func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:    u.CreatedAt,
 			UpdatedAt:    u.UpdatedAt,
 			DeletedAt:    u.DeletedAt,
-		})
+		}
 	}
 
 	paginatedRes := responses.NewPaginatedResponse(res, pagination.GetPage(), pagination.GetLimit(), total)
@@ -302,30 +296,4 @@ func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(nil, "User deleted"))
-}
-
-func (h *UserHandler) verifyEmail(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	var dto dtos.EmailTokenDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if _, err := h.verificationService.Verify(r.Context(), dto.Token); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.userService.UpdateVerified(r.Context(), &session.User.ID); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "user verified"))
 }

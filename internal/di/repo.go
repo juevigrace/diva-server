@@ -11,6 +11,7 @@ type RepoModule struct {
 	UserPreferences *repo.UserPreferencesRepository
 	UserPermission  *repo.UserPermissionRepository
 	Verification    *repo.VerificationRepository
+	Action          *repo.ActionRepository
 }
 
 func NewRepoModule(queries *db.Queries) *RepoModule {
@@ -20,5 +21,6 @@ func NewRepoModule(queries *db.Queries) *RepoModule {
 		UserPreferences: repo.NewUserPreferencesRepository(queries),
 		UserPermission:  repo.NewUserPermissionRepository(queries),
 		Verification:    repo.NewVerificationRepository(queries),
+		Action:          repo.NewActionRepository(queries),
 	}
 }

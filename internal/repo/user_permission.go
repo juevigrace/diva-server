@@ -24,7 +24,7 @@ func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID)
 	}
 
 	perms := make([]*models.UserPermission, len(rows))
-	for _, row := range rows {
+	for i, row := range rows {
 		var grantedBy *uuid.UUID = nil
 		if row.GrantedBy.Valid {
 			parsed, err := uuid.ParseBytes(row.GrantedBy.Bytes[:])
@@ -47,7 +47,7 @@ func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID)
 
 		}
 
-		perms = append(perms, &models.UserPermission{
+		perms[i] = &models.UserPermission{
 			Permission: row.PermissionID.Bytes,
 			User:       row.UserID.Bytes,
 			GrantedBy:  grantedBy,
@@ -55,7 +55,7 @@ func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID)
 			GrantedAt:  grandedAt,
 			ExpiresAt:  expiresAt,
 			UpdatedAt:  row.GrantedAt.Time.UnixMilli(),
-		})
+		}
 	}
 	return perms, nil
 }

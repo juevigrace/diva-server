@@ -132,6 +132,88 @@ func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessio
 	return i, err
 }
 
+const getSessionsByUser = `-- name: GetSessionsByUser :many
+select
+    s.id,
+    s.access_token,
+    s.refresh_token,
+    s.device,
+    s.status,
+    s.ip_address,
+    s.user_agent,
+    s.expires_at,
+    s.created_at,
+    s.updated_at,
+    u.id as user_id,
+    u.email,
+    u.username,
+    u.user_verified,
+    u.role,
+    u.created_at,
+    u.updated_at
+from diva_session s
+left join diva_user u on s.user_id = u.id
+where u.id = $1 and u.deleted_at is null
+`
+
+type GetSessionsByUserRow struct {
+	ID           pgtype.UUID
+	AccessToken  string
+	RefreshToken string
+	Device       string
+	Status       SessionStatusType
+	IpAddress    string
+	UserAgent    string
+	ExpiresAt    pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	UserID       pgtype.UUID
+	Email        pgtype.Text
+	Username     pgtype.Text
+	UserVerified pgtype.Bool
+	Role         NullRoleType
+	CreatedAt_2  pgtype.Timestamptz
+	UpdatedAt_2  pgtype.Timestamptz
+}
+
+func (q *Queries) GetSessionsByUser(ctx context.Context, id pgtype.UUID) ([]GetSessionsByUserRow, error) {
+	rows, err := q.db.Query(ctx, getSessionsByUser, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSessionsByUserRow
+	for rows.Next() {
+		var i GetSessionsByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccessToken,
+			&i.RefreshToken,
+			&i.Device,
+			&i.Status,
+			&i.IpAddress,
+			&i.UserAgent,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UserID,
+			&i.Email,
+			&i.Username,
+			&i.UserVerified,
+			&i.Role,
+			&i.CreatedAt_2,
+			&i.UpdatedAt_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSession = `-- name: UpdateSession :exec
 UPDATE diva_session 
 SET access_token = $1, refresh_token = $2, device = $3, status = $4, ip_address = $5, user_agent = $6, expires_at = $7, updated_at = NOW() 

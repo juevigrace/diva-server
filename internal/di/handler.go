@@ -5,25 +5,25 @@ import (
 )
 
 type HandlerModule struct {
-	Auth         *handler.AuthHandler
-	Verification *handler.VerificationHandler
-	User         *handler.UserHandler
-	Session      *handler.SessionHandler
+	Auth    *handler.AuthHandler
+	User    *handler.UserHandler
+	Session *handler.SessionHandler
 }
 
 func NewHandlerModule(services *ServiceModule) *HandlerModule {
+	actionHandler := handler.NewActionHandler(services.Action)
+
+	auth := handler.NewAuthHandler(services.Auth, services.Session)
 	sessionHandler := handler.NewSessionHandler(services.Session)
-	verification := handler.NewVerificationHandler(services.Verification)
+
 	userPermission := handler.NewUserPermissionHandler(services.UserPermission)
 	userPreferences := handler.NewUserPreferencesHandler(services.UserPreferences)
-	userMe := handler.NewUserMeHandler(services.User, userPreferences)
-	user := handler.NewUserHandler(services.User, services.Verification, userMe, userPermission)
-	auth := handler.NewAuthHandler(services.Auth, services.Session)
+	userMe := handler.NewUserMeHandler(services.Action, services.User, services.Verification, userPreferences, actionHandler)
+	user := handler.NewUserHandler(services.Session, services.User, userMe, userPermission)
 
 	return &HandlerModule{
-		Auth:         auth,
-		Verification: verification,
-		User:         user,
-		Session:      sessionHandler,
+		Auth:    auth,
+		User:    user,
+		Session: sessionHandler,
 	}
 }

@@ -58,7 +58,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	res, err := h.authService.SignIn(r.Context(), &dto)
+	session, err := h.authService.SignIn(r.Context(), &dto)
 	if err != nil {
 		res := new(responses.APIResponse)
 		if errors.Is(models.ErrInvalidCredentials, err) {
@@ -70,7 +70,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(res, "Sign in successful"))
+	responses.WriteJSON(w, responses.RespondOk(session, "Sign in successful"))
 }
 
 func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
@@ -81,13 +81,13 @@ func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	res, err := h.authService.SignUp(r.Context(), &dto)
+	session, err := h.authService.SignUp(r.Context(), &dto)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(res, "Sign up successful"))
+	responses.WriteJSON(w, responses.RespondOk(session, "Sign up successful"))
 }
 
 func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
@@ -152,8 +152,7 @@ func (h *AuthHandler) forgotPasswordRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	action, err := h.authService.ForgotPasswordRequest(r.Context(), dto.Email)
-	if err != nil {
+	if err := h.authService.ForgotPasswordRequest(r.Context(), dto.Email); err != nil {
 		if errors.Is(err, models.ErrUserNotFound) {
 			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
 			return
@@ -162,7 +161,7 @@ func (h *AuthHandler) forgotPasswordRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(action, "Check your email to continue"))
+	responses.WriteJSON(w, responses.RespondOk(nil, "Check your email to continue"))
 }
 
 func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Request) {
