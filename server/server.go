@@ -80,6 +80,11 @@ func (s *Server) routes() {
 			responses.WriteJSON(w, res)
 		})
 	})
+
+	s.router.Chi.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		res := responses.RespondNotFound(nil, "Route not found")
+		responses.WriteJSON(w, res)
+	})
 }
 
 func (s *Server) setup() error {
@@ -89,7 +94,7 @@ func (s *Server) setup() error {
 		return err
 	}
 
-	s.router = router.NewServerRouter(s.database)
+	s.router = router.NewServerRouter()
 
 	s.srv = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.config.Port),

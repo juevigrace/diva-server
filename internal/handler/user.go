@@ -36,18 +36,13 @@ func NewUserHandler(
 }
 
 func (h *UserHandler) Routes(r chi.Router) {
-	r.Route("/user", func(user chi.Router) {
-		user.Group(func(admin chi.Router) {
-			admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-			admin.Get("/", h.getUsers)
+	r.Route("/user", func(u chi.Router) {
+		u.Route("/check", func(check chi.Router) {
+			check.Get("/username/{username}", h.checkUsername)
+			check.Get("/email/{email}", h.checkEmail)
 		})
 
-		user.Route("/check", func(check chi.Router) {
-			check.Get("/username/:username", h.checkUsername)
-			check.Get("/email/:email", h.checkEmail)
-		})
-
-		user.Route("/:id", func(uid chi.Router) {
+		u.Route("/{id}", func(uid chi.Router) {
 			uid.Get("/", h.getUserByID)
 			uid.Group(func(admin chi.Router) {
 				admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
@@ -56,12 +51,13 @@ func (h *UserHandler) Routes(r chi.Router) {
 			})
 		})
 
-		user.Group(func(admin chi.Router) {
+		u.Group(func(admin chi.Router) {
 			admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
+			admin.Get("/", h.getUsers)
 			admin.Post("/", h.createUser)
 		})
 
-		user.Group(func(auth chi.Router) {
+		u.Group(func(auth chi.Router) {
 			auth.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
 			h.userMeHandler.Routes(auth)
 			h.userPermHandler.Routes(auth)

@@ -24,8 +24,8 @@ func (q *Queries) Count(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO diva_user (id, email, username, password_hash, birth_date, alias)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO diva_user (id, email, username, password_hash, alias)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateUserParams struct {
@@ -33,7 +33,6 @@ type CreateUserParams struct {
 	Email        string
 	Username     string
 	PasswordHash string
-	BirthDate    pgtype.Timestamptz
 	Alias        string
 }
 
@@ -43,7 +42,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Email,
 		arg.Username,
 		arg.PasswordHash,
-		arg.BirthDate,
 		arg.Alias,
 	)
 	return err
