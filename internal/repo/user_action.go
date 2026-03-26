@@ -9,15 +9,15 @@ import (
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type ActionRepository struct {
+type UserActionsRepository struct {
 	queries *db.Queries
 }
 
-func NewActionRepository(queries *db.Queries) *ActionRepository {
-	return &ActionRepository{queries: queries}
+func NewUserActionsRepository(queries *db.Queries) *UserActionsRepository {
+	return &UserActionsRepository{queries: queries}
 }
 
-func (r *ActionRepository) Create(ctx context.Context, userAction *models.UserAction) error {
+func (r *UserActionsRepository) Create(ctx context.Context, userAction *models.UserAction) error {
 	params := db.CreateUserPendingActionParams{
 		UserID:     pgtype.UUID{Bytes: userAction.UserID, Valid: true},
 		ActionName: userAction.Action.String(),
@@ -25,11 +25,11 @@ func (r *ActionRepository) Create(ctx context.Context, userAction *models.UserAc
 	return r.queries.CreateUserPendingAction(ctx, params)
 }
 
-func (r *ActionRepository) GetAll(ctx context.Context, userID uuid.UUID) ([]db.DivaUserPendingAction, error) {
+func (r *UserActionsRepository) GetAll(ctx context.Context, userID uuid.UUID) ([]db.DivaUserPendingAction, error) {
 	return r.queries.GetUserPendingActions(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 }
 
-func (r *ActionRepository) Delete(ctx context.Context, userAction *models.UserAction) error {
+func (r *UserActionsRepository) Delete(ctx context.Context, userAction *models.UserAction) error {
 	params := db.DeleteUserPendingActionParams{
 		UserID:     pgtype.UUID{Bytes: userAction.UserID, Valid: true},
 		ActionName: userAction.Action.String(),

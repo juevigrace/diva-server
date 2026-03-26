@@ -12,19 +12,19 @@ import (
 )
 
 type UserMeHandler struct {
-	actionService       *service.ActionService
+	actionService       *service.UserActionsService
 	userService         *service.UserService
 	verificationService *service.VerificationService
 	pHandler            *UserPreferencesHandler
-	aHandler            *ActionHandler
+	aHandler            *UserActionsHandler
 }
 
 func NewUserMeHandler(
-	actionService *service.ActionService,
+	actionService *service.UserActionsService,
 	userService *service.UserService,
 	verificationService *service.VerificationService,
 	pHandler *UserPreferencesHandler,
-	aHandler *ActionHandler,
+	aHandler *UserActionsHandler,
 ) *UserMeHandler {
 	return &UserMeHandler{
 		actionService:       actionService,

@@ -3,3 +3,6 @@
 
 - Verification
   - Old verification tokens need to be cleaned if not used
+
+- User
+  - Add get handler to sync prefs

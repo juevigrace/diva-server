@@ -14,14 +14,14 @@ type AuthService struct {
 	userService         *UserService
 	sessionService      *SessionService
 	verificationService *VerificationService
-	actionService       *ActionService
+	actionService       *UserActionsService
 }
 
 func NewAuthService(
 	userService *UserService,
 	sessionService *SessionService,
 	verificationService *VerificationService,
-	actionService *ActionService,
+	actionService *UserActionsService,
 ) *AuthService {
 	return &AuthService{
 		userService:         userService,

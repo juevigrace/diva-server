@@ -8,19 +8,19 @@ import (
 	"github.com/juevigrace/diva-server/internal/repo"
 )
 
-type ActionService struct {
-	repo *repo.ActionRepository
+type UserActionsService struct {
+	repo *repo.UserActionsRepository
 }
 
-func NewActionService(repo *repo.ActionRepository) *ActionService {
-	return &ActionService{repo: repo}
+func NewUserActionsService(repo *repo.UserActionsRepository) *UserActionsService {
+	return &UserActionsService{repo: repo}
 }
 
-func (s *ActionService) Create(ctx context.Context, userAction *models.UserAction) error {
+func (s *UserActionsService) Create(ctx context.Context, userAction *models.UserAction) error {
 	return s.repo.Create(ctx, userAction)
 }
 
-func (s *ActionService) GetAll(ctx context.Context, userID uuid.UUID) ([]models.Action, error) {
+func (s *UserActionsService) GetAll(ctx context.Context, userID uuid.UUID) ([]models.Action, error) {
 	actions, err := s.repo.GetAll(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -33,6 +33,6 @@ func (s *ActionService) GetAll(ctx context.Context, userID uuid.UUID) ([]models.
 	return result, nil
 }
 
-func (s *ActionService) Delete(ctx context.Context, userAction *models.UserAction) error {
+func (s *UserActionsService) Delete(ctx context.Context, userAction *models.UserAction) error {
 	return s.repo.Delete(ctx, userAction)
 }

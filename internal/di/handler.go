@@ -11,7 +11,7 @@ type HandlerModule struct {
 }
 
 func NewHandlerModule(services *ServiceModule) *HandlerModule {
-	actionHandler := handler.NewActionHandler(services.Action)
+	actionHandler := handler.NewUserActionsHandler(services.Action)
 
 	auth := handler.NewAuthHandler(services.Auth, services.Session)
 	sessionHandler := handler.NewSessionHandler(services.Session)
