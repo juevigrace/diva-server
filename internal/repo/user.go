@@ -24,12 +24,8 @@ func (r *UserRepository) Count(ctx context.Context) (int64, error) {
 	return r.queries.Count(ctx)
 }
 
-func (r *UserRepository) Create(ctx context.Context, params *db.CreateUserParams) (uuid.UUID, error) {
-	if err := r.queries.CreateUser(ctx, *params); err != nil {
-		return uuid.Nil, err
-	}
-
-	return params.ID.Bytes, nil
+func (r *UserRepository) Create(ctx context.Context, params *db.CreateUserParams) error {
+	return r.queries.CreateUser(ctx, *params)
 }
 
 func (r *UserRepository) UpdateProfile(ctx context.Context, params *db.UpdateProfileParams) error {
@@ -56,7 +52,7 @@ func (r *UserRepository) UpdateUsername(ctx context.Context, id uuid.UUID, usern
 	return r.queries.UpdateUsername(ctx, params)
 }
 
-func (r *UserRepository) UpdateEmail(ctx context.Context, id uuid.UUID, dto *dtos.UserEmailDto) error {
+func (r *UserRepository) UpdateEmail(ctx context.Context, id uuid.UUID, dto *dtos.UpdateEmailDto) error {
 	params := db.UpdateEmailParams{
 		Email: dto.Email,
 		ID:    pgtype.UUID{Bytes: id, Valid: true},

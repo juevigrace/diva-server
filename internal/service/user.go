@@ -14,21 +14,27 @@ import (
 )
 
 type UserService struct {
-	repo         *repo.UserRepository
-	verification *VerificationService
+	repo      *repo.UserRepository
+	uaService *UserActionsService
 }
 
-func NewUserService(repo *repo.UserRepository, verification *VerificationService) *UserService {
-	return &UserService{repo: repo, verification: verification}
+func NewUserService(repo *repo.UserRepository, uaService *UserActionsService) *UserService {
+	return &UserService{repo: repo, uaService: uaService}
 }
 
-func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UUID, error) {
+func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (*uuid.UUID, error) {
 	id := uuid.New()
 
 	passwordHash, err := util.HashPassword(dto.Password)
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
+
+	if _, err := s.uaService.Create(ctx, models.ActionUserVerification, &id); err != nil {
+		return nil, err
+	}
+
+	// TODO: need to create any other user related data here
 
 	params := &db.CreateUserParams{
 		ID:           pgtype.UUID{Bytes: id, Valid: true},
@@ -38,7 +44,11 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 		Alias:        dto.Alias,
 	}
 
-	return s.repo.Create(ctx, params)
+	if err := s.repo.Create(ctx, params); err != nil {
+		return nil, err
+	}
+
+	return &id, nil
 }
 
 func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, dto *dtos.UpdateProfileDto) error {
@@ -73,8 +83,19 @@ func (s *UserService) UpdatePassword(ctx context.Context, session *models.Sessio
 	return s.repo.UpdatePassword(ctx, params)
 }
 
-func (s *UserService) UpdateVerified(ctx context.Context, userID *uuid.UUID) error {
-	return s.repo.VerifyUser(ctx, userID)
+func (s *UserService) VerifyUser(ctx context.Context, userID *uuid.UUID) error {
+	if err := s.repo.VerifyUser(ctx, userID); err != nil {
+		return err
+	}
+
+	if err := s.uaService.Delete(ctx, &models.UserAction{
+		UserID: *userID,
+		Action: models.ActionUserVerification,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {

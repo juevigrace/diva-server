@@ -2,9 +2,8 @@ package repo
 
 import (
 	"context"
+	"errors"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -21,27 +20,20 @@ func (r *VerificationRepository) Create(ctx context.Context, params *db.CreateVe
 	return r.queries.CreateVerification(ctx, *params)
 }
 
-func (r *VerificationRepository) GetByUser(ctx context.Context, userID uuid.UUID) (*models.UserVerification, error) {
-	v, err := r.queries.GetVerificationByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
-	if err != nil {
-		return nil, err
-	}
-	return &models.UserVerification{
-		UserID:    v.UserID.Bytes,
-		Token:     v.Token,
-		ExpiresAt: v.ExpiresAt.Time,
-		CreatedAt: v.CreatedAt.Time,
-	}, nil
-}
-
 func (r *VerificationRepository) GetByToken(ctx context.Context, token string) (*models.UserVerification, error) {
 	v, err := r.queries.GetVerificationByToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
+
+	if !v.ActionName.Valid {
+		return nil, errors.New("action name is not valid")
+	}
+
 	return &models.UserVerification{
 		UserID:    v.UserID.Bytes,
 		Token:     v.Token,
+		Action:    models.ActionFromString(v.ActionName.String),
 		ExpiresAt: v.ExpiresAt.Time,
 		CreatedAt: v.CreatedAt.Time,
 	}, nil

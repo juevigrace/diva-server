@@ -11,44 +11,63 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createUserPendingAction = `-- name: CreateUserPendingAction :exec
-INSERT INTO diva_user_pending_actions (user_id, action_name)
-VALUES ($1, $2)
+const createUserAction = `-- name: CreateUserAction :exec
+INSERT INTO diva_user_pending_actions (id, user_id, action_name)
+VALUES ($1, $2, $3)
 `
 
-type CreateUserPendingActionParams struct {
+type CreateUserActionParams struct {
+	ID         pgtype.UUID
 	UserID     pgtype.UUID
 	ActionName string
 }
 
-func (q *Queries) CreateUserPendingAction(ctx context.Context, arg CreateUserPendingActionParams) error {
-	_, err := q.db.Exec(ctx, createUserPendingAction, arg.UserID, arg.ActionName)
+func (q *Queries) CreateUserAction(ctx context.Context, arg CreateUserActionParams) error {
+	_, err := q.db.Exec(ctx, createUserAction, arg.ID, arg.UserID, arg.ActionName)
 	return err
 }
 
-const deleteUserPendingAction = `-- name: DeleteUserPendingAction :exec
-DELETE FROM diva_user_pending_actions
-WHERE user_id = $1 AND action_name = $2
+const deleteUserAction = `-- name: DeleteUserAction :exec
+delete from diva_user_pending_actions
+where user_id = $1 and action_name = $2
 `
 
-type DeleteUserPendingActionParams struct {
+type DeleteUserActionParams struct {
 	UserID     pgtype.UUID
 	ActionName string
 }
 
-func (q *Queries) DeleteUserPendingAction(ctx context.Context, arg DeleteUserPendingActionParams) error {
-	_, err := q.db.Exec(ctx, deleteUserPendingAction, arg.UserID, arg.ActionName)
+func (q *Queries) DeleteUserAction(ctx context.Context, arg DeleteUserActionParams) error {
+	_, err := q.db.Exec(ctx, deleteUserAction, arg.UserID, arg.ActionName)
 	return err
 }
 
-const getUserPendingActions = `-- name: GetUserPendingActions :many
-SELECT user_id, action_name
-FROM diva_user_pending_actions
-WHERE user_id = $1
+const getUserAction = `-- name: GetUserAction :one
+select id, user_id, action_name
+from diva_user_pending_actions
+where action_name = $1 and user_id = $2
 `
 
-func (q *Queries) GetUserPendingActions(ctx context.Context, userID pgtype.UUID) ([]DivaUserPendingAction, error) {
-	rows, err := q.db.Query(ctx, getUserPendingActions, userID)
+type GetUserActionParams struct {
+	ActionName string
+	UserID     pgtype.UUID
+}
+
+func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (DivaUserPendingAction, error) {
+	row := q.db.QueryRow(ctx, getUserAction, arg.ActionName, arg.UserID)
+	var i DivaUserPendingAction
+	err := row.Scan(&i.ID, &i.UserID, &i.ActionName)
+	return i, err
+}
+
+const getUserActions = `-- name: GetUserActions :many
+select id, user_id, action_name
+from diva_user_pending_actions
+where user_id = $1
+`
+
+func (q *Queries) GetUserActions(ctx context.Context, userID pgtype.UUID) ([]DivaUserPendingAction, error) {
+	rows, err := q.db.Query(ctx, getUserActions, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +75,7 @@ func (q *Queries) GetUserPendingActions(ctx context.Context, userID pgtype.UUID)
 	var items []DivaUserPendingAction
 	for rows.Next() {
 		var i DivaUserPendingAction
-		if err := rows.Scan(&i.UserID, &i.ActionName); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserID, &i.ActionName); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

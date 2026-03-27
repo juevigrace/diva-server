@@ -18,8 +18,8 @@ type SessionDataDto struct {
 }
 
 type ForgotPasswordConfirmDto struct {
-	Verification EmailTokenDto  `json:"verification" validate:"required"`
-	SessionData  SessionDataDto `json:"session_data" validate:"required"`
+	Verification VerificationDto `json:"verification" validate:"required"`
+	SessionData  SessionDataDto  `json:"session_data" validate:"required"`
 }
 
 type UpdatePasswordDto struct {

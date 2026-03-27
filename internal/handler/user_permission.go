@@ -21,6 +21,7 @@ func NewUserPermissionHandler(svc *service.UserPermissionService) *UserPermissio
 func (h *UserPermissionHandler) Routes(r chi.Router) {
 	r.Route("/permissions", func(perms chi.Router) {
 		perms.Get("/", h.getPermission)
+		// TODO: add perm checks
 		perms.Post("/", h.createPermission)
 		perms.Put("/", h.updatePermission)
 		perms.Delete("/", h.deletePermission)

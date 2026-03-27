@@ -11,40 +11,23 @@ import (
 )
 
 type AuthService struct {
-	userService         *UserService
-	sessionService      *SessionService
-	verificationService *VerificationService
-	actionService       *UserActionsService
+	userService    *UserService
+	sessionService *SessionService
 }
 
 func NewAuthService(
 	userService *UserService,
 	sessionService *SessionService,
-	verificationService *VerificationService,
-	actionService *UserActionsService,
 ) *AuthService {
 	return &AuthService{
-		userService:         userService,
-		sessionService:      sessionService,
-		verificationService: verificationService,
-		actionService:       actionService,
+		userService:    userService,
+		sessionService: sessionService,
 	}
 }
 
 func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*responses.SessionResponse, error) {
 	userID, err := s.userService.Create(ctx, &dto.User)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := s.verificationService.GenerateAndSend(ctx, userID, dto.User.Email); err != nil {
-		return nil, err
-	}
-
-	if err := s.actionService.Create(ctx, &models.UserAction{
-		UserID: userID,
-		Action: models.ActionUserVerification,
-	}); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +49,7 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*respons
 		return nil, models.ErrInvalidCredentials
 	}
 
-	session, err := s.sessionService.Create(ctx, user.ID, &dto.SessionData)
+	session, err := s.sessionService.Create(ctx, &user.ID, &dto.SessionData)
 	if err != nil {
 		return nil, err
 	}
@@ -90,37 +73,6 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 		return nil, err
 	}
 	return toSessionResponse(updated), nil
-}
-
-func (s *AuthService) ForgotPasswordRequest(ctx context.Context, email string) error {
-	user, err := s.userService.GetByEmail(ctx, email)
-	if err != nil {
-		return err
-	}
-
-	if err := s.verificationService.GenerateAndSend(ctx, user.ID, user.Email); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *AuthService) ForgotPasswordConfirm(
-	ctx context.Context,
-	token string,
-	dto *dtos.SessionDataDto,
-) (*responses.SessionResponse, error) {
-	verification, err := s.verificationService.Verify(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-
-	session, err := s.sessionService.Create(ctx, verification.UserID, dto)
-	if err != nil {
-		return nil, err
-	}
-
-	return toSessionResponse(session), nil
 }
 
 func (s *AuthService) ForgotPasswordUpdate(

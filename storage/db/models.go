@@ -608,6 +608,7 @@ type DivaCollectionShare struct {
 
 type DivaEmailVerificationToken struct {
 	UserID    pgtype.UUID
+	ActionID  pgtype.UUID
 	Token     string
 	ExpiresAt pgtype.Timestamptz
 	CreatedAt pgtype.Timestamptz
@@ -790,6 +791,7 @@ type DivaUser struct {
 }
 
 type DivaUserPendingAction struct {
+	ID         pgtype.UUID
 	UserID     pgtype.UUID
 	ActionName string
 }

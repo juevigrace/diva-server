@@ -22,6 +22,6 @@ type UpdatePhoneNumberDto struct {
 	PhoneNumber string `json:"phone_number" validate:"required"`
 }
 
-type UserEmailDto struct {
+type UpdateEmailDto struct {
 	Email string `json:"email" validate:"required,email"`
 }

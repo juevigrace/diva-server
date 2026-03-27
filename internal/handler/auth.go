@@ -39,8 +39,6 @@ func (h *AuthHandler) Routes(r chi.Router) {
 
 		auth.Route("/forgot", func(forgot chi.Router) {
 			forgot.Route("/password", func(pass chi.Router) {
-				pass.Post("/request", h.forgotPasswordRequest)
-				pass.Post("/confirm", h.forgotPasswordConfirm)
 				pass.Group(func(upPass chi.Router) {
 					upPass.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
 					upPass.Patch("/", h.forgotPasswordUpdate)
@@ -143,46 +141,6 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(res, "Session refreshed"))
-}
-
-func (h *AuthHandler) forgotPasswordRequest(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.UserEmailDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.authService.ForgotPasswordRequest(r.Context(), dto.Email); err != nil {
-		if errors.Is(err, models.ErrUserNotFound) {
-			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
-			return
-		}
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "Check your email to continue"))
-}
-
-func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.ForgotPasswordConfirmDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
-
-	res, err := h.authService.ForgotPasswordConfirm(r.Context(), dto.Verification.Token, &dto.SessionData)
-	if err != nil {
-		if errors.Is(err, models.ErrTokenInvalid) {
-			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
-			return
-		}
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(res, "Success"))
 }
 
 func (h *AuthHandler) forgotPasswordUpdate(w http.ResponseWriter, r *http.Request) {

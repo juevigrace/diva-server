@@ -18,9 +18,10 @@ CREATE TABLE IF NOT EXISTS diva_user (
 );
 
 CREATE TABLE IF NOT EXISTS diva_user_pending_actions(
+    id UUID NOT NULL PRIMARY KEY,
     user_id UUID NOT NULL,
     action_name VARCHAR(100) NOT NULL,
-    PRIMARY KEY (user_id, action_name),
+    UNIQUE(user_id, action_name),
     FOREIGN KEY(user_id) REFERENCES diva_user(id)
 );
 
@@ -78,11 +79,14 @@ CREATE TABLE IF NOT EXISTS diva_user_permissions (
 );
 
 CREATE TABLE IF NOT EXISTS diva_email_verification_tokens (
-    user_id UUID NOT NULL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    action_id UUID NOT NULL,
     token TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
+    PRIMARY KEY(user_id, token, action_id),
+    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE,
+    FOREIGN KEY (action_id) REFERENCES diva_user_pending_actions(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_diva_user_permissions_user_id ON diva_user_permissions (user_id);
@@ -99,5 +103,6 @@ DROP TABLE IF EXISTS diva_user_permissions;
 DROP TABLE IF EXISTS diva_permissions;
 DROP TABLE IF EXISTS diva_session;
 DROP TABLE IF EXISTS diva_user_preferences;
+DROP TABLE IF EXISTS diva_user_pending_actions;
 DROP TABLE IF EXISTS diva_user;
 -- +goose StatementEnd

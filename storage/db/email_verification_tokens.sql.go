@@ -12,23 +12,23 @@ import (
 )
 
 const createVerification = `-- name: CreateVerification :exec
-INSERT INTO diva_email_verification_tokens (user_id, token, expires_at, created_at)
+INSERT INTO diva_email_verification_tokens (user_id, action_id, token, expires_at)
 VALUES ($1, $2, $3, $4)
 `
 
 type CreateVerificationParams struct {
 	UserID    pgtype.UUID
+	ActionID  pgtype.UUID
 	Token     string
 	ExpiresAt pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
 }
 
 func (q *Queries) CreateVerification(ctx context.Context, arg CreateVerificationParams) error {
 	_, err := q.db.Exec(ctx, createVerification,
 		arg.UserID,
+		arg.ActionID,
 		arg.Token,
 		arg.ExpiresAt,
-		arg.CreatedAt,
 	)
 	return err
 }
@@ -44,37 +44,29 @@ func (q *Queries) DeleteByToken(ctx context.Context, token string) error {
 }
 
 const getVerificationByToken = `-- name: GetVerificationByToken :one
-select user_id, token, expires_at, created_at
-from diva_email_verification_tokens
+select ev.user_id, ev.token, ev.expires_at, ev.created_at, up.action_name
+from diva_email_verification_tokens as ev
+left join diva_user_pending_actions as up on up.id = ev.action_id
 where token = $1
 `
 
-func (q *Queries) GetVerificationByToken(ctx context.Context, token string) (DivaEmailVerificationToken, error) {
-	row := q.db.QueryRow(ctx, getVerificationByToken, token)
-	var i DivaEmailVerificationToken
-	err := row.Scan(
-		&i.UserID,
-		&i.Token,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-	)
-	return i, err
+type GetVerificationByTokenRow struct {
+	UserID     pgtype.UUID
+	Token      string
+	ExpiresAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	ActionName pgtype.Text
 }
 
-const getVerificationByUser = `-- name: GetVerificationByUser :one
-select user_id, token, expires_at, created_at
-from diva_email_verification_tokens
-where user_id = $1
-`
-
-func (q *Queries) GetVerificationByUser(ctx context.Context, userID pgtype.UUID) (DivaEmailVerificationToken, error) {
-	row := q.db.QueryRow(ctx, getVerificationByUser, userID)
-	var i DivaEmailVerificationToken
+func (q *Queries) GetVerificationByToken(ctx context.Context, token string) (GetVerificationByTokenRow, error) {
+	row := q.db.QueryRow(ctx, getVerificationByToken, token)
+	var i GetVerificationByTokenRow
 	err := row.Scan(
 		&i.UserID,
 		&i.Token,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ActionName,
 	)
 	return i, err
 }

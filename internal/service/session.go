@@ -21,14 +21,14 @@ func NewSessionService(repo *repo.SessionRepository) *SessionService {
 	return &SessionService{repo: repo}
 }
 
-func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.SessionDataDto) (*models.Session, error) {
+func (s *SessionService) Create(ctx context.Context, userID *uuid.UUID, dto *dtos.SessionDataDto) (*models.Session, error) {
 	sessionID := uuid.New()
-	accessToken, err := util.CreateAccessToken(userID, sessionID)
+	accessToken, err := util.CreateAccessToken(*userID, sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := util.CreateRefreshToken(userID, sessionID)
+	refreshToken, err := util.CreateRefreshToken(*userID, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, dto *dtos
 
 	params := &db.CreateSessionParams{
 		ID:           pgtype.UUID{Bytes: sessionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: *userID, Valid: true},
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		Device:       dto.Device,
