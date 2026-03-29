@@ -12,8 +12,8 @@ import (
 )
 
 const createUserPermission = `-- name: CreateUserPermission :exec
-INSERT INTO diva_user_permissions (permission_id, user_id, granted_by, granted, granted_at, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO diva_user_permissions (permission_id, user_id, granted_by, granted, expires_at)
+VALUES ($1, $2, $3, $4, $5)
 `
 
 type CreateUserPermissionParams struct {
@@ -21,7 +21,6 @@ type CreateUserPermissionParams struct {
 	UserID       pgtype.UUID
 	GrantedBy    pgtype.UUID
 	Granted      bool
-	GrantedAt    pgtype.Timestamptz
 	ExpiresAt    pgtype.Timestamptz
 }
 
@@ -31,7 +30,6 @@ func (q *Queries) CreateUserPermission(ctx context.Context, arg CreateUserPermis
 		arg.UserID,
 		arg.GrantedBy,
 		arg.Granted,
-		arg.GrantedAt,
 		arg.ExpiresAt,
 	)
 	return err
@@ -49,6 +47,16 @@ type DeleteUserPermissionParams struct {
 
 func (q *Queries) DeleteUserPermission(ctx context.Context, arg DeleteUserPermissionParams) error {
 	_, err := q.db.Exec(ctx, deleteUserPermission, arg.PermissionID, arg.UserID)
+	return err
+}
+
+const deleteUserPermissions = `-- name: DeleteUserPermissions :exec
+delete from diva_user_permissions
+where user_id = $1
+`
+
+func (q *Queries) DeleteUserPermissions(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserPermissions, userID)
 	return err
 }
 

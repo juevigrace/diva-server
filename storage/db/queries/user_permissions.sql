@@ -1,6 +1,6 @@
 -- name: CreateUserPermission :exec
-INSERT INTO diva_user_permissions (permission_id, user_id, granted_by, granted, granted_at, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6);
+INSERT INTO diva_user_permissions (permission_id, user_id, granted_by, granted, expires_at)
+VALUES ($1, $2, $3, $4, $5);
 
 -- name: UpdateUserPermission :exec
 UPDATE diva_user_permissions
@@ -10,6 +10,11 @@ WHERE permission_id = $3 AND user_id = $4;
 -- name: DeleteUserPermission :exec
 delete from diva_user_permissions
 where permission_id = $1 and user_id = $2
+;
+
+-- name: DeleteUserPermissions :exec
+delete from diva_user_permissions
+where user_id = $1
 ;
 
 -- name: GetUserPermissions :many

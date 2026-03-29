@@ -5,12 +5,10 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/repo"
 	"github.com/juevigrace/diva-server/internal/util"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserService struct {
@@ -30,21 +28,21 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (*uui
 		return nil, err
 	}
 
-	if _, err := s.uaService.Create(ctx, models.ActionUserVerification, &id); err != nil {
-		return nil, err
-	}
-
-	// TODO: need to create any other user related data here
-
-	params := &db.CreateUserParams{
-		ID:           pgtype.UUID{Bytes: id, Valid: true},
+	user := &models.User{
+		ID:           id,
 		Email:        dto.Email,
 		Username:     dto.Username,
 		PasswordHash: passwordHash,
 		Alias:        dto.Alias,
 	}
 
-	if err := s.repo.Create(ctx, params); err != nil {
+	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// TODO: need to create any other user related data here
+
+	if _, err := s.uaService.Create(ctx, models.ActionUserVerification, &id); err != nil {
 		return nil, err
 	}
 
@@ -52,13 +50,15 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (*uui
 }
 
 func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, dto *dtos.UpdateProfileDto) error {
-	params := db.UpdateProfileParams{
-		Alias:  dto.Alias,
-		Avatar: dto.Avatar,
-		Bio:    dto.Bio,
-		ID:     pgtype.UUID{Bytes: userID, Valid: true},
+	user := &models.User{
+		ID:        userID,
+		BirthDate: dto.BirthDate,
+		Alias:     dto.Alias,
+		Avatar:    dto.Avatar,
+		Bio:       dto.Bio,
 	}
-	return s.repo.UpdateProfile(ctx, &params)
+
+	return s.repo.UpdateProfile(ctx, user)
 }
 
 func (s *UserService) UpdatePassword(ctx context.Context, session *models.Session, newPassword string) error {
@@ -75,12 +75,7 @@ func (s *UserService) UpdatePassword(ctx context.Context, session *models.Sessio
 		return err
 	}
 
-	params := &db.UpdatePasswordParams{
-		PasswordHash: newHash,
-		ID:           pgtype.UUID{Bytes: session.User.ID, Valid: true},
-	}
-
-	return s.repo.UpdatePassword(ctx, params)
+	return s.repo.UpdatePassword(ctx, newHash, &session.User.ID)
 }
 
 func (s *UserService) VerifyUser(ctx context.Context, userID *uuid.UUID) error {
@@ -98,7 +93,7 @@ func (s *UserService) VerifyUser(ctx context.Context, userID *uuid.UUID) error {
 	return nil
 }
 
-func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
+func (s *UserService) Delete(ctx context.Context, userID *uuid.UUID) error {
 	return s.repo.Delete(ctx, userID)
 }
 
@@ -132,7 +127,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 	return s.repo.GetByEmail(ctx, email)
 }
 
-func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+func (s *UserService) GetByID(ctx context.Context, userID *uuid.UUID) (*models.User, error) {
 	return s.repo.GetByID(ctx, userID)
 }
 
@@ -142,4 +137,20 @@ func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination)
 
 func (s *UserService) Count(ctx context.Context) (int64, error) {
 	return s.repo.Count(ctx)
+}
+
+func (s *UserService) CreateBatch(ctx context.Context, params []*models.User) error {
+	return s.repo.CreateBatch(ctx, params)
+}
+
+func (s *UserService) UpdatePhoneNumber(ctx context.Context, phone string, userID *uuid.UUID) error {
+	return s.repo.UpdatePhoneNumber(ctx, phone, userID)
+}
+
+func (s *UserService) UpdateUsername(ctx context.Context, username string, userID *uuid.UUID) error {
+	return s.repo.UpdateUsername(ctx, username, userID)
+}
+
+func (s *UserService) UpdateEmail(ctx context.Context, dto *dtos.UpdateEmailDto, userID *uuid.UUID) error {
+	return s.repo.UpdateEmail(ctx, dto, userID)
 }

@@ -6,10 +6,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/juevigrace/diva-server/internal/di"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/repo"
-	"github.com/juevigrace/diva-server/internal/service"
 	"github.com/juevigrace/diva-server/server"
 	"github.com/juevigrace/diva-server/storage"
 
@@ -52,12 +51,8 @@ func main() {
 
 	mailClient := mail.NewClient(serverConf.ResendAPIKey, serverConf.ResendFromEmail)
 
-	verService := service.NewVerificationService(
-		repo.NewVerificationRepository(queries),
-		mailClient,
-	)
-
-	userService := service.NewUserService(repo.NewUserRepository(queries), verService)
+	repoModule := di.NewRepoModule(queries)
+	serviceModule := di.NewServiceModule(repoModule, mailClient)
 
 	user := dtos.CreateUserDto{
 		Email:    serverConf.RootEmail,
@@ -66,7 +61,7 @@ func main() {
 		Alias:    serverConf.RootUsername,
 	}
 
-	id, err := userService.Create(context.Background(), &user)
+	id, err := serviceModule.User.Create(context.Background(), &user)
 	if err != nil {
 		log.Fatal(err)
 	}

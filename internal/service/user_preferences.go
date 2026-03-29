@@ -2,13 +2,12 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/repo"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserPreferencesService struct {
@@ -25,17 +24,18 @@ func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, d
 		return err
 	}
 
-	params := &db.CreateUserPreferencesParams{
-		ID:                  pgtype.UUID{Bytes: id, Valid: true},
-		UserID:              pgtype.UUID{Bytes: userID, Valid: true},
-		Theme:               models.ThemeFromString(dto.Theme).ToDB(),
+	pref := &models.UserPreferences{
+		ID:                  id,
+		UserID:              userID,
+		Theme:               models.ThemeFromString(dto.Theme),
 		OnboardingCompleted: dto.OnboardingCompleted,
 		Language:            dto.Language,
-		CreatedAt:           models.ToTimestamptzPtr(&dto.CreatedAt),
-		UpdatedAt:           models.ToTimestamptzPtr(&dto.UpdatedAt),
+		LastSyncAt:          time.Now().UTC().UnixMilli(),
+		CreatedAt:           dto.CreatedAt,
+		UpdatedAt:           dto.UpdatedAt,
 	}
 
-	return s.repo.Create(ctx, params)
+	return s.repo.Create(ctx, pref)
 }
 
 func (s *UserPreferencesService) Update(ctx context.Context, dto *dtos.UserPreferencesDto) error {
@@ -44,12 +44,21 @@ func (s *UserPreferencesService) Update(ctx context.Context, dto *dtos.UserPrefe
 		return err
 	}
 
-	params := &db.UpdateUserPreferencesParams{
-		Theme:               models.ThemeFromString(dto.Theme).ToDB(),
-		OnboardingCompleted: dto.OnboardingCompleted,
-		Language:            dto.Language,
-		UpdatedAt:           models.ToTimestamptzPtr(&dto.UpdatedAt),
-		ID:                  pgtype.UUID{Bytes: id, Valid: true},
+	pref := &models.UserPreferences{
+		ID:         id,
+		Theme:      models.ThemeFromString(dto.Theme),
+		Language:   dto.Language,
+		LastSyncAt: time.Now().UTC().UnixMilli(),
+		UpdatedAt:  dto.UpdatedAt,
 	}
-	return s.repo.Update(ctx, params)
+
+	return s.repo.Update(ctx, pref)
+}
+
+func (s *UserPreferencesService) CreateBatch(ctx context.Context, params []*models.UserPreferences) error {
+	return s.repo.CreateBatch(ctx, params)
+}
+
+func (s *UserPreferencesService) UpdateBatch(ctx context.Context, params []*models.UserPreferences) error {
+	return s.repo.UpdateBatch(ctx, params)
 }

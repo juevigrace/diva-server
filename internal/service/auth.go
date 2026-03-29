@@ -36,7 +36,7 @@ func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*respons
 		return nil, err
 	}
 
-	return toSessionResponse(session), nil
+	return models.ToSessionResponse(session), nil
 }
 
 func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.SessionResponse, error) {
@@ -54,7 +54,7 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*respons
 		return nil, err
 	}
 
-	return toSessionResponse(session), nil
+	return models.ToSessionResponse(session), nil
 }
 
 func (s *AuthService) SignOut(ctx context.Context, sessionID *uuid.UUID) error {
@@ -72,7 +72,7 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 	if err != nil {
 		return nil, err
 	}
-	return toSessionResponse(updated), nil
+	return models.ToSessionResponse(updated), nil
 }
 
 func (s *AuthService) ForgotPasswordUpdate(
@@ -84,29 +84,13 @@ func (s *AuthService) ForgotPasswordUpdate(
 		return err
 	}
 
-	if err := s.sessionService.Delete(ctx, session.ID); err != nil {
+	if err := s.sessionService.Delete(ctx, &session.ID); err != nil {
 		return err
 	}
 
-	if err := s.sessionService.CloseAll(ctx, session.User.ID); err != nil {
+	if err := s.sessionService.CloseAll(ctx, &session.User.ID); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func toSessionResponse(s *models.Session) *responses.SessionResponse {
-	return &responses.SessionResponse{
-		SessionId:    s.ID.String(),
-		UserId:       s.User.ID.String(),
-		AccessToken:  s.AccessToken,
-		RefreshToken: s.RefreshToken,
-		Status:       s.Status.String(),
-		Device:       s.Device,
-		Ip:           s.IpAddress,
-		Agent:        s.UserAgent,
-		ExpiresAt:    s.ExpiresAt,
-		CreatedAt:    s.CreatedAt,
-		UpdatedAt:    s.UpdatedAt,
-	}
 }

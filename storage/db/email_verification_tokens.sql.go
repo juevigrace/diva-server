@@ -44,7 +44,13 @@ func (q *Queries) DeleteByToken(ctx context.Context, token string) error {
 }
 
 const getVerificationByToken = `-- name: GetVerificationByToken :one
-select ev.user_id, ev.token, ev.expires_at, ev.created_at, up.action_name
+select
+    ev.user_id,
+    ev.token,
+    ev.expires_at,
+    ev.created_at,
+    up.id as action_id,
+    up.action_name
 from diva_email_verification_tokens as ev
 left join diva_user_pending_actions as up on up.id = ev.action_id
 where token = $1
@@ -55,6 +61,7 @@ type GetVerificationByTokenRow struct {
 	Token      string
 	ExpiresAt  pgtype.Timestamptz
 	CreatedAt  pgtype.Timestamptz
+	ActionID   pgtype.UUID
 	ActionName pgtype.Text
 }
 
@@ -66,6 +73,7 @@ func (q *Queries) GetVerificationByToken(ctx context.Context, token string) (Get
 		&i.Token,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ActionID,
 		&i.ActionName,
 	)
 	return i, err

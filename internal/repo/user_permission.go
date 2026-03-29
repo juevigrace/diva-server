@@ -34,12 +34,6 @@ func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID)
 			grantedBy = &parsed
 		}
 
-		var grandedAt *int64 = nil
-		if row.GrantedAt.Valid {
-			var time = row.GrantedAt.Time.UnixMilli()
-			grandedAt = &time
-		}
-
 		var expiresAt *int64 = nil
 		if row.ExpiresAt.Valid {
 			var time = row.GrantedAt.Time.UnixMilli()
@@ -49,10 +43,10 @@ func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID)
 
 		perms[i] = &models.UserPermission{
 			Permission: row.PermissionID.Bytes,
-			User:       row.UserID.Bytes,
+			UserID:     row.UserID.Bytes,
 			GrantedBy:  grantedBy,
 			Granted:    row.Granted,
-			GrantedAt:  grandedAt,
+			GrantedAt:  row.GrantedAt.Time.UnixMilli(),
 			ExpiresAt:  expiresAt,
 			UpdatedAt:  row.GrantedAt.Time.UnixMilli(),
 		}
@@ -60,17 +54,50 @@ func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID)
 	return perms, nil
 }
 
-func (r *UserPermissionRepository) Create(ctx context.Context, params *db.CreateUserPermissionParams) error {
-	return r.queries.CreateUserPermission(ctx, *params)
-}
-
-func (r *UserPermissionRepository) Update(ctx context.Context, params *db.UpdateUserPermissionParams) error {
-	return r.queries.UpdateUserPermission(ctx, *params)
-}
-
-func (r *UserPermissionRepository) Delete(ctx context.Context, userID, permissionID uuid.UUID) error {
-	return r.queries.DeleteUserPermission(ctx, db.DeleteUserPermissionParams{
-		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+func (r *UserPermissionRepository) Create(ctx context.Context, params *models.UserPermission) error {
+	return r.queries.CreateUserPermission(ctx, db.CreateUserPermissionParams{
+		PermissionID: pgtype.UUID{Bytes: params.Permission, Valid: true},
+		UserID:       pgtype.UUID{Bytes: params.UserID, Valid: true},
+		GrantedBy:    models.ToUUIDPtr(params.GrantedBy),
+		Granted:      params.Granted,
+		ExpiresAt:    models.ToTimestamptzPtr(params.ExpiresAt),
 	})
+}
+
+func (r *UserPermissionRepository) Update(ctx context.Context, params *models.UserPermission) error {
+	return r.queries.UpdateUserPermission(ctx, db.UpdateUserPermissionParams{
+		Granted:      params.Granted,
+		ExpiresAt:    models.ToTimestamptzPtr(params.ExpiresAt),
+		PermissionID: pgtype.UUID{Bytes: params.Permission, Valid: true},
+		UserID:       pgtype.UUID{Bytes: params.UserID, Valid: true},
+	})
+}
+
+func (r *UserPermissionRepository) Delete(ctx context.Context, userID, permissionID *uuid.UUID) error {
+	return r.queries.DeleteUserPermission(ctx, db.DeleteUserPermissionParams{
+		PermissionID: pgtype.UUID{Bytes: *permissionID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: *userID, Valid: true},
+	})
+}
+
+func (r *UserPermissionRepository) CreateBatch(ctx context.Context, params []*models.UserPermission) error {
+	for _, p := range params {
+		if err := r.Create(ctx, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *UserPermissionRepository) UpdateBatch(ctx context.Context, params []*models.UserPermission) error {
+	for _, p := range params {
+		if err := r.Update(ctx, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *UserPermissionRepository) DeleteBatch(ctx context.Context, userID *uuid.UUID) error {
+	return r.queries.DeleteUserPermissions(ctx, pgtype.UUID{Bytes: *userID, Valid: true})
 }

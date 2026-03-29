@@ -4,5 +4,5 @@ VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: UpdateUserPreferences :exec
 UPDATE diva_user_preferences 
-SET theme = $1, onboarding_completed = $2, language = $3, last_sync_at = NOW(), updated_at = $4
-WHERE id = $5;
+SET theme = $1, language = $2, last_sync_at = NOW(), updated_at = $3
+WHERE id = $4;

@@ -37,7 +37,7 @@ func (h *UserActionsHandler) getActions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	actions, err := h.service.GetAll(r.Context(), session.User.ID)
+	actions, err := h.service.GetAll(r.Context(), &session.User.ID)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -66,7 +66,7 @@ func (h *UserActionsHandler) streamActions(w http.ResponseWriter, r *http.Reques
 
 	actionsCh := make(chan []responses.ActionResponse)
 	errCh := make(chan error)
-	go h.streamActionsWorker(r.Context(), session.User.ID, actionsCh, errCh)
+	go h.streamActionsWorker(r.Context(), &session.User.ID, actionsCh, errCh)
 	for {
 		select {
 		case actions := <-actionsCh:
@@ -98,7 +98,7 @@ func (h *UserActionsHandler) streamActions(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *UserActionsHandler) streamActionsWorker(ctx context.Context, userID uuid.UUID, out chan []responses.ActionResponse, errCh chan error) {
+func (h *UserActionsHandler) streamActionsWorker(ctx context.Context, userID *uuid.UUID, out chan []responses.ActionResponse, errCh chan error) {
 	defer close(out)
 	defer close(errCh)
 	ticker := time.NewTicker(1 * time.Minute)
@@ -114,7 +114,7 @@ func (h *UserActionsHandler) streamActionsWorker(ctx context.Context, userID uui
 		}
 	}
 }
-func (h *UserActionsHandler) sendActions(ctx context.Context, userID uuid.UUID, out chan []responses.ActionResponse, errCh chan error) {
+func (h *UserActionsHandler) sendActions(ctx context.Context, userID *uuid.UUID, out chan []responses.ActionResponse, errCh chan error) {
 	actions, err := h.service.GetAll(ctx, userID)
 	if err != nil {
 		errCh <- err

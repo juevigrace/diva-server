@@ -5,11 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/repo"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserPermissionService struct {
@@ -33,25 +31,26 @@ func (s *UserPermissionService) Create(ctx context.Context, dto *dtos.UserPermis
 	if err != nil {
 		return err
 	}
-	grantedBy := pgtype.UUID{}
+
+	var grantedBy *uuid.UUID = nil
 	if dto.GrantedBy != "" {
 		gb, err := uuid.Parse(dto.GrantedBy)
 		if err != nil {
 			return err
 		}
-		grantedBy = pgtype.UUID{Bytes: gb, Valid: true}
+		grantedBy = &gb
 	}
 
-	params := &db.CreateUserPermissionParams{
-		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
-		GrantedBy:    grantedBy,
-		Granted:      dto.Granted,
-		GrantedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
-		ExpiresAt:    models.ToTimestamptzPtr(dto.ExpiresAt),
+	perm := &models.UserPermission{
+		Permission: permissionID,
+		UserID:     userID,
+		GrantedBy:  grantedBy,
+		Granted:    false,
+		GrantedAt:  time.Now().UTC().UnixMilli(),
+		ExpiresAt:  dto.ExpiresAt,
 	}
 
-	return s.repo.Create(ctx, params)
+	return s.repo.Create(ctx, perm)
 }
 
 func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermissionDto) error {
@@ -63,12 +62,14 @@ func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermis
 	if err != nil {
 		return err
 	}
-	params := &db.UpdateUserPermissionParams{
-		Granted:      dto.Granted,
-		ExpiresAt:    models.ToTimestamptzPtr(dto.ExpiresAt),
-		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+
+	params := &models.UserPermission{
+		Permission: permissionID,
+		UserID:     userID,
+		Granted:    dto.Granted,
+		ExpiresAt:  dto.ExpiresAt,
 	}
+
 	return s.repo.Update(ctx, params)
 }
 
@@ -81,5 +82,17 @@ func (s *UserPermissionService) Delete(ctx context.Context, dto *dtos.DeleteUser
 	if err != nil {
 		return err
 	}
-	return s.repo.Delete(ctx, userID, permissionID)
+	return s.repo.Delete(ctx, &userID, &permissionID)
+}
+
+func (s *UserPermissionService) CreateBatch(ctx context.Context, params []*models.UserPermission) error {
+	return s.repo.CreateBatch(ctx, params)
+}
+
+func (s *UserPermissionService) UpdateBatch(ctx context.Context, params []*models.UserPermission) error {
+	return s.repo.UpdateBatch(ctx, params)
+}
+
+func (s *UserPermissionService) DeleteBatch(ctx context.Context, userID *uuid.UUID) error {
+	return s.repo.DeleteBatch(ctx, userID)
 }

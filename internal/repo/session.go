@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -17,28 +18,46 @@ func NewSessionRepository(queries *db.Queries) *SessionRepository {
 	return &SessionRepository{queries: queries}
 }
 
-func (r *SessionRepository) Create(ctx context.Context, params *db.CreateSessionParams) error {
-	return r.queries.CreateSession(ctx, *params)
+func (r *SessionRepository) Create(ctx context.Context, params *models.Session) error {
+	return r.queries.CreateSession(ctx, db.CreateSessionParams{
+		ID:           pgtype.UUID{Bytes: params.ID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: params.User.ID, Valid: true},
+		AccessToken:  params.AccessToken,
+		RefreshToken: params.RefreshToken,
+		Device:       params.Device,
+		Status:       params.Status.ToDB(),
+		IpAddress:    params.IpAddress,
+		UserAgent:    params.UserAgent,
+		ExpiresAt:    models.ToTimestamptzPtr(&params.ExpiresAt),
+	})
 }
 
-func (r *SessionRepository) Update(ctx context.Context, params *db.UpdateSessionParams) error {
-	return r.queries.UpdateSession(ctx, *params)
+func (r *SessionRepository) Update(ctx context.Context, params *models.Session) error {
+	return r.queries.UpdateSession(ctx, db.UpdateSessionParams{
+		AccessToken:  params.AccessToken,
+		RefreshToken: params.RefreshToken,
+		Device:       params.Device,
+		Status:       params.Status.ToDB(),
+		IpAddress:    params.IpAddress,
+		UserAgent:    params.UserAgent,
+		ExpiresAt:    pgtype.Timestamptz{Time: time.UnixMilli(params.ExpiresAt), Valid: true},
+		ID:           pgtype.UUID{Bytes: params.ID, Valid: true},
+	})
 }
 
-func (r *SessionRepository) UpdateStatus(ctx context.Context, params *db.UpdateSessionStatusParams) error {
-	return r.queries.UpdateSessionStatus(ctx, *params)
+func (r *SessionRepository) UpdateStatus(ctx context.Context, status models.SessionStatus, id *uuid.UUID) error {
+	return r.queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
+		Status: status.ToDB(),
+		ID:     pgtype.UUID{Bytes: *id, Valid: true},
+	})
 }
 
-func (r *SessionRepository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
-	return r.queries.DeleteSessionByUserID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+func (r *SessionRepository) Delete(ctx context.Context, id *uuid.UUID) error {
+	return r.queries.DeleteSession(ctx, pgtype.UUID{Bytes: *id, Valid: true})
 }
 
-func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.queries.DeleteSession(ctx, pgtype.UUID{Bytes: id, Valid: true})
-}
-
-func (r *SessionRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
-	rows, err := r.queries.GetSessionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+func (r *SessionRepository) GetByUser(ctx context.Context, userID *uuid.UUID) ([]*models.Session, error) {
+	rows, err := r.queries.GetSessionsByUser(ctx, pgtype.UUID{Bytes: *userID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +81,8 @@ func (r *SessionRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]
 	return sessions, nil
 }
 
-func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Session, error) {
-	row, err := r.queries.GetSessionByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+func (r *SessionRepository) GetByID(ctx context.Context, id *uuid.UUID) (*models.Session, error) {
+	row, err := r.queries.GetSessionByID(ctx, pgtype.UUID{Bytes: *id, Valid: true})
 	if err != nil {
 		return nil, err
 	}
@@ -79,15 +98,15 @@ func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		Email:        uRow.Email,
 		Username:     uRow.Username,
 		PasswordHash: uRow.PasswordHash,
-		BirthDate:    uRow.BirthDate.Time.Unix(),
+		BirthDate:    uRow.BirthDate.Time.UnixMilli(),
 		PhoneNumber:  uRow.PhoneNumber,
 		Alias:        uRow.Alias,
 		Avatar:       uRow.Avatar,
 		Bio:          uRow.Bio,
 		UserVerified: uRow.UserVerified,
 		Role:         models.RoleFromDB(uRow.Role),
-		CreatedAt:    uRow.CreatedAt.Time.Unix(),
-		UpdatedAt:    uRow.UpdatedAt.Time.Unix(),
+		CreatedAt:    uRow.CreatedAt.Time.UnixMilli(),
+		UpdatedAt:    uRow.UpdatedAt.Time.UnixMilli(),
 		DeletedAt:    models.ToInt64Ptr(uRow.DeletedAt),
 	}
 

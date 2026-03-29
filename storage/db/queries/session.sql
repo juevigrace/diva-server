@@ -12,11 +12,6 @@ UPDATE diva_session
 SET  status = $1, updated_at = NOW() 
 WHERE id = $2;
 
--- name: DeleteSessionByUserID :exec
-delete from diva_session
-where user_id = $1
-;
-
 -- name: DeleteSession :exec
 delete from diva_session
 where id = $1

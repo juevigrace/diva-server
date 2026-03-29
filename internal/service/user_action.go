@@ -30,7 +30,7 @@ func (s *UserActionsService) Create(ctx context.Context, action models.Action, u
 	return &id, nil
 }
 
-func (s *UserActionsService) GetAll(ctx context.Context, userID uuid.UUID) ([]models.Action, error) {
+func (s *UserActionsService) GetAll(ctx context.Context, userID *uuid.UUID) ([]models.Action, error) {
 	actions, err := s.repo.GetAll(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -49,4 +49,12 @@ func (s *UserActionsService) GetOne(ctx context.Context, action models.Action, u
 
 func (s *UserActionsService) Delete(ctx context.Context, userAction *models.UserAction) error {
 	return s.repo.Delete(ctx, userAction)
+}
+
+func (s *UserActionsService) DeleteByUser(ctx context.Context, userID *uuid.UUID) error {
+	return s.repo.DeleteByUser(ctx, userID)
+}
+
+func (s *UserActionsService) CreateBatch(ctx context.Context, userActions []*models.UserAction) error {
+	return s.repo.CreateBatch(ctx, userActions)
 }

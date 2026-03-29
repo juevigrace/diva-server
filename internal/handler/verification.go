@@ -73,7 +73,7 @@ func (h *VerificationHandler) verify(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	switch uv.Action {
+	switch uv.UserAction.Action {
 	case models.ActionPasswordReset:
 		if dto.SessionData != nil {
 			dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
@@ -118,7 +118,7 @@ func (h *VerificationHandler) verifyWithAuth(w http.ResponseWriter, r *http.Requ
 		}
 	}()
 
-	switch uv.Action {
+	switch uv.UserAction.Action {
 	case models.ActionPasswordReset:
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid action"))
 	case models.ActionUserVerification:

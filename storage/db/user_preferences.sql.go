@@ -41,22 +41,20 @@ func (q *Queries) CreateUserPreferences(ctx context.Context, arg CreateUserPrefe
 
 const updateUserPreferences = `-- name: UpdateUserPreferences :exec
 UPDATE diva_user_preferences 
-SET theme = $1, onboarding_completed = $2, language = $3, last_sync_at = NOW(), updated_at = $4
-WHERE id = $5
+SET theme = $1, language = $2, last_sync_at = NOW(), updated_at = $3
+WHERE id = $4
 `
 
 type UpdateUserPreferencesParams struct {
-	Theme               ThemeType
-	OnboardingCompleted bool
-	Language            string
-	UpdatedAt           pgtype.Timestamptz
-	ID                  pgtype.UUID
+	Theme     ThemeType
+	Language  string
+	UpdatedAt pgtype.Timestamptz
+	ID        pgtype.UUID
 }
 
 func (q *Queries) UpdateUserPreferences(ctx context.Context, arg UpdateUserPreferencesParams) error {
 	_, err := q.db.Exec(ctx, updateUserPreferences,
 		arg.Theme,
-		arg.OnboardingCompleted,
 		arg.Language,
 		arg.UpdatedAt,
 		arg.ID,

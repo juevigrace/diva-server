@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS diva_user_permissions (
     user_id UUID NOT NULL,
     granted_by UUID DEFAULT NULL,
     granted BOOLEAN NOT NULL DEFAULT FALSE,
-    granted_at TIMESTAMPTZ DEFAULT NULL,
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ DEFAULT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (permission_id, user_id),

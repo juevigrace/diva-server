@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/repo"
 	"github.com/juevigrace/diva-server/internal/util"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type VerificationService struct {
@@ -54,7 +52,7 @@ func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos
 	}
 
 	var actionID *uuid.UUID
-	action, err := s.uaService.GetOne(ctx, parsedAction, &u.ID)
+	a, err := s.uaService.GetOne(ctx, parsedAction, &u.ID)
 	if err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
 			id, err := s.uaService.Create(ctx, parsedAction, &u.ID)
@@ -65,27 +63,33 @@ func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos
 		} else {
 			return err
 		}
+	} else {
+		actionID = &a.ID
 	}
-	actionID = &action.ID
 
-	if err := s.GenerateAndSend(ctx, &u.ID, u.Email, actionID); err != nil {
+	if err := s.GenerateAndSend(ctx, u.Email, &models.UserAction{
+		ID:     *actionID,
+		Action: parsedAction,
+		UserID: u.ID,
+	}); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *VerificationService) GenerateAndSend(ctx context.Context, userID *uuid.UUID, email string, actionID *uuid.UUID) error {
+func (s *VerificationService) GenerateAndSend(ctx context.Context, email string, action *models.UserAction) error {
 	token, err := util.GenerateOTPCode()
 	if err != nil {
 		return err
 	}
 
-	params := &db.CreateVerificationParams{
-		UserID:    pgtype.UUID{Bytes: *userID, Valid: true},
-		ActionID:  pgtype.UUID{Bytes: *actionID, Valid: true},
-		Token:     token,
-		ExpiresAt: pgtype.Timestamptz{Time: time.Now().UTC().Add(15 * time.Minute), Valid: true},
+	params := &models.UserVerification{
+		UserID:     action.UserID,
+		UserAction: action,
+		Token:      token,
+		ExpiresAt:  time.Now().UTC().Add(15 * time.Minute),
+		CreatedAt:  time.Time{},
 	}
 
 	if err := s.repo.Create(ctx, params); err != nil {
@@ -130,7 +134,7 @@ func (s *VerificationService) HandlePasswordReset(ctx context.Context, userID *u
 		return nil, err
 	}
 
-	return toSessionResponse(session), nil
+	return models.ToSessionResponse(session), nil
 }
 
 func (s *VerificationService) HandleVerifyUser(ctx context.Context, userID uuid.UUID) error {

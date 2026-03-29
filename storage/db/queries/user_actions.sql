@@ -18,3 +18,8 @@ where action_name = $1 and user_id = $2
 delete from diva_user_pending_actions
 where user_id = $1 and action_name = $2
 ;
+
+-- name: DeleteUserActions :exec
+delete from diva_user_pending_actions
+where user_id = $1
+;

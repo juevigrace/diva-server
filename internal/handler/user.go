@@ -180,7 +180,7 @@ func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.GetByID(r.Context(), id)
+	user, err := h.userService.GetByID(r.Context(), &id)
 	if err != nil {
 		if errors.Is(err, models.ErrUserNotFound) {
 			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
@@ -286,7 +286,7 @@ func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.Delete(r.Context(), id); err != nil {
+	if err := h.userService.Delete(r.Context(), &id); err != nil {
 		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
 		return
 	}

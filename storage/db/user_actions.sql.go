@@ -42,6 +42,16 @@ func (q *Queries) DeleteUserAction(ctx context.Context, arg DeleteUserActionPara
 	return err
 }
 
+const deleteUserActions = `-- name: DeleteUserActions :exec
+delete from diva_user_pending_actions
+where user_id = $1
+`
+
+func (q *Queries) DeleteUserActions(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserActions, userID)
+	return err
+}
+
 const getUserAction = `-- name: GetUserAction :one
 select id, user_id, action_name
 from diva_user_pending_actions

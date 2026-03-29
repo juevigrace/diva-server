@@ -67,7 +67,7 @@ func (h *UserMeHandler) deleteMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.Delete(r.Context(), session.User.ID); err != nil {
+	if err := h.userService.Delete(r.Context(), &session.User.ID); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
