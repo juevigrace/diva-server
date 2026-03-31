@@ -40,7 +40,7 @@ func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*respons
 }
 
 func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.SessionResponse, error) {
-	user, err := s.userService.GetByUsername(ctx, dto.Username)
+	user, err := s.userService.GetByUsernameOrEmail(ctx, dto.Username)
 	if err != nil {
 		return nil, models.ErrInvalidCredentials
 	}

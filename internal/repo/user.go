@@ -199,3 +199,29 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
 	}, nil
 }
+
+func (r *UserRepository) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
+	row, err := r.queries.GetUserByUsernameOrEmail(ctx, value)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, models.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &models.User{
+		ID:           row.ID.Bytes,
+		Email:        row.Email,
+		Username:     row.Username,
+		PasswordHash: row.PasswordHash,
+		BirthDate:    row.BirthDate.Time.UnixMilli(),
+		PhoneNumber:  row.PhoneNumber,
+		Alias:        row.Alias,
+		Avatar:       row.Avatar,
+		Bio:          row.Bio,
+		UserVerified: row.UserVerified,
+		Role:         models.RoleFromDB(row.Role),
+		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
+		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
+		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
+	}, nil
+}

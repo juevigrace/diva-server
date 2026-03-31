@@ -30,6 +30,7 @@ func NewUserMeHandler(
 
 func (h *UserMeHandler) Routes(r chi.Router) {
 	r.Route("/me", func(me chi.Router) {
+		me.Get("/", h.getMe)
 		me.Put("/", h.updateMe)
 		me.Delete("/", h.deleteMe)
 		me.Patch("/email", func(w http.ResponseWriter, r *http.Request) {})
@@ -37,6 +38,22 @@ func (h *UserMeHandler) Routes(r chi.Router) {
 		h.pHandler.Routes(me)
 		h.aHandler.Routes(me)
 	})
+}
+
+func (h *UserMeHandler) getMe(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	user, err := h.userService.GetByID(r.Context(), &session.User.ID)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(user.ToUserResponse(), "Good"))
 }
 
 func (h *UserMeHandler) updateMe(w http.ResponseWriter, r *http.Request) {

@@ -314,6 +314,65 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 	return i, err
 }
 
+const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
+select
+    id,
+    email,
+    username,
+    password_hash,
+    phone_number,
+    birth_date,
+    alias,
+    avatar,
+    bio,
+    user_verified,
+    role,
+    created_at,
+    updated_at,
+    deleted_at
+from diva_user
+where (email = $1 or username = $1) and deleted_at is null
+`
+
+type GetUserByUsernameOrEmailRow struct {
+	ID           pgtype.UUID
+	Email        string
+	Username     string
+	PasswordHash string
+	PhoneNumber  string
+	BirthDate    pgtype.Timestamptz
+	Alias        string
+	Avatar       string
+	Bio          string
+	UserVerified bool
+	Role         RoleType
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	DeletedAt    pgtype.Timestamptz
+}
+
+func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, email string) (GetUserByUsernameOrEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByUsernameOrEmail, email)
+	var i GetUserByUsernameOrEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PasswordHash,
+		&i.PhoneNumber,
+		&i.BirthDate,
+		&i.Alias,
+		&i.Avatar,
+		&i.Bio,
+		&i.UserVerified,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const updateEmail = `-- name: UpdateEmail :exec
 UPDATE diva_user
 SET email = $1,

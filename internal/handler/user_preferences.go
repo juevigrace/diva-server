@@ -20,6 +20,7 @@ func NewUserPreferencesHandler(svc *service.UserPreferencesService) *UserPrefere
 
 func (h *UserPreferencesHandler) Routes(r chi.Router) {
 	r.Route("/preferences", func(pref chi.Router) {
+		pref.Use()
 		pref.Post("/", h.createPreferences)
 		pref.Put("/", h.updatePreferences)
 	})

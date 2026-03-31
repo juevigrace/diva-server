@@ -93,6 +93,22 @@ func (s *UserService) VerifyUser(ctx context.Context, userID *uuid.UUID) error {
 	return nil
 }
 
+func (s *UserService) CreateBatch(ctx context.Context, params []*models.User) error {
+	return s.repo.CreateBatch(ctx, params)
+}
+
+func (s *UserService) UpdatePhoneNumber(ctx context.Context, phone string, userID *uuid.UUID) error {
+	return s.repo.UpdatePhoneNumber(ctx, phone, userID)
+}
+
+func (s *UserService) UpdateUsername(ctx context.Context, username string, userID *uuid.UUID) error {
+	return s.repo.UpdateUsername(ctx, username, userID)
+}
+
+func (s *UserService) UpdateEmail(ctx context.Context, dto *dtos.UpdateEmailDto, userID *uuid.UUID) error {
+	return s.repo.UpdateEmail(ctx, dto, userID)
+}
+
 func (s *UserService) Delete(ctx context.Context, userID *uuid.UUID) error {
 	return s.repo.Delete(ctx, userID)
 }
@@ -127,6 +143,10 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 	return s.repo.GetByEmail(ctx, email)
 }
 
+func (s *UserService) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
+	return s.repo.GetByUsernameOrEmail(ctx, value)
+}
+
 func (s *UserService) GetByID(ctx context.Context, userID *uuid.UUID) (*models.User, error) {
 	return s.repo.GetByID(ctx, userID)
 }
@@ -137,20 +157,4 @@ func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination)
 
 func (s *UserService) Count(ctx context.Context) (int64, error) {
 	return s.repo.Count(ctx)
-}
-
-func (s *UserService) CreateBatch(ctx context.Context, params []*models.User) error {
-	return s.repo.CreateBatch(ctx, params)
-}
-
-func (s *UserService) UpdatePhoneNumber(ctx context.Context, phone string, userID *uuid.UUID) error {
-	return s.repo.UpdatePhoneNumber(ctx, phone, userID)
-}
-
-func (s *UserService) UpdateUsername(ctx context.Context, username string, userID *uuid.UUID) error {
-	return s.repo.UpdateUsername(ctx, username, userID)
-}
-
-func (s *UserService) UpdateEmail(ctx context.Context, dto *dtos.UpdateEmailDto, userID *uuid.UUID) error {
-	return s.repo.UpdateEmail(ctx, dto, userID)
 }

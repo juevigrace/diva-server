@@ -45,7 +45,10 @@ func (h *UserActionsHandler) getActions(w http.ResponseWriter, r *http.Request) 
 
 	result := make([]responses.ActionResponse, len(actions))
 	for i, a := range actions {
-		result[i] = responses.ActionResponse{ActionName: a.String()}
+		result[i] = responses.ActionResponse{
+			ActionName: a.Action.String(),
+			ID:         a.ID.String(),
+		}
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(result, "Success"))
@@ -64,7 +67,7 @@ func (h *UserActionsHandler) streamActions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	actionsCh := make(chan []responses.ActionResponse)
+	actionsCh := make(chan []*responses.ActionResponse)
 	errCh := make(chan error)
 	go h.streamActionsWorker(r.Context(), &session.User.ID, actionsCh, errCh)
 	for {
@@ -98,7 +101,12 @@ func (h *UserActionsHandler) streamActions(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *UserActionsHandler) streamActionsWorker(ctx context.Context, userID *uuid.UUID, out chan []responses.ActionResponse, errCh chan error) {
+func (h *UserActionsHandler) streamActionsWorker(
+	ctx context.Context,
+	userID *uuid.UUID,
+	out chan []*responses.ActionResponse,
+	errCh chan error,
+) {
 	defer close(out)
 	defer close(errCh)
 	ticker := time.NewTicker(1 * time.Minute)
@@ -114,15 +122,23 @@ func (h *UserActionsHandler) streamActionsWorker(ctx context.Context, userID *uu
 		}
 	}
 }
-func (h *UserActionsHandler) sendActions(ctx context.Context, userID *uuid.UUID, out chan []responses.ActionResponse, errCh chan error) {
+func (h *UserActionsHandler) sendActions(
+	ctx context.Context,
+	userID *uuid.UUID,
+	out chan []*responses.ActionResponse,
+	errCh chan error,
+) {
 	actions, err := h.service.GetAll(ctx, userID)
 	if err != nil {
 		errCh <- err
 		return
 	}
-	result := make([]responses.ActionResponse, len(actions))
+	result := make([]*responses.ActionResponse, len(actions))
 	for i, a := range actions {
-		result[i] = responses.ActionResponse{ActionName: a.String()}
+		result[i] = &responses.ActionResponse{
+			ActionName: a.Action.String(),
+			ID:         a.ID.String(),
+		}
 	}
 	out <- result
 }

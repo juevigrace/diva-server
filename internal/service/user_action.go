@@ -30,15 +30,18 @@ func (s *UserActionsService) Create(ctx context.Context, action models.Action, u
 	return &id, nil
 }
 
-func (s *UserActionsService) GetAll(ctx context.Context, userID *uuid.UUID) ([]models.Action, error) {
+func (s *UserActionsService) GetAll(ctx context.Context, userID *uuid.UUID) ([]*models.UserAction, error) {
 	actions, err := s.repo.GetAll(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]models.Action, len(actions))
+	result := make([]*models.UserAction, len(actions))
 	for i, a := range actions {
-		result[i] = models.ActionFromString(a.ActionName)
+		result[i] = &models.UserAction{
+			ID:     a.ID.Bytes,
+			Action: models.ActionFromString(a.ActionName),
+		}
 	}
 	return result, nil
 }

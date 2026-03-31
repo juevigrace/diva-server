@@ -128,3 +128,23 @@ select
 from diva_user
 where email = $1 and deleted_at is null
 ;
+
+-- name: GetUserByUsernameOrEmail :one
+select
+    id,
+    email,
+    username,
+    password_hash,
+    phone_number,
+    birth_date,
+    alias,
+    avatar,
+    bio,
+    user_verified,
+    role,
+    created_at,
+    updated_at,
+    deleted_at
+from diva_user
+where (email = $1 or username = $1) and deleted_at is null
+;
