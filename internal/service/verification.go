@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -51,26 +52,22 @@ func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos
 		return err
 	}
 
-	var actionID *uuid.UUID
 	a, err := s.uaService.GetOne(ctx, parsedAction, &u.ID)
 	if err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
-			id, err := s.uaService.Create(ctx, parsedAction, &u.ID)
+			_, err := s.uaService.Create(ctx, parsedAction, &u.ID)
 			if err != nil {
 				return err
 			}
-			actionID = id
 		} else {
 			return err
 		}
-	} else {
-		actionID = &a.ID
 	}
 
 	if err := s.GenerateAndSend(ctx, u.Email, &models.UserAction{
-		ID:     *actionID,
-		Action: parsedAction,
-		UserID: u.ID,
+		ID:     a.ID,
+		Action: a.Action,
+		UserID: a.UserID,
 	}); err != nil {
 		return err
 	}
@@ -79,17 +76,32 @@ func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos
 }
 
 func (s *VerificationService) GenerateAndSend(ctx context.Context, email string, action *models.UserAction) error {
+	exVerification, err := s.repo.GetByActionId(ctx, &action.ID)
+	if err != nil {
+		if ok := !errors.Is(sql.ErrNoRows, err); !ok {
+			return err
+		}
+	}
+
+	if exVerification != nil {
+		if exVerification.ExpiresAt.Before(time.Now().UTC()) {
+			if err := s.Delete(ctx, exVerification.Token); err != nil {
+				return err
+			}
+		} else {
+			return nil
+		}
+	}
+
 	token, err := util.GenerateOTPCode()
 	if err != nil {
 		return err
 	}
 
 	params := &models.UserVerification{
-		UserID:     action.UserID,
 		UserAction: action,
 		Token:      token,
 		ExpiresAt:  time.Now().UTC().Add(15 * time.Minute),
-		CreatedAt:  time.Time{},
 	}
 
 	if err := s.repo.Create(ctx, params); err != nil {
@@ -114,7 +126,11 @@ func (s *VerificationService) GenerateAndSend(ctx context.Context, email string,
 func (s *VerificationService) Verify(ctx context.Context, token string) (*models.UserVerification, error) {
 	record, err := s.repo.GetByToken(ctx, token)
 	if err != nil {
-		return nil, err
+		if ok := errors.Is(pgx.ErrNoRows, err); ok {
+			return nil, errors.New("token is not valid")
+		} else {
+			return nil, err
+		}
 	}
 
 	if record.ExpiresAt.Before(time.Now().UTC()) {

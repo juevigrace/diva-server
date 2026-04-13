@@ -62,14 +62,21 @@ func (h *VerificationHandler) verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var shouldDelete bool
+
 	uv, err := h.vService.Verify(r.Context(), dto.Token)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
+
+	shouldDelete = true
+
 	defer func() {
-		if err := h.vService.Delete(r.Context(), dto.Token); err != nil {
-			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		if shouldDelete {
+			if err := h.vService.Delete(r.Context(), dto.Token); err != nil {
+				responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			}
 		}
 	}()
 
@@ -78,7 +85,7 @@ func (h *VerificationHandler) verify(w http.ResponseWriter, r *http.Request) {
 		if dto.SessionData != nil {
 			dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 		}
-		session, err := h.vService.HandlePasswordReset(r.Context(), &uv.UserID, dto.SessionData)
+		session, err := h.vService.HandlePasswordReset(r.Context(), &uv.UserAction.UserID, dto.SessionData)
 		if err != nil {
 			if errors.Is(err, models.ErrTokenInvalid) {
 				responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
@@ -107,14 +114,20 @@ func (h *VerificationHandler) verifyWithAuth(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	var shouldDelete bool
 	uv, err := h.vService.Verify(r.Context(), dto.Token)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
+
+	shouldDelete = true
+
 	defer func() {
-		if err := h.vService.Delete(r.Context(), dto.Token); err != nil {
-			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		if shouldDelete {
+			if err := h.vService.Delete(r.Context(), dto.Token); err != nil {
+				responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			}
 		}
 	}()
 

@@ -37,7 +37,7 @@ var (
 )
 
 func CreateAccessToken(userId, sessionId uuid.UUID) (string, error) {
-	var accessExpiration time.Time = time.Now().UTC().Add(15 * time.Minute)
+	var accessExpiration time.Time = time.Now().UTC().Add(1 * time.Hour)
 	claims := &userClaims{
 		UserId:    userId,
 		SessionID: sessionId,

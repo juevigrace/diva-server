@@ -43,6 +43,42 @@ func (q *Queries) DeleteByToken(ctx context.Context, token string) error {
 	return err
 }
 
+const getVerificationByActionID = `-- name: GetVerificationByActionID :one
+select
+    ev.user_id,
+    ev.token,
+    ev.expires_at,
+    ev.created_at,
+    up.id as action_id,
+    up.action_name
+from diva_email_verification_tokens as ev
+left join diva_user_pending_actions as up on up.id = ev.action_id
+where ev.action_id = $1
+`
+
+type GetVerificationByActionIDRow struct {
+	UserID     pgtype.UUID
+	Token      string
+	ExpiresAt  pgtype.Timestamptz
+	CreatedAt  pgtype.Timestamptz
+	ActionID   pgtype.UUID
+	ActionName pgtype.Text
+}
+
+func (q *Queries) GetVerificationByActionID(ctx context.Context, actionID pgtype.UUID) (GetVerificationByActionIDRow, error) {
+	row := q.db.QueryRow(ctx, getVerificationByActionID, actionID)
+	var i GetVerificationByActionIDRow
+	err := row.Scan(
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.ActionID,
+		&i.ActionName,
+	)
+	return i, err
+}
+
 const getVerificationByToken = `-- name: GetVerificationByToken :one
 select
     ev.user_id,
