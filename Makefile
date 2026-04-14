@@ -141,7 +141,6 @@ dev-build:
 
 dev-up:
 	@echo "Starting development environment..."
-	@sqlc generate
 	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev up -d --build
 	@echo "Development environment started!"
 
@@ -164,7 +163,6 @@ prod-build:
 
 prod-up:
 	@echo "Starting production environment..."
-	@sqlc generate
 	@docker compose -p diva-prod -f docker-compose.yml --env-file .env up -d --build
 	@echo "Production environment started!"
 
