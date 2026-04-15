@@ -85,7 +85,7 @@ func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(session, "Sign up successful"))
+	responses.WriteJSON(w, responses.RespondCreated(session, "Sign up successful"))
 }
 
 func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {

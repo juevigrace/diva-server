@@ -52,22 +52,29 @@ func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos
 		return err
 	}
 
+	var action *models.UserAction
 	a, err := s.uaService.GetOne(ctx, parsedAction, &u.ID)
 	if err != nil {
-		if errors.Is(sql.ErrNoRows, err) {
+		if errors.Is(pgx.ErrNoRows, err) {
 			_, err := s.uaService.Create(ctx, parsedAction, &u.ID)
+			if err != nil {
+				return err
+			}
+			action, err = s.uaService.GetOne(ctx, parsedAction, &u.ID)
 			if err != nil {
 				return err
 			}
 		} else {
 			return err
 		}
+	} else {
+		action = a
 	}
 
 	if err := s.GenerateAndSend(ctx, u.Email, &models.UserAction{
-		ID:     a.ID,
-		Action: a.Action,
-		UserID: a.UserID,
+		ID:     action.ID,
+		Action: action.Action,
+		UserID: action.UserID,
 	}); err != nil {
 		return err
 	}
@@ -85,7 +92,7 @@ func (s *VerificationService) GenerateAndSend(ctx context.Context, email string,
 
 	if exVerification != nil {
 		if exVerification.ExpiresAt.Before(time.Now().UTC()) {
-			if err := s.Delete(ctx, exVerification.Token); err != nil {
+			if err := s.DeleteToken(ctx, exVerification.Token); err != nil {
 				return err
 			}
 		} else {
@@ -140,7 +147,15 @@ func (s *VerificationService) Verify(ctx context.Context, token string) (*models
 	return record, nil
 }
 
-func (s *VerificationService) Delete(ctx context.Context, token string) error {
+func (s *VerificationService) Delete(ctx context.Context, uv *models.UserVerification) error {
+	if err := s.uaService.Delete(ctx, uv.UserAction); err != nil {
+		return err
+	}
+
+	return s.DeleteToken(ctx, uv.Token)
+}
+
+func (s *VerificationService) DeleteToken(ctx context.Context, token string) error {
 	return s.repo.DeleteByToken(ctx, token)
 }
 

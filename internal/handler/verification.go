@@ -74,7 +74,7 @@ func (h *VerificationHandler) verify(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if shouldDelete {
-			if err := h.vService.Delete(r.Context(), dto.Token); err != nil {
+			if err := h.vService.Delete(r.Context(), uv); err != nil {
 				responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			}
 		}
@@ -125,7 +125,7 @@ func (h *VerificationHandler) verifyWithAuth(w http.ResponseWriter, r *http.Requ
 
 	defer func() {
 		if shouldDelete {
-			if err := h.vService.Delete(r.Context(), dto.Token); err != nil {
+			if err := h.vService.Delete(r.Context(), uv); err != nil {
 				responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			}
 		}
@@ -133,7 +133,7 @@ func (h *VerificationHandler) verifyWithAuth(w http.ResponseWriter, r *http.Requ
 
 	switch uv.UserAction.Action {
 	case models.ActionPasswordReset:
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid action"))
+		responses.WriteJSON(w, responses.RespondOk(nil, "Success"))
 	case models.ActionUserVerification:
 		if err := h.vService.HandleVerifyUser(r.Context(), session.User.ID); err != nil {
 			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
