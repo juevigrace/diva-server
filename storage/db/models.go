@@ -409,6 +409,48 @@ func (ns NullSessionStatusType) Value() (driver.Value, error) {
 	return string(ns.SessionStatusType), nil
 }
 
+type SessionType string
+
+const (
+	SessionTypeNORMAL   SessionType = "NORMAL"
+	SessionTypeTEMPORAL SessionType = "TEMPORAL"
+)
+
+func (e *SessionType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SessionType(s)
+	case string:
+		*e = SessionType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SessionType: %T", src)
+	}
+	return nil
+}
+
+type NullSessionType struct {
+	SessionType SessionType
+	Valid       bool // Valid is true if SessionType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSessionType) Scan(value interface{}) error {
+	if value == nil {
+		ns.SessionType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SessionType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSessionType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SessionType), nil
+}
+
 type ShareTypeType string
 
 const (
@@ -757,6 +799,7 @@ type DivaSession struct {
 	AccessToken  string
 	RefreshToken string
 	Device       string
+	Type         SessionType
 	Status       SessionStatusType
 	IpAddress    string
 	UserAgent    string

@@ -165,6 +165,16 @@ func (s *VerificationService) HandlePasswordReset(ctx context.Context, userID *u
 		return nil, err
 	}
 
+	session.Type = models.SESSION_TEMPORAL
+	if _, err := s.sService.Update(ctx, session); err != nil {
+		return nil, err
+	}
+
+	session, err = s.sService.GetByID(ctx, &session.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	return models.ToSessionResponse(session), nil
 }
 

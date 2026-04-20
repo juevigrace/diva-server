@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS diva_session (
     access_token VARCHAR(500) NOT NULL,
     refresh_token VARCHAR(500) NOT NULL,
     device VARCHAR(100) NOT NULL DEFAULT '',
+    type session_type NOT NULL,
     status session_status_type NOT NULL,
     ip_address VARCHAR(45) NOT NULL DEFAULT '',
     user_agent TEXT NOT NULL DEFAULT '',

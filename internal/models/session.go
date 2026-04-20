@@ -14,6 +14,7 @@ type Session struct {
 	IpAddress    string
 	UserAgent    string
 	Status       SessionStatus
+	Type         SessionType
 	ExpiresAt    int64
 	CreatedAt    int64
 	UpdatedAt    int64
@@ -26,6 +27,7 @@ func ToSessionResponse(s *Session) *responses.SessionResponse {
 		AccessToken:  s.AccessToken,
 		RefreshToken: s.RefreshToken,
 		Status:       s.Status.String(),
+		Type:         s.Type.String(),
 		Device:       s.Device,
 		Ip:           s.IpAddress,
 		Agent:        s.UserAgent,

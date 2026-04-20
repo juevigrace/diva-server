@@ -6,6 +6,7 @@ type SessionResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	Status       string `json:"status"`
+	Type         string `json:"type"`
 	Device       string `json:"device"`
 	Ip           string `json:"ip"`
 	Agent        string `json:"agent"`

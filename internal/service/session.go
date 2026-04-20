@@ -46,6 +46,7 @@ func (s *SessionService) Create(ctx context.Context, userID *uuid.UUID, dto *dto
 		IpAddress:    dto.IpAddress,
 		UserAgent:    dto.UserAgent,
 		Status:       models.SESSION_ACTIVE,
+		Type:         models.SESSION_NORMAL,
 		ExpiresAt:    expirationMillis,
 	}
 

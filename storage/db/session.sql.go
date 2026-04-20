@@ -12,8 +12,8 @@ import (
 )
 
 const createSession = `-- name: CreateSession :exec
-INSERT INTO diva_session (id, user_id, access_token, refresh_token, device, status, ip_address, user_agent, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO diva_session (id, user_id, access_token, refresh_token, device, status, type, ip_address, user_agent, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type CreateSessionParams struct {
@@ -23,6 +23,7 @@ type CreateSessionParams struct {
 	RefreshToken string
 	Device       string
 	Status       SessionStatusType
+	Type         SessionType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -36,6 +37,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 		arg.RefreshToken,
 		arg.Device,
 		arg.Status,
+		arg.Type,
 		arg.IpAddress,
 		arg.UserAgent,
 		arg.ExpiresAt,
@@ -60,6 +62,7 @@ select
     s.refresh_token,
     s.device,
     s.status,
+    s.type,
     s.ip_address,
     s.user_agent,
     s.expires_at,
@@ -83,6 +86,7 @@ type GetSessionByIDRow struct {
 	RefreshToken string
 	Device       string
 	Status       SessionStatusType
+	Type         SessionType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -106,6 +110,7 @@ func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessio
 		&i.RefreshToken,
 		&i.Device,
 		&i.Status,
+		&i.Type,
 		&i.IpAddress,
 		&i.UserAgent,
 		&i.ExpiresAt,
@@ -129,6 +134,7 @@ select
     s.refresh_token,
     s.device,
     s.status,
+    s.type,
     s.ip_address,
     s.user_agent,
     s.expires_at,
@@ -152,6 +158,7 @@ type GetSessionsByUserRow struct {
 	RefreshToken string
 	Device       string
 	Status       SessionStatusType
+	Type         SessionType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -181,6 +188,7 @@ func (q *Queries) GetSessionsByUser(ctx context.Context, id pgtype.UUID) ([]GetS
 			&i.RefreshToken,
 			&i.Device,
 			&i.Status,
+			&i.Type,
 			&i.IpAddress,
 			&i.UserAgent,
 			&i.ExpiresAt,
@@ -205,9 +213,9 @@ func (q *Queries) GetSessionsByUser(ctx context.Context, id pgtype.UUID) ([]GetS
 }
 
 const updateSession = `-- name: UpdateSession :exec
-UPDATE diva_session 
-SET access_token = $1, refresh_token = $2, device = $3, status = $4, ip_address = $5, user_agent = $6, expires_at = $7, updated_at = NOW() 
-WHERE id = $8
+UPDATE diva_session
+SET access_token = $1, refresh_token = $2, device = $3, status = $4, type = $5, ip_address = $6, user_agent = $7, expires_at = $8, updated_at = NOW()
+WHERE id = $9
 `
 
 type UpdateSessionParams struct {
@@ -215,6 +223,7 @@ type UpdateSessionParams struct {
 	RefreshToken string
 	Device       string
 	Status       SessionStatusType
+	Type         SessionType
 	IpAddress    string
 	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
@@ -227,6 +236,7 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) er
 		arg.RefreshToken,
 		arg.Device,
 		arg.Status,
+		arg.Type,
 		arg.IpAddress,
 		arg.UserAgent,
 		arg.ExpiresAt,
