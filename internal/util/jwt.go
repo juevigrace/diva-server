@@ -16,7 +16,6 @@ type JwtData struct {
 }
 
 type userClaims struct {
-	UserId    uuid.UUID `json:"user_id"`
 	SessionID uuid.UUID `json:"session_id"`
 }
 
@@ -36,20 +35,18 @@ var (
 	}
 )
 
-func CreateAccessToken(userId, sessionId uuid.UUID) (string, error) {
+func CreateAccessToken(sessionId *uuid.UUID) (string, error) {
 	var accessExpiration time.Time = time.Now().UTC().Add(1 * time.Hour)
 	claims := &userClaims{
-		UserId:    userId,
-		SessionID: sessionId,
+		SessionID: *sessionId,
 	}
 	return createJWT(claims, accessExpiration)
 }
 
-func CreateRefreshToken(userId, sessionId uuid.UUID) (string, error) {
+func CreateRefreshToken(sessionId *uuid.UUID) (string, error) {
 	var refreshExpiration time.Time = time.Now().UTC().Add(24 * time.Hour)
 	claims := &userClaims{
-		UserId:    userId,
-		SessionID: sessionId,
+		SessionID: *sessionId,
 	}
 	return createJWT(claims, refreshExpiration)
 }
@@ -57,7 +54,6 @@ func CreateRefreshToken(userId, sessionId uuid.UUID) (string, error) {
 func CreateResetToken(userId, sessionId uuid.UUID) (string, error) {
 	var resetExpiration time.Time = time.Now().UTC().Add(10 * time.Minute)
 	claims := &userClaims{
-		UserId:    userId,
 		SessionID: sessionId,
 	}
 	return createJWT(claims, resetExpiration)
@@ -71,7 +67,7 @@ func createJWT(claims *userClaims, expiration time.Time) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 			NotBefore: jwt.NewNumericDate(time.Now().UTC()),
 			Issuer:    Issuer,
-			Subject:   claims.UserId.String(),
+			Subject:   claims.SessionID.String(),
 			Audience:  Audience,
 		},
 	})

@@ -6,6 +6,6 @@ type VerificationDto struct {
 }
 
 type RequestVerificationDto struct {
-	Email  string `json:"email" validate:"required,email"`
+	Email  string `json:"email" validate:"required,email,max=100"`
 	Action string `json:"action" validate:"required,max=255"`
 }

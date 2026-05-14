@@ -3,7 +3,7 @@ package dtos
 type CreateUserDto struct {
 	Email    string `json:"email" validate:"required,email,max=100"`
 	Username string `json:"username" validate:"required,min=3,max=50"`
-	Password string `json:"password" validate:"required,min=4"`
+	Password string `json:"password" validate:"required,min=4,max=255"`
 }
 
 type CreateProfileDto struct {
@@ -28,22 +28,22 @@ type UpdateUsernameDto struct {
 }
 
 type UpdatePasswordDto struct {
-	NewPassword string `json:"new_password" validate:"required,min=4"`
+	NewPassword string `json:"new_password" validate:"required,min=4,max=255"`
 }
 
 type UpdatePhoneNumberDto struct {
-	PhoneNumber string `json:"phone_number" validate:"required"`
+	PhoneNumber string `json:"phone_number" validate:"required,max=30"`
 }
 
 type UpdateEmailDto struct {
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"required,email,max=100"`
 }
 
 type UserPermissionDto struct {
 	UserId       string `json:"user_id" validate:"required,uuid"`
 	PermissionId string `json:"permission_id" validate:"required,uuid"`
 	Granted      bool   `json:"granted" validate:"required"`
-	ExpiresAt    *int64 `json:"expires_at" validate:"required"`
+	ExpiresAt    *int64 `json:"expires_at" validate:"required,omitempty,gt=0"`
 }
 
 type DeleteUserPermissionDto struct {
@@ -58,5 +58,5 @@ type UserPreferencesDto struct {
 	OnboardingCompleted bool   `json:"onboarding_completed" validate:"required"`
 	Language            string `json:"language" validate:"required,max=10"`
 	CreatedAt           int64  `json:"created_at" validate:"required,gt=0"`
-	UpdatedAt           int64  `json:"updated_at"`
+	UpdatedAt           int64  `json:"updated_at" validate:"required,gt=0"`
 }
