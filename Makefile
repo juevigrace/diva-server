@@ -87,7 +87,7 @@ clean:
 	@echo "Cleaning build artifacts..."
 	@rm -rf $(BINARY_DIR)
 	@echo "Cleaning Docker resources..."
-	@docker compose -p diva-dev -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
+	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev down -v --remove-orphans 2>/dev/null || true
 	@docker compose -p diva-prod -f docker-compose.yml down -v --remove-orphans 2>/dev/null || true
 	@docker system prune -f
 	@echo "Clean completed!"
@@ -129,15 +129,10 @@ db-shell-prod:
 	@echo "Accessing prod database shell..."
 	@docker compose -p diva-prod -f docker-compose.yml exec diva_db psql -U ${DB_USER} -d ${DB_NAME}
 
-rebuild:
-	@echo "Force rebuilding without cache..."
-	@docker compose -p diva-dev -f docker-compose.dev.yml build --no-cache
-	@docker compose -p diva-prod -f docker-compose.yml build --no-cache
-
 # Development Commands
 dev-build:
 	@echo "Building development image..."
-	@docker compose -p diva-dev -f docker-compose.dev.yml build
+	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev build
 
 dev-up:
 	@echo "Starting development environment..."
@@ -146,15 +141,15 @@ dev-up:
 
 dev-down:
 	@echo "Stopping development environment..."
-	@docker compose -p diva-dev -f docker-compose.dev.yml down
+	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev down
 
 dev-logs:
 	@echo "Following development logs..."
-	@docker compose -p diva-dev -f docker-compose.dev.yml logs -f
+	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev logs -f
 
 dev-shell:
 	@echo "Accessing development container shell..."
-	@docker compose -p diva-dev -f docker-compose.dev.yml exec diva_server_dev sh
+	@docker compose -p diva-dev -f docker-compose.dev.yml --env-file .env.dev exec diva_server_dev sh
 
 # Production Commands
 prod-build:
@@ -163,7 +158,7 @@ prod-build:
 
 prod-up:
 	@echo "Starting production environment..."
-	@docker compose -p diva-prod -f docker-compose.yml --env-file .env up -d --build
+	@docker compose -p diva-prod -f docker-compose.yml up -d --build
 	@echo "Production environment started!"
 
 prod-down:

@@ -1,8 +1,15 @@
 package models
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
+)
+
+var (
+	ErrSessionNotFound = errors.New("session not found")
+	ErrSessionInvalid  = errors.New("invalid session")
 )
 
 type Session struct {

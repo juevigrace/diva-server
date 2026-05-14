@@ -20,17 +20,6 @@ func (st *SessionType) String() string {
 	}
 }
 
-func (st *SessionType) ToDB() db.SessionType {
-	switch *st {
-	case SESSION_NORMAL:
-		return db.SessionTypeNORMAL
-	case SESSION_TEMPORAL:
-		return db.SessionTypeTEMPORAL
-	default:
-		return db.SessionTypeNORMAL
-	}
-}
-
 func SessionTypeFromString(s string) SessionType {
 	switch s {
 	case "NORMAL":
@@ -39,6 +28,17 @@ func SessionTypeFromString(s string) SessionType {
 		return SESSION_TEMPORAL
 	default:
 		return SESSION_NORMAL
+	}
+}
+
+func (st *SessionType) ToDB() db.SessionType {
+	switch *st {
+	case SESSION_NORMAL:
+		return db.SessionTypeNORMAL
+	case SESSION_TEMPORAL:
+		return db.SessionTypeTEMPORAL
+	default:
+		return db.SessionTypeNORMAL
 	}
 }
 

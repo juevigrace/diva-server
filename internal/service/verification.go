@@ -105,7 +105,7 @@ func (s *VerificationService) GenerateAndSend(ctx context.Context, email string,
 		return err
 	}
 
-	params := &models.UserVerification{
+	params := &models.UserActionVerification{
 		UserAction: action,
 		Token:      token,
 		ExpiresAt:  time.Now().UTC().Add(15 * time.Minute),
@@ -130,7 +130,7 @@ func (s *VerificationService) GenerateAndSend(ctx context.Context, email string,
 	return nil
 }
 
-func (s *VerificationService) Verify(ctx context.Context, token string) (*models.UserVerification, error) {
+func (s *VerificationService) Verify(ctx context.Context, token string) (*models.UserActionVerification, error) {
 	record, err := s.repo.GetByToken(ctx, token)
 	if err != nil {
 		if ok := errors.Is(pgx.ErrNoRows, err); ok {
@@ -147,7 +147,7 @@ func (s *VerificationService) Verify(ctx context.Context, token string) (*models
 	return record, nil
 }
 
-func (s *VerificationService) Delete(ctx context.Context, uv *models.UserVerification) error {
+func (s *VerificationService) Delete(ctx context.Context, uv *models.UserActionVerification) error {
 	if err := s.uaService.Delete(ctx, uv.UserAction); err != nil {
 		return err
 	}

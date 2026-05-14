@@ -1,6 +1,14 @@
 package models
 
-import "github.com/juevigrace/diva-server/storage/db"
+import (
+	"errors"
+
+	"github.com/juevigrace/diva-server/storage/db"
+)
+
+var (
+	ErrAdminAccessRequired = errors.New("admin access required")
+)
 
 type Role int
 
@@ -23,19 +31,6 @@ func (r Role) String() string {
 	}
 }
 
-func (r Role) ToDB() db.RoleType {
-	switch r {
-	case ROLE_ADMIN:
-		return db.RoleTypeADMIN
-	case ROLE_MODERATOR:
-		return db.RoleTypeMODERATOR
-	case ROLE_USER:
-		return db.RoleTypeUSER
-	default:
-		return db.RoleTypeUSER
-	}
-}
-
 func RoleFromString(role string) Role {
 	switch role {
 	case "ADMIN":
@@ -46,6 +41,19 @@ func RoleFromString(role string) Role {
 		return ROLE_USER
 	default:
 		return ROLE_USER
+	}
+}
+
+func (r Role) ToDB() db.RoleType {
+	switch r {
+	case ROLE_ADMIN:
+		return db.RoleTypeADMIN
+	case ROLE_MODERATOR:
+		return db.RoleTypeMODERATOR
+	case ROLE_USER:
+		return db.RoleTypeUSER
+	default:
+		return db.RoleTypeUSER
 	}
 }
 

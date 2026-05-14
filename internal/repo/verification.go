@@ -18,7 +18,7 @@ func NewVerificationRepository(queries *db.Queries) *VerificationRepository {
 	return &VerificationRepository{queries: queries}
 }
 
-func (r *VerificationRepository) Create(ctx context.Context, params *models.UserVerification) error {
+func (r *VerificationRepository) Create(ctx context.Context, params *models.UserActionVerification) error {
 	return r.queries.CreateVerification(ctx, db.CreateVerificationParams{
 		UserID:    pgtype.UUID{Bytes: params.UserAction.UserID, Valid: true},
 		ActionID:  pgtype.UUID{Bytes: params.UserAction.ID, Valid: true},
@@ -27,7 +27,7 @@ func (r *VerificationRepository) Create(ctx context.Context, params *models.User
 	})
 }
 
-func (r *VerificationRepository) GetByActionId(ctx context.Context, actionID *uuid.UUID) (*models.UserVerification, error) {
+func (r *VerificationRepository) GetByActionId(ctx context.Context, actionID *uuid.UUID) (*models.UserActionVerification, error) {
 	v, err := r.queries.GetVerificationByActionID(ctx, models.ToUUIDPtr(actionID))
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (r *VerificationRepository) GetByActionId(ctx context.Context, actionID *uu
 		return nil, errors.New("action name is not valid")
 	}
 
-	return &models.UserVerification{
+	return &models.UserActionVerification{
 		Token: v.Token,
 		UserAction: &models.UserAction{
 			ID:     v.ActionID.Bytes,
@@ -53,7 +53,7 @@ func (r *VerificationRepository) GetByActionId(ctx context.Context, actionID *uu
 	}, nil
 }
 
-func (r *VerificationRepository) GetByToken(ctx context.Context, token string) (*models.UserVerification, error) {
+func (r *VerificationRepository) GetByToken(ctx context.Context, token string) (*models.UserActionVerification, error) {
 	v, err := r.queries.GetVerificationByToken(ctx, token)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (r *VerificationRepository) GetByToken(ctx context.Context, token string) (
 		return nil, errors.New("action name is not valid")
 	}
 
-	return &models.UserVerification{
+	return &models.UserActionVerification{
 		Token: v.Token,
 		UserAction: &models.UserAction{
 			ID:     v.ActionID.Bytes,

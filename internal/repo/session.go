@@ -106,7 +106,7 @@ func (r *SessionRepository) GetByID(ctx context.Context, id *uuid.UUID) (*models
 		Alias:        uRow.Alias,
 		Avatar:       uRow.Avatar,
 		Bio:          uRow.Bio,
-		UserVerified: uRow.UserVerified,
+		Verified:     uRow.UserVerified,
 		Role:         models.RoleFromDB(uRow.Role),
 		CreatedAt:    uRow.CreatedAt.Time.UnixMilli(),
 		UpdatedAt:    uRow.UpdatedAt.Time.UnixMilli(),

@@ -20,6 +20,7 @@ where id = $1
 -- name: GetSessionByID :one
 select
     s.id,
+    s.user_id,
     s.access_token,
     s.refresh_token,
     s.device,
@@ -29,22 +30,15 @@ select
     s.user_agent,
     s.expires_at,
     s.created_at,
-    s.updated_at,
-    u.id as user_id,
-    u.email,
-    u.username,
-    u.user_verified,
-    u.role,
-    u.created_at,
-    u.updated_at
+    s.updated_at
 from diva_session s
-left join diva_user u on s.user_id = u.id
-where s.id = $1 and u.deleted_at is null
+where s.id = $1
 ;
 
 -- name: GetSessionsByUser :many
 select
     s.id,
+    s.user_id,
     s.access_token,
     s.refresh_token,
     s.device,
@@ -54,15 +48,7 @@ select
     s.user_agent,
     s.expires_at,
     s.created_at,
-    s.updated_at,
-    u.id as user_id,
-    u.email,
-    u.username,
-    u.user_verified,
-    u.role,
-    u.created_at,
-    u.updated_at
+    s.updated_at
 from diva_session s
-left join diva_user u on s.user_id = u.id
-where u.id = $1 and u.deleted_at is null
+where s.user_id = $1
 ;

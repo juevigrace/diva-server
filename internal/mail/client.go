@@ -39,6 +39,6 @@ func (c *Client) Send(ctx context.Context, to, subject string, component templ.C
 	return err
 }
 
-func (c *Client) SendVerificationEmail(ctx context.Context, to string, verification *models.UserVerification) error {
+func (c *Client) SendVerificationEmail(ctx context.Context, to string, verification *models.UserActionVerification) error {
 	return c.Send(ctx, to, "Email Verification", VerificationEmail(verification))
 }

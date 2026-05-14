@@ -23,19 +23,6 @@ func (s SessionStatus) String() string {
 	}
 }
 
-func (s SessionStatus) ToDB() db.SessionStatusType {
-	switch s {
-	case SESSION_CLOSED:
-		return db.SessionStatusTypeCLOSED
-	case SESSION_EXPIRED:
-		return db.SessionStatusTypeEXPIRED
-	case SESSION_ACTIVE:
-		return db.SessionStatusTypeACTIVE
-	default:
-		return db.SessionStatusTypeACTIVE
-	}
-}
-
 func SessionStatusFromString(status string) SessionStatus {
 	switch status {
 	case "CLOSED":
@@ -46,6 +33,19 @@ func SessionStatusFromString(status string) SessionStatus {
 		return SESSION_ACTIVE
 	default:
 		return SESSION_ACTIVE
+	}
+}
+
+func (s SessionStatus) ToDB() db.SessionStatusType {
+	switch s {
+	case SESSION_CLOSED:
+		return db.SessionStatusTypeCLOSED
+	case SESSION_EXPIRED:
+		return db.SessionStatusTypeEXPIRED
+	case SESSION_ACTIVE:
+		return db.SessionStatusTypeACTIVE
+	default:
+		return db.SessionStatusTypeACTIVE
 	}
 }
 

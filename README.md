@@ -1,17 +1,16 @@
 # Diva Server
 
-A high-performance Go backend server that provides RESTful APIs and real-time services for the Diva ecosystem.
+TODO
 
 ## Description
 
-Diva Server is the core backend infrastructure for the Diva platform, handling authentication, data persistence, real-time communication, and business logic for all client applications.
+TODO
 
 ## Requirements
 
 - **Go**: 1.21 or later
 - **Make**: GNU Make 3.8 or later
 - **PostgreSQL**: 13.0 or later (for production)
-- **Redis**: 6.0 or later (for caching)
 
 ## Installation
 
@@ -138,6 +137,7 @@ make build
 ## API Documentation
 
 When the server is running, API documentation is available at:
+
 - Swagger UI: `http://localhost:8080/swagger/index.html`
 - OpenAPI JSON: `http://localhost:8080/swagger/doc.json`
 
@@ -170,3 +170,4 @@ server/
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+

@@ -28,24 +28,3 @@ func StringToServerEnv(env string) ServerEnv {
 		return DEVELOPMENT
 	}
 }
-
-type ServerStatus int
-
-const (
-	Inactive ServerStatus = iota
-	Active
-	Maintenance
-)
-
-func (s ServerStatus) String() string {
-	switch s {
-	case Inactive:
-		return "INACTIVE"
-	case Active:
-		return "ACTIVE"
-	case Maintenance:
-		return "MAINTENANCE"
-	default:
-		return "INACTIVE"
-	}
-}

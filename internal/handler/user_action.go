@@ -43,9 +43,9 @@ func (h *UserActionsHandler) getActions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	result := make([]responses.ActionResponse, len(actions))
+	result := make([]responses.UserActionResponse, len(actions))
 	for i, a := range actions {
-		result[i] = responses.ActionResponse{
+		result[i] = responses.UserActionResponse{
 			ActionName: a.Action.String(),
 			ID:         a.ID.String(),
 		}
@@ -67,7 +67,7 @@ func (h *UserActionsHandler) streamActions(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	actionsCh := make(chan []*responses.ActionResponse)
+	actionsCh := make(chan []*responses.UserActionResponse)
 	errCh := make(chan error)
 	go h.streamActionsWorker(r.Context(), &session.User.ID, actionsCh, errCh)
 	for {
@@ -104,7 +104,7 @@ func (h *UserActionsHandler) streamActions(w http.ResponseWriter, r *http.Reques
 func (h *UserActionsHandler) streamActionsWorker(
 	ctx context.Context,
 	userID *uuid.UUID,
-	out chan []*responses.ActionResponse,
+	out chan []*responses.UserActionResponse,
 	errCh chan error,
 ) {
 	defer close(out)
@@ -125,7 +125,7 @@ func (h *UserActionsHandler) streamActionsWorker(
 func (h *UserActionsHandler) sendActions(
 	ctx context.Context,
 	userID *uuid.UUID,
-	out chan []*responses.ActionResponse,
+	out chan []*responses.UserActionResponse,
 	errCh chan error,
 ) {
 	actions, err := h.service.GetAll(ctx, userID)
@@ -133,9 +133,9 @@ func (h *UserActionsHandler) sendActions(
 		errCh <- err
 		return
 	}
-	result := make([]*responses.ActionResponse, len(actions))
+	result := make([]*responses.UserActionResponse, len(actions))
 	for i, a := range actions {
-		result[i] = &responses.ActionResponse{
+		result[i] = &responses.UserActionResponse{
 			ActionName: a.Action.String(),
 			ID:         a.ID.String(),
 		}

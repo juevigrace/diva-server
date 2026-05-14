@@ -26,21 +26,6 @@ func (m MediaType) String() string {
 	}
 }
 
-func (m MediaType) ToDB() db.MediaTypeType {
-	switch m {
-	case MEDIA_AUDIO:
-		return db.MediaTypeTypeAUDIO
-	case MEDIA_IMAGE:
-		return db.MediaTypeTypeIMAGE
-	case MEDIA_VIDEO:
-		return db.MediaTypeTypeVIDEO
-	case MEDIA_UNSPECIFIED:
-		return db.MediaTypeTypeUNSPECIFIED
-	default:
-		return db.MediaTypeTypeUNSPECIFIED
-	}
-}
-
 func MediaTypeFromString(s string) MediaType {
 	switch s {
 	case "AUDIO":
@@ -53,5 +38,20 @@ func MediaTypeFromString(s string) MediaType {
 		return MEDIA_UNSPECIFIED
 	default:
 		return MEDIA_UNSPECIFIED
+	}
+}
+
+func (m MediaType) ToDB() db.MediaTypeType {
+	switch m {
+	case MEDIA_AUDIO:
+		return db.MediaTypeTypeAUDIO
+	case MEDIA_IMAGE:
+		return db.MediaTypeTypeIMAGE
+	case MEDIA_VIDEO:
+		return db.MediaTypeTypeVIDEO
+	case MEDIA_UNSPECIFIED:
+		return db.MediaTypeTypeUNSPECIFIED
+	default:
+		return db.MediaTypeTypeUNSPECIFIED
 	}
 }
