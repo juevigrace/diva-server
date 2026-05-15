@@ -36,6 +36,17 @@ func (t Theme) ToDB() db.ThemeType {
 	}
 }
 
+func ThemeFromDB(t db.ThemeType) Theme {
+	switch t {
+	case db.ThemeTypeLIGHT:
+		return THEME_LIGHT
+	case db.ThemeTypeDARK:
+		return THEME_DARK
+	default:
+		return THEME_SYSTEM
+	}
+}
+
 func ThemeFromString(s string) Theme {
 	switch s {
 	case "LIGHT":

@@ -87,13 +87,8 @@ select
     up.granted,
     up.granted_at as grantedAt,
     up.expires_at as expiresAt,
-    up.updated_at as updatedAt,
-    p.name,
-    p.description,
-    p.action,
-    p.role_level as roleLevel
+    up.updated_at as updatedAt
 from diva_user_permissions up
-join diva_permissions p on up.permission_id = p.id
 where up.user_id = $1 and up.granted = true
 `
 
@@ -105,10 +100,6 @@ type GetUserPermissionsRow struct {
 	Grantedat    pgtype.Timestamptz
 	Expiresat    pgtype.Timestamptz
 	Updatedat    pgtype.Timestamptz
-	Name         string
-	Description  string
-	Action       string
-	Rolelevel    RoleType
 }
 
 func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([]GetUserPermissionsRow, error) {
@@ -128,10 +119,6 @@ func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([
 			&i.Grantedat,
 			&i.Expiresat,
 			&i.Updatedat,
-			&i.Name,
-			&i.Description,
-			&i.Action,
-			&i.Rolelevel,
 		); err != nil {
 			return nil, err
 		}

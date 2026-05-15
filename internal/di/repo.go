@@ -10,7 +10,7 @@ type RepoModule struct {
 	Session         *repo.SessionRepository
 	UserPreferences *repo.UserPreferencesRepository
 	UserPermission  *repo.UserPermissionRepository
-	Verification    *repo.VerificationRepository
+	Verification    *repo.UserActionVerificationRepository
 	Action          *repo.UserActionsRepository
 }
 

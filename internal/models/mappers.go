@@ -28,3 +28,11 @@ func ToInt64Ptr(t pgtype.Timestamptz) *int64 {
 	v := t.Time.UnixMilli()
 	return &v
 }
+
+func FromUUIDPtr(v pgtype.UUID) *uuid.UUID {
+	if !v.Valid {
+		return nil
+	}
+	u := uuid.UUID(v.Bytes)
+	return &u
+}

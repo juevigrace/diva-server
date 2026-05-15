@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -20,136 +20,31 @@ func NewUserRepository(queries *db.Queries) *UserRepository {
 	return &UserRepository{queries: queries}
 }
 
-func (r *UserRepository) Count(ctx context.Context) (int64, error) {
-	return r.queries.Count(ctx)
-}
-
-func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
-	return r.queries.CreateUser(ctx, db.CreateUserParams{
-		ID:           pgtype.UUID{Bytes: user.ID, Valid: true},
-		Email:        user.Email,
-		Username:     user.Username,
-		PasswordHash: user.PasswordHash,
-		Alias:        user.Alias,
-	})
-}
-
-func (r *UserRepository) CreateBatch(ctx context.Context, params []*models.User) error {
-	for _, p := range params {
-		if err := r.Create(ctx, p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *UserRepository) UpdateProfile(ctx context.Context, params *models.User) error {
-	return r.queries.UpdateProfile(ctx, db.UpdateProfileParams{
-		Alias:  params.Alias,
-		Avatar: params.Avatar,
-		Bio:    params.Bio,
-		ID:     pgtype.UUID{Bytes: params.ID, Valid: true},
-	})
-}
-
-func (r *UserRepository) UpdatePassword(ctx context.Context, hash string, id *uuid.UUID) error {
-	return r.queries.UpdatePassword(ctx, db.UpdatePasswordParams{
-		PasswordHash: hash,
-		ID:           pgtype.UUID{Bytes: *id, Valid: true},
-	})
-}
-
-func (r *UserRepository) UpdatePhoneNumber(ctx context.Context, phone string, id *uuid.UUID) error {
-	params := db.UpdatePhoneNumberParams{
-		PhoneNumber: phone,
-		ID:          pgtype.UUID{Bytes: *id, Valid: true},
-	}
-	return r.queries.UpdatePhoneNumber(ctx, params)
-}
-
-func (r *UserRepository) UpdateUsername(ctx context.Context, username string, id *uuid.UUID) error {
-	params := db.UpdateUsernameParams{
-		Username: username,
-		ID:       pgtype.UUID{Bytes: *id, Valid: true},
-	}
-	return r.queries.UpdateUsername(ctx, params)
-}
-
-func (r *UserRepository) UpdateEmail(ctx context.Context, dto *dtos.UpdateEmailDto, id *uuid.UUID) error {
-	params := db.UpdateEmailParams{
-		Email: dto.Email,
-		ID:    pgtype.UUID{Bytes: *id, Valid: true},
-	}
-	return r.queries.UpdateEmail(ctx, params)
-}
-
-func (r *UserRepository) VerifyUser(ctx context.Context, userID *uuid.UUID) error {
-	return r.queries.UpdateVerified(ctx, db.UpdateVerifiedParams{
-		UserVerified: true,
-		ID:           pgtype.UUID{Bytes: *userID, Valid: true},
-	})
-}
-
-func (r *UserRepository) Delete(ctx context.Context, id *uuid.UUID) error {
-	return r.queries.DeleteUser(ctx, pgtype.UUID{Bytes: *id, Valid: true})
-}
-
-func (r *UserRepository) GetAll(ctx context.Context, limit, offset int) ([]*models.User, error) {
-	rows, err := r.queries.GetAllUsers(ctx, db.GetAllUsersParams{
-		Limit:  int32(limit),
-		Offset: int32(offset),
-	})
+func (r *UserRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
+	rows, err := r.queries.ListUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	users := make([]*models.User, len(rows))
-	for i, row := range rows {
+	for i := range rows {
 		users[i] = &models.User{
-			ID:           row.ID.Bytes,
-			Email:        row.Email,
-			Username:     row.Username,
-			PasswordHash: row.PasswordHash,
-			BirthDate:    row.BirthDate.Time.UnixMilli(),
-			PhoneNumber:  row.PhoneNumber,
-			Alias:        row.Alias,
-			Avatar:       row.Avatar,
-			Bio:          row.Bio,
-			Verified:     row.UserVerified,
-			Role:         models.RoleFromDB(row.Role),
-			CreatedAt:    row.CreatedAt.Time.UnixMilli(),
-			UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
-			DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
+			ID:           rows[i].ID.Bytes,
+			Username:     rows[i].Username,
+			Email:        rows[i].Email,
+			PasswordHash: rows[i].Passwordhash,
+			Verified:     rows[i].Verified,
+			Role:         models.RoleFromDB(rows[i].Role),
+			CreatedAt:    rows[i].Createdat.Time.UnixMilli(),
+			UpdatedAt:    rows[i].Updatedat.Time.UnixMilli(),
+			DeletedAt:    models.ToInt64Ptr(rows[i].Deletedat),
 		}
 	}
 	return users, nil
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id *uuid.UUID) (*models.User, error) {
-	row, err := r.queries.GetUserByID(ctx, pgtype.UUID{Bytes: *id, Valid: true})
-	if err != nil {
-		return nil, err
-	}
-	return &models.User{
-		ID:           row.ID.Bytes,
-		Email:        row.Email,
-		Username:     row.Username,
-		PasswordHash: row.PasswordHash,
-		BirthDate:    row.BirthDate.Time.UnixMilli(),
-		PhoneNumber:  row.PhoneNumber,
-		Alias:        row.Alias,
-		Avatar:       row.Avatar,
-		Bio:          row.Bio,
-		Verified:     row.UserVerified,
-		Role:         models.RoleFromDB(row.Role),
-		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
-	}, nil
-}
-
-func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*models.User, error) {
-	row, err := r.queries.GetUserByUsername(ctx, username)
+func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	row, err := r.queries.GetUserByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, models.ErrUserNotFound
@@ -158,19 +53,14 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*m
 	}
 	return &models.User{
 		ID:           row.ID.Bytes,
-		Email:        row.Email,
 		Username:     row.Username,
-		PasswordHash: row.PasswordHash,
-		BirthDate:    row.BirthDate.Time.UnixMilli(),
-		PhoneNumber:  row.PhoneNumber,
-		Alias:        row.Alias,
-		Avatar:       row.Avatar,
-		Bio:          row.Bio,
-		Verified:     row.UserVerified,
+		Email:        row.Email,
+		PasswordHash: row.Passwordhash,
+		Verified:     row.Verified,
 		Role:         models.RoleFromDB(row.Role),
-		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
+		CreatedAt:    row.Createdat.Time.UnixMilli(),
+		UpdatedAt:    row.Updatedat.Time.UnixMilli(),
+		DeletedAt:    models.ToInt64Ptr(row.Deletedat),
 	}, nil
 }
 
@@ -184,24 +74,19 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 	}
 	return &models.User{
 		ID:           row.ID.Bytes,
-		Email:        row.Email,
 		Username:     row.Username,
-		PasswordHash: row.PasswordHash,
-		BirthDate:    row.BirthDate.Time.UnixMilli(),
-		PhoneNumber:  row.PhoneNumber,
-		Alias:        row.Alias,
-		Avatar:       row.Avatar,
-		Bio:          row.Bio,
-		Verified:     row.UserVerified,
+		Email:        row.Email,
+		PasswordHash: row.Passwordhash,
+		Verified:     row.Verified,
 		Role:         models.RoleFromDB(row.Role),
-		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
+		CreatedAt:    row.Createdat.Time.UnixMilli(),
+		UpdatedAt:    row.Updatedat.Time.UnixMilli(),
+		DeletedAt:    models.ToInt64Ptr(row.Deletedat),
 	}, nil
 }
 
-func (r *UserRepository) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
-	row, err := r.queries.GetUserByUsernameOrEmail(ctx, value)
+func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	row, err := r.queries.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, models.ErrUserNotFound
@@ -210,18 +95,73 @@ func (r *UserRepository) GetByUsernameOrEmail(ctx context.Context, value string)
 	}
 	return &models.User{
 		ID:           row.ID.Bytes,
-		Email:        row.Email,
 		Username:     row.Username,
-		PasswordHash: row.PasswordHash,
-		BirthDate:    row.BirthDate.Time.UnixMilli(),
-		PhoneNumber:  row.PhoneNumber,
-		Alias:        row.Alias,
-		Avatar:       row.Avatar,
-		Bio:          row.Bio,
-		Verified:     row.UserVerified,
+		Email:        row.Email,
+		PasswordHash: row.Passwordhash,
+		Verified:     row.Verified,
 		Role:         models.RoleFromDB(row.Role),
-		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
+		CreatedAt:    row.Createdat.Time.UnixMilli(),
+		UpdatedAt:    row.Updatedat.Time.UnixMilli(),
+		DeletedAt:    models.ToInt64Ptr(row.Deletedat),
 	}, nil
+}
+
+func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	return r.queries.CreateUser(ctx, db.CreateUserParams{
+		ID:           pgtype.UUID{Bytes: user.ID, Valid: true},
+		Username:     user.Username,
+		Email:        user.Email,
+		PasswordHash: user.PasswordHash,
+		Verified:     user.Verified,
+		Role:         user.Role.ToDB(),
+		CreatedAt:    pgtype.Timestamptz{Time: time.UnixMilli(user.CreatedAt), Valid: true},
+		UpdatedAt:    pgtype.Timestamptz{Time: time.UnixMilli(user.UpdatedAt), Valid: true},
+	})
+}
+
+func (r *UserRepository) UpdateUsername(ctx context.Context, username string, id uuid.UUID) error {
+	return r.queries.UpdateUsername(ctx, db.UpdateUsernameParams{
+		Username: username,
+		ID:       pgtype.UUID{Bytes: id, Valid: true},
+	})
+}
+
+func (r *UserRepository) UpdateEmail(ctx context.Context, email string, id uuid.UUID) error {
+	return r.queries.UpdateEmail(ctx, db.UpdateEmailParams{
+		Email: email,
+		ID:    pgtype.UUID{Bytes: id, Valid: true},
+	})
+}
+
+func (r *UserRepository) UpdatePassword(ctx context.Context, passwordHash string, id uuid.UUID) error {
+	return r.queries.UpdatePassword(ctx, db.UpdatePasswordParams{
+		PasswordHash: passwordHash,
+		ID:           pgtype.UUID{Bytes: id, Valid: true},
+	})
+}
+
+func (r *UserRepository) UpdateVerified(ctx context.Context, verified bool, id uuid.UUID) error {
+	return r.queries.UpdateVerified(ctx, db.UpdateVerifiedParams{
+		Verified: verified,
+		ID:       pgtype.UUID{Bytes: id, Valid: true},
+	})
+}
+
+func (r *UserRepository) UpdateRole(ctx context.Context, role models.Role, id uuid.UUID) error {
+	return r.queries.UpdateRole(ctx, db.UpdateRoleParams{
+		Role: role.ToDB(),
+		ID:   pgtype.UUID{Bytes: id, Valid: true},
+	})
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.queries.DeleteUser(ctx, pgtype.UUID{Bytes: id, Valid: true})
+}
+
+func (r *UserRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
+	return r.queries.SoftDeleteUser(ctx, pgtype.UUID{Bytes: id, Valid: true})
+}
+
+func (r *UserRepository) Restore(ctx context.Context, id uuid.UUID) error {
+	return r.queries.RestoreUser(ctx, pgtype.UUID{Bytes: id, Valid: true})
 }

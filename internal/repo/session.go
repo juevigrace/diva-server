@@ -18,48 +18,8 @@ func NewSessionRepository(queries *db.Queries) *SessionRepository {
 	return &SessionRepository{queries: queries}
 }
 
-func (r *SessionRepository) Create(ctx context.Context, params *models.Session) error {
-	return r.queries.CreateSession(ctx, db.CreateSessionParams{
-		ID:           pgtype.UUID{Bytes: params.ID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: params.User.ID, Valid: true},
-		AccessToken:  params.AccessToken,
-		RefreshToken: params.RefreshToken,
-		Device:       params.Device,
-		Status:       params.Status.ToDB(),
-		Type:         params.Type.ToDB(),
-		IpAddress:    params.IpAddress,
-		UserAgent:    params.UserAgent,
-		ExpiresAt:    models.ToTimestamptzPtr(&params.ExpiresAt),
-	})
-}
-
-func (r *SessionRepository) Update(ctx context.Context, params *models.Session) error {
-	return r.queries.UpdateSession(ctx, db.UpdateSessionParams{
-		AccessToken:  params.AccessToken,
-		RefreshToken: params.RefreshToken,
-		Device:       params.Device,
-		Status:       params.Status.ToDB(),
-		Type:         params.Type.ToDB(),
-		IpAddress:    params.IpAddress,
-		UserAgent:    params.UserAgent,
-		ExpiresAt:    pgtype.Timestamptz{Time: time.UnixMilli(params.ExpiresAt), Valid: true},
-		ID:           pgtype.UUID{Bytes: params.ID, Valid: true},
-	})
-}
-
-func (r *SessionRepository) UpdateStatus(ctx context.Context, status models.SessionStatus, id *uuid.UUID) error {
-	return r.queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
-		Status: status.ToDB(),
-		ID:     pgtype.UUID{Bytes: *id, Valid: true},
-	})
-}
-
-func (r *SessionRepository) Delete(ctx context.Context, id *uuid.UUID) error {
-	return r.queries.DeleteSession(ctx, pgtype.UUID{Bytes: *id, Valid: true})
-}
-
-func (r *SessionRepository) GetByUser(ctx context.Context, userID *uuid.UUID) ([]*models.Session, error) {
-	rows, err := r.queries.GetSessionsByUser(ctx, pgtype.UUID{Bytes: *userID, Valid: true})
+func (r *SessionRepository) ListSessionsByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
+	rows, err := r.queries.ListSessionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
@@ -68,63 +28,129 @@ func (r *SessionRepository) GetByUser(ctx context.Context, userID *uuid.UUID) ([
 	for i := range rows {
 		sessions[i] = &models.Session{
 			ID:           rows[i].ID.Bytes,
-			AccessToken:  rows[i].AccessToken,
-			RefreshToken: rows[i].RefreshToken,
+			User:         models.User{ID: rows[i].Userid.Bytes},
+			AccessToken:  rows[i].Accesstoken,
+			RefreshToken: rows[i].Refreshtoken,
 			Device:       rows[i].Device,
 			Status:       models.SessionStatusFromDB(rows[i].Status),
 			Type:         models.SessionTypeFromDB(rows[i].Type),
-			IpAddress:    rows[i].IpAddress,
-			UserAgent:    rows[i].UserAgent,
-			ExpiresAt:    rows[i].ExpiresAt.Time.UnixMilli(),
-			CreatedAt:    rows[i].CreatedAt.Time.UnixMilli(),
-			UpdatedAt:    rows[i].UpdatedAt.Time.UnixMilli(),
+			IpAddress:    rows[i].Ipaddress,
+			UserAgent:    rows[i].Useragent,
+			ExpiresAt:    rows[i].Expiresat.Time.UnixMilli(),
+			CreatedAt:    rows[i].Createdat.Time.UnixMilli(),
+			UpdatedAt:    rows[i].Updatedat.Time.UnixMilli(),
 		}
 	}
-
 	return sessions, nil
 }
 
-func (r *SessionRepository) GetByID(ctx context.Context, id *uuid.UUID) (*models.Session, error) {
-	row, err := r.queries.GetSessionByID(ctx, pgtype.UUID{Bytes: *id, Valid: true})
+func (r *SessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Session, error) {
+	row, err := r.queries.GetSessionByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return nil, err
 	}
-
-	uRow, err := r.queries.GetUserByID(ctx, row.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: find permissions and add them
-	user := models.User{
-		ID:           uRow.ID.Bytes,
-		Email:        uRow.Email,
-		Username:     uRow.Username,
-		PasswordHash: uRow.PasswordHash,
-		BirthDate:    uRow.BirthDate.Time.UnixMilli(),
-		PhoneNumber:  uRow.PhoneNumber,
-		Alias:        uRow.Alias,
-		Avatar:       uRow.Avatar,
-		Bio:          uRow.Bio,
-		Verified:     uRow.UserVerified,
-		Role:         models.RoleFromDB(uRow.Role),
-		CreatedAt:    uRow.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:    uRow.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:    models.ToInt64Ptr(uRow.DeletedAt),
-	}
-
 	return &models.Session{
 		ID:           row.ID.Bytes,
-		User:         user,
-		AccessToken:  row.AccessToken,
-		RefreshToken: row.RefreshToken,
+		User:         models.User{ID: row.Userid.Bytes},
+		AccessToken:  row.Accesstoken,
+		RefreshToken: row.Refreshtoken,
 		Device:       row.Device,
 		Status:       models.SessionStatusFromDB(row.Status),
 		Type:         models.SessionTypeFromDB(row.Type),
-		IpAddress:    row.IpAddress,
-		UserAgent:    row.UserAgent,
-		ExpiresAt:    row.ExpiresAt.Time.UnixMilli(),
-		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
+		IpAddress:    row.Ipaddress,
+		UserAgent:    row.Useragent,
+		ExpiresAt:    row.Expiresat.Time.UnixMilli(),
+		CreatedAt:    row.Createdat.Time.UnixMilli(),
+		UpdatedAt:    row.Updatedat.Time.UnixMilli(),
 	}, nil
+}
+
+func (r *SessionRepository) GetByAccessToken(ctx context.Context, accessToken string) (*models.Session, error) {
+	row, err := r.queries.GetSessionByAccessToken(ctx, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	return &models.Session{
+		ID:           row.ID.Bytes,
+		User:         models.User{ID: row.Userid.Bytes},
+		AccessToken:  row.Accesstoken,
+		RefreshToken: row.Refreshtoken,
+		Device:       row.Device,
+		Status:       models.SessionStatusFromDB(row.Status),
+		Type:         models.SessionTypeFromDB(row.Type),
+		IpAddress:    row.Ipaddress,
+		UserAgent:    row.Useragent,
+		ExpiresAt:    row.Expiresat.Time.UnixMilli(),
+		CreatedAt:    row.Createdat.Time.UnixMilli(),
+		UpdatedAt:    row.Updatedat.Time.UnixMilli(),
+	}, nil
+}
+
+func (r *SessionRepository) GetByRefreshToken(ctx context.Context, refreshToken string) (*models.Session, error) {
+	row, err := r.queries.GetSessionByRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+	return &models.Session{
+		ID:           row.ID.Bytes,
+		User:         models.User{ID: row.Userid.Bytes},
+		AccessToken:  row.Accesstoken,
+		RefreshToken: row.Refreshtoken,
+		Device:       row.Device,
+		Status:       models.SessionStatusFromDB(row.Status),
+		Type:         models.SessionTypeFromDB(row.Type),
+		IpAddress:    row.Ipaddress,
+		UserAgent:    row.Useragent,
+		ExpiresAt:    row.Expiresat.Time.UnixMilli(),
+		CreatedAt:    row.Createdat.Time.UnixMilli(),
+		UpdatedAt:    row.Updatedat.Time.UnixMilli(),
+	}, nil
+}
+
+func (r *SessionRepository) Create(ctx context.Context, session *models.Session) error {
+	return r.queries.CreateSession(ctx, db.CreateSessionParams{
+		ID:           pgtype.UUID{Bytes: session.ID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: session.User.ID, Valid: true},
+		AccessToken:  session.AccessToken,
+		RefreshToken: session.RefreshToken,
+		Device:       session.Device,
+		Status:       session.Status.ToDB(),
+		Type:         session.Type.ToDB(),
+		IpAddress:    session.IpAddress,
+		UserAgent:    session.UserAgent,
+		ExpiresAt:    pgtype.Timestamptz{Time: time.UnixMilli(session.ExpiresAt), Valid: true},
+	})
+}
+
+func (r *SessionRepository) Update(ctx context.Context, session *models.Session) error {
+	return r.queries.UpdateSession(ctx, db.UpdateSessionParams{
+		AccessToken:  session.AccessToken,
+		RefreshToken: session.RefreshToken,
+		Device:       session.Device,
+		Status:       session.Status.ToDB(),
+		Type:         session.Type.ToDB(),
+		IpAddress:    session.IpAddress,
+		UserAgent:    session.UserAgent,
+		ExpiresAt:    pgtype.Timestamptz{Time: time.UnixMilli(session.ExpiresAt), Valid: true},
+		ID:           pgtype.UUID{Bytes: session.ID, Valid: true},
+	})
+}
+
+func (r *SessionRepository) UpdateStatus(ctx context.Context, status models.SessionStatus, id uuid.UUID) error {
+	return r.queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
+		Status: status.ToDB(),
+		ID:     pgtype.UUID{Bytes: id, Valid: true},
+	})
+}
+
+func (r *SessionRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.queries.DeleteSession(ctx, pgtype.UUID{Bytes: id, Valid: true})
+}
+
+func (r *SessionRepository) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
+	return r.queries.DeleteSessionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+}
+
+func (r *SessionRepository) DeleteExpired(ctx context.Context) error {
+	return r.queries.DeleteExpiredSessions(ctx)
 }

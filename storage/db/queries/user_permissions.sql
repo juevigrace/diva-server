@@ -6,13 +6,8 @@ select
     up.granted,
     up.granted_at as grantedAt,
     up.expires_at as expiresAt,
-    up.updated_at as updatedAt,
-    p.name,
-    p.description,
-    p.action,
-    p.role_level as roleLevel
+    up.updated_at as updatedAt
 from diva_user_permissions up
-join diva_permissions p on up.permission_id = p.id
 where up.user_id = $1 and up.granted = true
 ;
 

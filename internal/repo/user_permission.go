@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -17,87 +18,81 @@ func NewUserPermissionRepository(queries *db.Queries) *UserPermissionRepository 
 	return &UserPermissionRepository{queries: queries}
 }
 
-func (r *UserPermissionRepository) GetByUser(ctx context.Context, id *uuid.UUID) ([]*models.UserPermission, error) {
-	rows, err := r.queries.GetUserPermissions(ctx, pgtype.UUID{Bytes: *id, Valid: true})
+func (r *UserPermissionRepository) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPermission, error) {
+	rows, err := r.queries.GetUserPermissions(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
 
 	perms := make([]*models.UserPermission, len(rows))
-	for i, row := range rows {
-		var grantedBy *uuid.UUID = nil
-		if row.GrantedBy.Valid {
-			parsed, err := uuid.ParseBytes(row.GrantedBy.Bytes[:])
-			if err != nil {
-				return nil, err
-			}
-			grantedBy = &parsed
-		}
-
-		var expiresAt *int64 = nil
-		if row.ExpiresAt.Valid {
-			var time = row.GrantedAt.Time.UnixMilli()
-			expiresAt = &time
-
-		}
-
+	for i := range rows {
 		perms[i] = &models.UserPermission{
-			Permission: row.PermissionID.Bytes,
-			UserID:     row.UserID.Bytes,
-			GrantedBy:  grantedBy,
-			Granted:    row.Granted,
-			GrantedAt:  row.GrantedAt.Time.UnixMilli(),
-			ExpiresAt:  expiresAt,
-			UpdatedAt:  row.GrantedAt.Time.UnixMilli(),
+			Permission: &models.Permission{ID: rows[i].Permissionid.Bytes},
+			GrantedBy:  models.FromUUIDPtr(rows[i].Grantedby),
+			Granted:    rows[i].Granted,
+			GrantedAt:  models.ToInt64Ptr(rows[i].Grantedat),
+			ExpiresAt:  models.ToInt64Ptr(rows[i].Expiresat),
+			UpdatedAt:  rows[i].Updatedat.Time.UnixMilli(),
 		}
 	}
 	return perms, nil
 }
 
-func (r *UserPermissionRepository) Create(ctx context.Context, params *models.UserPermission) error {
-	return r.queries.CreateUserPermission(ctx, db.CreateUserPermissionParams{
-		PermissionID: pgtype.UUID{Bytes: params.Permission, Valid: true},
-		UserID:       pgtype.UUID{Bytes: params.UserID, Valid: true},
-		GrantedBy:    models.ToUUIDPtr(params.GrantedBy),
-		Granted:      params.Granted,
-		ExpiresAt:    models.ToTimestamptzPtr(params.ExpiresAt),
+func (r *UserPermissionRepository) GetByUserAndPermission(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) (*models.UserPermission, error) {
+	row, err := r.queries.GetUserPermission(ctx, db.GetUserPermissionParams{
+		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.UserPermission{
+		Permission: &models.Permission{ID: row.Permissionid.Bytes},
+		GrantedBy:  models.FromUUIDPtr(row.Grantedby),
+		Granted:    row.Granted,
+		GrantedAt:  models.ToInt64Ptr(row.Grantedat),
+		ExpiresAt:  models.ToInt64Ptr(row.Expiresat),
+		UpdatedAt:  row.Updatedat.Time.UnixMilli(),
+	}, nil
+}
+
+func (r *UserPermissionRepository) Grant(ctx context.Context, userID uuid.UUID, up *models.UserPermission) error {
+	return r.queries.GrantPermission(ctx, db.GrantPermissionParams{
+		PermissionID: pgtype.UUID{Bytes: up.Permission.ID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+		GrantedBy:    models.ToUUIDPtr(up.GrantedBy),
+		Granted:      up.Granted,
+		GrantedAt:    models.ToTimestamptzPtr(up.GrantedAt),
+		ExpiresAt:    models.ToTimestamptzPtr(up.ExpiresAt),
+		UpdatedAt:    pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	})
 }
 
-func (r *UserPermissionRepository) Update(ctx context.Context, params *models.UserPermission) error {
-	return r.queries.UpdateUserPermission(ctx, db.UpdateUserPermissionParams{
-		Granted:      params.Granted,
-		ExpiresAt:    models.ToTimestamptzPtr(params.ExpiresAt),
-		PermissionID: pgtype.UUID{Bytes: params.Permission, Valid: true},
-		UserID:       pgtype.UUID{Bytes: params.UserID, Valid: true},
+func (r *UserPermissionRepository) Revoke(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) error {
+	return r.queries.RevokePermission(ctx, db.RevokePermissionParams{
+		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }
 
-func (r *UserPermissionRepository) Delete(ctx context.Context, userID, permissionID *uuid.UUID) error {
+func (r *UserPermissionRepository) UpdateGrant(ctx context.Context, userID uuid.UUID, up *models.UserPermission) error {
+	return r.queries.UpdatePermissionGrant(ctx, db.UpdatePermissionGrantParams{
+		Granted:      up.Granted,
+		GrantedBy:    models.ToUUIDPtr(up.GrantedBy),
+		ExpiresAt:    models.ToTimestamptzPtr(up.ExpiresAt),
+		PermissionID: pgtype.UUID{Bytes: up.Permission.ID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+	})
+}
+
+func (r *UserPermissionRepository) Delete(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) error {
 	return r.queries.DeleteUserPermission(ctx, db.DeleteUserPermissionParams{
-		PermissionID: pgtype.UUID{Bytes: *permissionID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: *userID, Valid: true},
+		PermissionID: pgtype.UUID{Bytes: permissionID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
 	})
 }
 
-func (r *UserPermissionRepository) CreateBatch(ctx context.Context, params []*models.UserPermission) error {
-	for _, p := range params {
-		if err := r.Create(ctx, p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *UserPermissionRepository) UpdateBatch(ctx context.Context, params []*models.UserPermission) error {
-	for _, p := range params {
-		if err := r.Update(ctx, p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *UserPermissionRepository) DeleteBatch(ctx context.Context, userID *uuid.UUID) error {
-	return r.queries.DeleteUserPermissions(ctx, pgtype.UUID{Bytes: *userID, Valid: true})
+func (r *UserPermissionRepository) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
+	return r.queries.DeleteAllUserPermissions(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 }

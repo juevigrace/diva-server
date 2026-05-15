@@ -18,7 +18,7 @@ import (
 
 type VerificationService struct {
 	mail      *mail.Client
-	repo      *repo.VerificationRepository
+	repo      *repo.UserActionVerificationRepository
 	sService  *SessionService
 	uService  *UserService
 	uaService *UserActionsService
@@ -26,7 +26,7 @@ type VerificationService struct {
 
 func NewVerificationService(
 	mail *mail.Client,
-	repo *repo.VerificationRepository,
+	repo *repo.UserActionVerificationRepository,
 	sService *SessionService,
 	uService *UserService,
 	uaService *UserActionsService,
