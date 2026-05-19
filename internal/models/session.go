@@ -8,6 +8,9 @@ import (
 )
 
 var (
+	ErrTokenNotValid   = errors.New("token is not valid")
+	ErrBadAudience     = errors.New("bad audience in token")
+	ErrBadIssuer       = errors.New("bad issuer in token")
 	ErrSessionNotFound = errors.New("session not found")
 	ErrSessionInvalid  = errors.New("invalid session")
 )

@@ -19,30 +19,30 @@ type User struct {
 	ID           uuid.UUID
 	Username     string
 	Email        string
+	PhoneNumber  string
 	PasswordHash string
-	Profile      *UserProfile
 	Verified     bool
 	Role         Role
 	CreatedAt    int64
 	UpdatedAt    int64
 	DeletedAt    *int64
-	Actions      []*UserAction
-	Permissions  []*UserPermission
-	Preferences  *UserPreferences
+	Profile      *UserProfile
+	Actions      []UserAction
+	Permissions  []UserPermission
+	Preferences  UserPreferences
 }
 
 type UserProfile struct {
-	FirstName   string
-	LastName    string
-	BirthDate   int64
-	PhoneNumber string
-	Alias       string
-	Avatar      string
-	Bio         string
+	FirstName string
+	LastName  string
+	BirthDate int64
+	Alias     string
+	Avatar    string
+	Bio       string
 }
 
 type UserPermission struct {
-	Permission *Permission
+	Permission Permission
 	GrantedBy  *uuid.UUID
 	Granted    bool
 	GrantedAt  *int64
@@ -63,14 +63,15 @@ type UserPreferences struct {
 
 func (u *User) Response() *responses.UserResponse {
 	return &responses.UserResponse{
-		ID:        u.ID.String(),
-		Username:  u.Username,
-		Email:     u.Email,
-		Verified:  u.Verified,
-		Role:      u.Role.String(),
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
-		DeletedAt: u.DeletedAt,
+		ID:          u.ID.String(),
+		Username:    u.Username,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		Verified:    u.Verified,
+		Role:        u.Role.String(),
+		CreatedAt:   u.CreatedAt,
+		UpdatedAt:   u.UpdatedAt,
+		DeletedAt:   u.DeletedAt,
 	}
 }
 
@@ -80,14 +81,13 @@ func (up *UserProfile) Response(id *uuid.UUID) *responses.UserProfileResponse {
 		*userID = id.String()
 	}
 	return &responses.UserProfileResponse{
-		UserID:      userID,
-		FirstName:   up.FirstName,
-		LastName:    up.LastName,
-		BirthDate:   up.BirthDate,
-		PhoneNumber: up.PhoneNumber,
-		Alias:       up.Alias,
-		Avatar:      up.Avatar,
-		Bio:         up.Bio,
+		UserID:    userID,
+		FirstName: up.FirstName,
+		LastName:  up.LastName,
+		BirthDate: up.BirthDate,
+		Alias:     up.Alias,
+		Avatar:    up.Avatar,
+		Bio:       up.Bio,
 	}
 }
 

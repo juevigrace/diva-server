@@ -15,7 +15,6 @@ type CreateProfileDto struct {
 }
 
 type UpdateProfileDto struct {
-	ID        string `json:"user_id" validate:"required,uuid"`
 	FirstName string `json:"first_name" validate:"required,max=255"`
 	LastName  string `json:"last_name" validate:"required,max=255"`
 	Alias     string `json:"alias" validate:"required,max=255"`
@@ -52,7 +51,7 @@ type DeleteUserPermissionDto struct {
 }
 
 type UserPreferencesDto struct {
-	Id                  string `json:"id" validate:"required,uuid"`
+	ID                  string `json:"id" validate:"required,uuid"`
 	Device              string `json:"device" validate:"required,max=100"`
 	Theme               string `json:"theme" validate:"required,oneof=LIGHT DARK SYSTEM"`
 	OnboardingCompleted bool   `json:"onboarding_completed" validate:"required"`

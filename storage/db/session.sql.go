@@ -96,90 +96,37 @@ func (q *Queries) DeleteSessionsByUser(ctx context.Context, userID pgtype.UUID) 
 	return err
 }
 
-const getSessionByAccessToken = `-- name: GetSessionByAccessToken :one
-select
-    s.id as id,
-    s.user_id as userId,
-    s.access_token as accessToken,
-    s.refresh_token as refreshToken,
-    s.device,
-    s.status,
-    s.type,
-    s.ip_address as ipAddress,
-    s.user_agent as userAgent,
-    s.expires_at as expiresAt,
-    s.created_at as createdAt,
-    s.updated_at as updatedAt
-from diva_session s
-where s.access_token = $1
-`
-
-type GetSessionByAccessTokenRow struct {
-	ID           pgtype.UUID
-	Userid       pgtype.UUID
-	Accesstoken  string
-	Refreshtoken string
-	Device       string
-	Status       SessionStatusType
-	Type         SessionType
-	Ipaddress    string
-	Useragent    string
-	Expiresat    pgtype.Timestamptz
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetSessionByAccessToken(ctx context.Context, accessToken string) (GetSessionByAccessTokenRow, error) {
-	row := q.db.QueryRow(ctx, getSessionByAccessToken, accessToken)
-	var i GetSessionByAccessTokenRow
-	err := row.Scan(
-		&i.ID,
-		&i.Userid,
-		&i.Accesstoken,
-		&i.Refreshtoken,
-		&i.Device,
-		&i.Status,
-		&i.Type,
-		&i.Ipaddress,
-		&i.Useragent,
-		&i.Expiresat,
-		&i.Createdat,
-		&i.Updatedat,
-	)
-	return i, err
-}
-
 const getSessionByID = `-- name: GetSessionByID :one
 select
     s.id as id,
-    s.user_id as userId,
-    s.access_token as accessToken,
-    s.refresh_token as refreshToken,
+    s.user_id,
+    s.access_token,
+    s.refresh_token,
     s.device,
     s.status,
     s.type,
-    s.ip_address as ipAddress,
-    s.user_agent as userAgent,
-    s.expires_at as expiresAt,
-    s.created_at as createdAt,
-    s.updated_at as updatedAt
+    s.ip_address,
+    s.user_agent,
+    s.expires_at,
+    s.created_at,
+    s.updated_at
 from diva_session s
 where s.id = $1
 `
 
 type GetSessionByIDRow struct {
 	ID           pgtype.UUID
-	Userid       pgtype.UUID
-	Accesstoken  string
-	Refreshtoken string
+	UserID       pgtype.UUID
+	AccessToken  string
+	RefreshToken string
 	Device       string
 	Status       SessionStatusType
 	Type         SessionType
-	Ipaddress    string
-	Useragent    string
-	Expiresat    pgtype.Timestamptz
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
+	IpAddress    string
+	UserAgent    string
+	ExpiresAt    pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }
 
 func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessionByIDRow, error) {
@@ -187,70 +134,17 @@ func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessio
 	var i GetSessionByIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.Userid,
-		&i.Accesstoken,
-		&i.Refreshtoken,
+		&i.UserID,
+		&i.AccessToken,
+		&i.RefreshToken,
 		&i.Device,
 		&i.Status,
 		&i.Type,
-		&i.Ipaddress,
-		&i.Useragent,
-		&i.Expiresat,
-		&i.Createdat,
-		&i.Updatedat,
-	)
-	return i, err
-}
-
-const getSessionByRefreshToken = `-- name: GetSessionByRefreshToken :one
-select
-    s.id as id,
-    s.user_id as userId,
-    s.access_token as accessToken,
-    s.refresh_token as refreshToken,
-    s.device,
-    s.status,
-    s.type,
-    s.ip_address as ipAddress,
-    s.user_agent as userAgent,
-    s.expires_at as expiresAt,
-    s.created_at as createdAt,
-    s.updated_at as updatedAt
-from diva_session s
-where s.refresh_token = $1
-`
-
-type GetSessionByRefreshTokenRow struct {
-	ID           pgtype.UUID
-	Userid       pgtype.UUID
-	Accesstoken  string
-	Refreshtoken string
-	Device       string
-	Status       SessionStatusType
-	Type         SessionType
-	Ipaddress    string
-	Useragent    string
-	Expiresat    pgtype.Timestamptz
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (GetSessionByRefreshTokenRow, error) {
-	row := q.db.QueryRow(ctx, getSessionByRefreshToken, refreshToken)
-	var i GetSessionByRefreshTokenRow
-	err := row.Scan(
-		&i.ID,
-		&i.Userid,
-		&i.Accesstoken,
-		&i.Refreshtoken,
-		&i.Device,
-		&i.Status,
-		&i.Type,
-		&i.Ipaddress,
-		&i.Useragent,
-		&i.Expiresat,
-		&i.Createdat,
-		&i.Updatedat,
+		&i.IpAddress,
+		&i.UserAgent,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -258,17 +152,17 @@ func (q *Queries) GetSessionByRefreshToken(ctx context.Context, refreshToken str
 const listSessionsByUser = `-- name: ListSessionsByUser :many
 select
     s.id as id,
-    s.user_id as userId,
-    s.access_token as accessToken,
-    s.refresh_token as refreshToken,
+    s.user_id,
+    s.access_token,
+    s.refresh_token,
     s.device,
     s.status,
     s.type,
-    s.ip_address as ipAddress,
-    s.user_agent as userAgent,
-    s.expires_at as expiresAt,
-    s.created_at as createdAt,
-    s.updated_at as updatedAt
+    s.ip_address,
+    s.user_agent,
+    s.expires_at,
+    s.created_at,
+    s.updated_at
 from diva_session s
 where s.user_id = $1
 order by created_at desc
@@ -276,17 +170,17 @@ order by created_at desc
 
 type ListSessionsByUserRow struct {
 	ID           pgtype.UUID
-	Userid       pgtype.UUID
-	Accesstoken  string
-	Refreshtoken string
+	UserID       pgtype.UUID
+	AccessToken  string
+	RefreshToken string
 	Device       string
 	Status       SessionStatusType
 	Type         SessionType
-	Ipaddress    string
-	Useragent    string
-	Expiresat    pgtype.Timestamptz
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
+	IpAddress    string
+	UserAgent    string
+	ExpiresAt    pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }
 
 func (q *Queries) ListSessionsByUser(ctx context.Context, userID pgtype.UUID) ([]ListSessionsByUserRow, error) {
@@ -300,17 +194,17 @@ func (q *Queries) ListSessionsByUser(ctx context.Context, userID pgtype.UUID) ([
 		var i ListSessionsByUserRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Userid,
-			&i.Accesstoken,
-			&i.Refreshtoken,
+			&i.UserID,
+			&i.AccessToken,
+			&i.RefreshToken,
 			&i.Device,
 			&i.Status,
 			&i.Type,
-			&i.Ipaddress,
-			&i.Useragent,
-			&i.Expiresat,
-			&i.Createdat,
-			&i.Updatedat,
+			&i.IpAddress,
+			&i.UserAgent,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -323,28 +217,19 @@ func (q *Queries) ListSessionsByUser(ctx context.Context, userID pgtype.UUID) ([
 }
 
 const updateSession = `-- name: UpdateSession :exec
-update diva_session
-set
+update diva_session set
     access_token = $1,
     refresh_token = $2,
-    device = $3,
-    status = $4,
-    type = $5,
-    ip_address = $6,
-    user_agent = $7,
-    expires_at = $8,
+    ip_address = $3,
+    expires_at = $4,
     updated_at = now()
-where id = $9
+where id = $5
 `
 
 type UpdateSessionParams struct {
 	AccessToken  string
 	RefreshToken string
-	Device       string
-	Status       SessionStatusType
-	Type         SessionType
 	IpAddress    string
-	UserAgent    string
 	ExpiresAt    pgtype.Timestamptz
 	ID           pgtype.UUID
 }
@@ -353,11 +238,7 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) er
 	_, err := q.db.Exec(ctx, updateSession,
 		arg.AccessToken,
 		arg.RefreshToken,
-		arg.Device,
-		arg.Status,
-		arg.Type,
 		arg.IpAddress,
-		arg.UserAgent,
 		arg.ExpiresAt,
 		arg.ID,
 	)
@@ -365,8 +246,7 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) er
 }
 
 const updateSessionStatus = `-- name: UpdateSessionStatus :exec
-update diva_session
-set
+update diva_session set
     status = $1,
     updated_at = now()
 where id = $2

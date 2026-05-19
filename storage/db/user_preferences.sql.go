@@ -81,43 +81,31 @@ func (q *Queries) DeletePreferencesByUser(ctx context.Context, userID pgtype.UUI
 const getPreferencesByDevice = `-- name: GetPreferencesByDevice :one
 select
     up.id as id,
-    up.user_id as userId,
+    up.user_id,
     up.device,
     up.theme,
-    up.onboarding_completed as onboardingCompleted,
+    up.onboarding_completed,
     up.language,
-    up.last_sync_at as lastSyncAt,
-    up.created_at as createdAt,
-    up.updated_at as updatedAt
+    up.last_sync_at,
+    up.created_at,
+    up.updated_at
 from diva_user_preferences up
 where up.device = $1
 `
 
-type GetPreferencesByDeviceRow struct {
-	ID                  pgtype.UUID
-	Userid              pgtype.UUID
-	Device              string
-	Theme               ThemeType
-	Onboardingcompleted bool
-	Language            string
-	Lastsyncat          pgtype.Timestamptz
-	Createdat           pgtype.Timestamptz
-	Updatedat           pgtype.Timestamptz
-}
-
-func (q *Queries) GetPreferencesByDevice(ctx context.Context, device string) (GetPreferencesByDeviceRow, error) {
+func (q *Queries) GetPreferencesByDevice(ctx context.Context, device string) (DivaUserPreference, error) {
 	row := q.db.QueryRow(ctx, getPreferencesByDevice, device)
-	var i GetPreferencesByDeviceRow
+	var i DivaUserPreference
 	err := row.Scan(
 		&i.ID,
-		&i.Userid,
+		&i.UserID,
 		&i.Device,
 		&i.Theme,
-		&i.Onboardingcompleted,
+		&i.OnboardingCompleted,
 		&i.Language,
-		&i.Lastsyncat,
-		&i.Createdat,
-		&i.Updatedat,
+		&i.LastSyncAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -125,43 +113,31 @@ func (q *Queries) GetPreferencesByDevice(ctx context.Context, device string) (Ge
 const getPreferencesByID = `-- name: GetPreferencesByID :one
 select
     up.id as id,
-    up.user_id as userId,
+    up.user_id,
     up.device,
     up.theme,
-    up.onboarding_completed as onboardingCompleted,
+    up.onboarding_completed,
     up.language,
-    up.last_sync_at as lastSyncAt,
-    up.created_at as createdAt,
-    up.updated_at as updatedAt
+    up.last_sync_at,
+    up.created_at,
+    up.updated_at
 from diva_user_preferences up
 where up.id = $1
 `
 
-type GetPreferencesByIDRow struct {
-	ID                  pgtype.UUID
-	Userid              pgtype.UUID
-	Device              string
-	Theme               ThemeType
-	Onboardingcompleted bool
-	Language            string
-	Lastsyncat          pgtype.Timestamptz
-	Createdat           pgtype.Timestamptz
-	Updatedat           pgtype.Timestamptz
-}
-
-func (q *Queries) GetPreferencesByID(ctx context.Context, id pgtype.UUID) (GetPreferencesByIDRow, error) {
+func (q *Queries) GetPreferencesByID(ctx context.Context, id pgtype.UUID) (DivaUserPreference, error) {
 	row := q.db.QueryRow(ctx, getPreferencesByID, id)
-	var i GetPreferencesByIDRow
+	var i DivaUserPreference
 	err := row.Scan(
 		&i.ID,
-		&i.Userid,
+		&i.UserID,
 		&i.Device,
 		&i.Theme,
-		&i.Onboardingcompleted,
+		&i.OnboardingCompleted,
 		&i.Language,
-		&i.Lastsyncat,
-		&i.Createdat,
-		&i.Updatedat,
+		&i.LastSyncAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -169,49 +145,37 @@ func (q *Queries) GetPreferencesByID(ctx context.Context, id pgtype.UUID) (GetPr
 const getPreferencesByUser = `-- name: GetPreferencesByUser :many
 select
     up.id as id,
-    up.user_id as userId,
+    up.user_id,
     up.device,
     up.theme,
-    up.onboarding_completed as onboardingCompleted,
+    up.onboarding_completed,
     up.language,
-    up.last_sync_at as lastSyncAt,
-    up.created_at as createdAt,
-    up.updated_at as updatedAt
+    up.last_sync_at,
+    up.created_at,
+    up.updated_at
 from diva_user_preferences up
 where up.user_id = $1
 `
 
-type GetPreferencesByUserRow struct {
-	ID                  pgtype.UUID
-	Userid              pgtype.UUID
-	Device              string
-	Theme               ThemeType
-	Onboardingcompleted bool
-	Language            string
-	Lastsyncat          pgtype.Timestamptz
-	Createdat           pgtype.Timestamptz
-	Updatedat           pgtype.Timestamptz
-}
-
-func (q *Queries) GetPreferencesByUser(ctx context.Context, userID pgtype.UUID) ([]GetPreferencesByUserRow, error) {
+func (q *Queries) GetPreferencesByUser(ctx context.Context, userID pgtype.UUID) ([]DivaUserPreference, error) {
 	rows, err := q.db.Query(ctx, getPreferencesByUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetPreferencesByUserRow
+	var items []DivaUserPreference
 	for rows.Next() {
-		var i GetPreferencesByUserRow
+		var i DivaUserPreference
 		if err := rows.Scan(
 			&i.ID,
-			&i.Userid,
+			&i.UserID,
 			&i.Device,
 			&i.Theme,
-			&i.Onboardingcompleted,
+			&i.OnboardingCompleted,
 			&i.Language,
-			&i.Lastsyncat,
-			&i.Createdat,
-			&i.Updatedat,
+			&i.LastSyncAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -224,8 +188,7 @@ func (q *Queries) GetPreferencesByUser(ctx context.Context, userID pgtype.UUID) 
 }
 
 const updateUserPreferences = `-- name: UpdateUserPreferences :exec
-update diva_user_preferences
-set
+update diva_user_preferences set
     theme = $1,
     language = $2,
     last_sync_at = now(),

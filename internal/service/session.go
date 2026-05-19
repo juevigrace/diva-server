@@ -12,21 +12,29 @@ import (
 )
 
 type SessionService struct {
-	repo *repo.SessionRepository
+	repo *repo.SessionRepo
 }
 
-func NewSessionService(repo *repo.SessionRepository) *SessionService {
+func NewSessionService(repo *repo.SessionRepo) *SessionService {
 	return &SessionService{repo: repo}
 }
 
-func (s *SessionService) Create(ctx context.Context, userID *uuid.UUID, dto *dtos.SessionDataDto) (*models.Session, error) {
+func (s *SessionService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
+	return s.repo.ListSessionsByUser(ctx, userID)
+}
+
+func (s *SessionService) GetByID(ctx context.Context, sessionID uuid.UUID) (*models.Session, error) {
+	return s.repo.GetByID(ctx, sessionID)
+}
+
+func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.SessionDataDto) (*models.Session, error) {
 	sessionID := uuid.New()
-	accessToken, err := util.CreateAccessToken(*userID, sessionID)
+	accessToken, err := util.CreateAccessToken(sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := util.CreateRefreshToken(*userID, sessionID)
+	refreshToken, err := util.CreateRefreshToken(sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +43,10 @@ func (s *SessionService) Create(ctx context.Context, userID *uuid.UUID, dto *dto
 	if err != nil {
 		return nil, err
 	}
-	expirationMillis := expiration.UnixMilli()
 
 	session := &models.Session{
 		ID:           sessionID,
-		User:         models.User{ID: *userID},
+		User:         models.User{ID: userID},
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		Device:       dto.Device,
@@ -47,23 +54,23 @@ func (s *SessionService) Create(ctx context.Context, userID *uuid.UUID, dto *dto
 		UserAgent:    dto.UserAgent,
 		Status:       models.SESSION_ACTIVE,
 		Type:         models.SESSION_NORMAL,
-		ExpiresAt:    expirationMillis,
+		ExpiresAt:    expiration.UnixMilli(),
 	}
 
 	if err := s.repo.Create(ctx, session); err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetByID(ctx, &sessionID)
+	return s.GetByID(ctx, sessionID)
 }
 
 func (s *SessionService) Update(ctx context.Context, session *models.Session) (*models.Session, error) {
-	accessToken, err := util.CreateAccessToken(session.User.ID, session.ID)
+	accessToken, err := util.CreateAccessToken(session.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := util.CreateRefreshToken(session.User.ID, session.ID)
+	refreshToken, err := util.CreateRefreshToken(session.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,47 +79,48 @@ func (s *SessionService) Update(ctx context.Context, session *models.Session) (*
 	if err != nil {
 		return nil, err
 	}
-	expirationMillis := expiration.UnixMilli()
 
-	var newSession models.Session = *session
-	newSession.AccessToken = accessToken
-	newSession.RefreshToken = refreshToken
-	newSession.ExpiresAt = expirationMillis
+	session.AccessToken = accessToken
+	session.RefreshToken = refreshToken
+	session.ExpiresAt = expiration.UnixMilli()
 
-	if err := s.repo.Update(ctx, &newSession); err != nil {
+	if err := s.repo.Update(ctx, session); err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetByID(ctx, &session.ID)
+	return s.GetByID(ctx, session.ID)
 }
 
-func (s *SessionService) Close(ctx context.Context, sessionID *uuid.UUID) error {
+func (s *SessionService) Expire(ctx context.Context, sessionID uuid.UUID) error {
+	return s.repo.UpdateStatus(ctx, models.SESSION_EXPIRED, sessionID)
+}
+
+func (s *SessionService) Close(ctx context.Context, sessionID uuid.UUID) error {
 	return s.repo.UpdateStatus(ctx, models.SESSION_CLOSED, sessionID)
 }
 
-func (s *SessionService) Delete(ctx context.Context, sessionID *uuid.UUID) error {
+func (s *SessionService) Delete(ctx context.Context, sessionID uuid.UUID) error {
 	return s.repo.Delete(ctx, sessionID)
 }
 
-func (s *SessionService) GetByID(ctx context.Context, sessionID *uuid.UUID) (*models.Session, error) {
-	return s.repo.GetByID(ctx, sessionID)
+func (s *SessionService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
+	return s.repo.DeleteByUser(ctx, userID)
 }
 
-func (s *SessionService) GetByUser(ctx context.Context, userID *uuid.UUID) ([]*models.Session, error) {
-	return s.repo.GetByUser(ctx, userID)
+func (s *SessionService) DeleteExpired(ctx context.Context) error {
+	return s.repo.DeleteExpired(ctx)
 }
 
-func (s *SessionService) CloseAll(ctx context.Context, userID *uuid.UUID) error {
+func (s *SessionService) CloseAllByUser(ctx context.Context, userID uuid.UUID) error {
 	sessions, err := s.GetByUser(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	errs := make([]error, 0)
-
-	for _, session := range sessions {
-		if err := s.Close(ctx, &session.ID); err != nil {
-			errs = append(errs, err)
+	errs := make([]error, len(sessions))
+	for i, session := range sessions {
+		if err := s.Close(ctx, session.ID); err != nil {
+			errs[i] = err
 		}
 	}
 

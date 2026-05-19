@@ -9,26 +9,44 @@ import (
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserActionsRepository struct {
+type UserActionsRepo struct {
 	queries *db.Queries
 }
 
-func NewUserActionsRepository(queries *db.Queries) *UserActionsRepository {
-	return &UserActionsRepository{queries: queries}
+func NewUserActionsRepo(queries *db.Queries) *UserActionsRepo {
+	return &UserActionsRepo{queries: queries}
 }
 
-func (r *UserActionsRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.UserAction, error) {
+func (r *UserActionsRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserAction, error) {
+	rows, err := r.queries.ListActionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+
+	actions := make([]*models.UserAction, len(rows))
+	for i, row := range rows {
+		actions[i] = &models.UserAction{
+			ID:     row.ID.Bytes,
+			Action: models.ActionFromString(row.Name),
+		}
+	}
+
+	return actions, nil
+}
+
+func (r *UserActionsRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.UserAction, error) {
 	row, err := r.queries.GetUserActionByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return nil, err
 	}
+
 	return &models.UserAction{
 		ID:     row.ID.Bytes,
 		Action: models.ActionFromString(row.Name),
 	}, nil
 }
 
-func (r *UserActionsRepository) GetByUserAndName(ctx context.Context, userID uuid.UUID, action models.Action) (*models.UserAction, error) {
+func (r *UserActionsRepo) GetByUserAndName(ctx context.Context, userID uuid.UUID, action models.Action) (*models.UserAction, error) {
 	row, err := r.queries.GetUserActionByUserAndName(ctx, db.GetUserActionByUserAndNameParams{
 		UserID: pgtype.UUID{Bytes: userID, Valid: true},
 		Name:   action.String(),
@@ -36,13 +54,14 @@ func (r *UserActionsRepository) GetByUserAndName(ctx context.Context, userID uui
 	if err != nil {
 		return nil, err
 	}
+
 	return &models.UserAction{
 		ID:     row.ID.Bytes,
 		Action: models.ActionFromString(row.Name),
 	}, nil
 }
 
-func (r *UserActionsRepository) Create(ctx context.Context, userID uuid.UUID, ua *models.UserAction) error {
+func (r *UserActionsRepo) Create(ctx context.Context, userID uuid.UUID, ua *models.UserAction) error {
 	return r.queries.CreateUserAction(ctx, db.CreateUserActionParams{
 		ID:     pgtype.UUID{Bytes: ua.ID, Valid: true},
 		Name:   ua.Action.String(),
@@ -50,6 +69,10 @@ func (r *UserActionsRepository) Create(ctx context.Context, userID uuid.UUID, ua
 	})
 }
 
-func (r *UserActionsRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *UserActionsRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.queries.DeleteUserAction(ctx, pgtype.UUID{Bytes: id, Valid: true})
+}
+
+func (r *UserActionsRepo) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
+	return r.queries.DeleteUserActionByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 }

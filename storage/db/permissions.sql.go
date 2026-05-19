@@ -11,23 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPermissions = `-- name: CountPermissions :one
+select count(*) from diva_permissions
+`
+
+func (q *Queries) CountPermissions(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countPermissions)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createPermission = `-- name: CreatePermission :exec
 insert into diva_permissions (
     id,
     name,
     description,
     action,
-    role_level,
-    created_at,
-    updated_at
+    role_level
 ) values (
     $1,
     $2,
     $3,
     $4,
-    $5,
-    $6,
-    $7
+    $5
 )
 `
 
@@ -37,8 +44,6 @@ type CreatePermissionParams struct {
 	Description string
 	Action      string
 	RoleLevel   RoleType
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
 }
 
 func (q *Queries) CreatePermission(ctx context.Context, arg CreatePermissionParams) error {
@@ -48,8 +53,6 @@ func (q *Queries) CreatePermission(ctx context.Context, arg CreatePermissionPara
 		arg.Description,
 		arg.Action,
 		arg.RoleLevel,
-		arg.CreatedAt,
-		arg.UpdatedAt,
 	)
 	return err
 }
@@ -70,37 +73,26 @@ select
     p.name,
     p.description,
     p.action,
-    p.role_level as roleLevel,
-    p.created_at as createdAt,
-    p.updated_at as updatedAt,
-    p.deleted_at as deletedAt
+    p.role_level,
+    p.created_at,
+    p.updated_at,
+    p.deleted_at
 from diva_permissions p
 where p.id = $1
 `
 
-type GetPermissionByIDRow struct {
-	ID          pgtype.UUID
-	Name        string
-	Description string
-	Action      string
-	Rolelevel   RoleType
-	Createdat   pgtype.Timestamptz
-	Updatedat   pgtype.Timestamptz
-	Deletedat   pgtype.Timestamptz
-}
-
-func (q *Queries) GetPermissionByID(ctx context.Context, id pgtype.UUID) (GetPermissionByIDRow, error) {
+func (q *Queries) GetPermissionByID(ctx context.Context, id pgtype.UUID) (DivaPermission, error) {
 	row := q.db.QueryRow(ctx, getPermissionByID, id)
-	var i GetPermissionByIDRow
+	var i DivaPermission
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.Action,
-		&i.Rolelevel,
-		&i.Createdat,
-		&i.Updatedat,
-		&i.Deletedat,
+		&i.RoleLevel,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -111,37 +103,26 @@ select
     p.name,
     p.description,
     p.action,
-    p.role_level as roleLevel,
-    p.created_at as createdAt,
-    p.updated_at as updatedAt,
-    p.deleted_at as deletedAt
+    p.role_level,
+    p.created_at,
+    p.updated_at,
+    p.deleted_at
 from diva_permissions p
 where p.name = $1
 `
 
-type GetPermissionByNameRow struct {
-	ID          pgtype.UUID
-	Name        string
-	Description string
-	Action      string
-	Rolelevel   RoleType
-	Createdat   pgtype.Timestamptz
-	Updatedat   pgtype.Timestamptz
-	Deletedat   pgtype.Timestamptz
-}
-
-func (q *Queries) GetPermissionByName(ctx context.Context, name string) (GetPermissionByNameRow, error) {
+func (q *Queries) GetPermissionByName(ctx context.Context, name string) (DivaPermission, error) {
 	row := q.db.QueryRow(ctx, getPermissionByName, name)
-	var i GetPermissionByNameRow
+	var i DivaPermission
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.Action,
-		&i.Rolelevel,
-		&i.Createdat,
-		&i.Updatedat,
-		&i.Deletedat,
+		&i.RoleLevel,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -152,43 +133,39 @@ select
     p.name,
     p.description,
     p.action,
-    p.role_level as roleLevel,
-    p.created_at as createdAt,
-    p.updated_at as updatedAt,
-    p.deleted_at as deletedAt
+    p.role_level,
+    p.created_at,
+    p.updated_at,
+    p.deleted_at
 from diva_permissions p
 order by p.name
+limit $1
+offset $2
 `
 
-type ListPermissionsRow struct {
-	ID          pgtype.UUID
-	Name        string
-	Description string
-	Action      string
-	Rolelevel   RoleType
-	Createdat   pgtype.Timestamptz
-	Updatedat   pgtype.Timestamptz
-	Deletedat   pgtype.Timestamptz
+type ListPermissionsParams struct {
+	Limit  int32
+	Offset int32
 }
 
-func (q *Queries) ListPermissions(ctx context.Context) ([]ListPermissionsRow, error) {
-	rows, err := q.db.Query(ctx, listPermissions)
+func (q *Queries) ListPermissions(ctx context.Context, arg ListPermissionsParams) ([]DivaPermission, error) {
+	rows, err := q.db.Query(ctx, listPermissions, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPermissionsRow
+	var items []DivaPermission
 	for rows.Next() {
-		var i ListPermissionsRow
+		var i DivaPermission
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.Action,
-			&i.Rolelevel,
-			&i.Createdat,
-			&i.Updatedat,
-			&i.Deletedat,
+			&i.RoleLevel,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -201,8 +178,7 @@ func (q *Queries) ListPermissions(ctx context.Context) ([]ListPermissionsRow, er
 }
 
 const restorePermission = `-- name: RestorePermission :exec
-update diva_permissions
-set
+update diva_permissions set
     deleted_at = null
 where id = $1
 `
@@ -225,8 +201,7 @@ func (q *Queries) SoftDeletePermission(ctx context.Context, id pgtype.UUID) erro
 }
 
 const updatePermission = `-- name: UpdatePermission :exec
-update diva_permissions
-set
+update diva_permissions set
     name = $1,
     description = $2,
     action = $3,

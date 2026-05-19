@@ -16,44 +16,36 @@ import (
 	"github.com/juevigrace/diva-server/internal/util"
 )
 
-type VerificationService struct {
+type UserVerificationService struct {
 	mail      *mail.Client
-	repo      *repo.UserActionVerificationRepository
+	repo      *repo.UserVerificationRepo
 	sService  *SessionService
-	uService  *UserService
 	uaService *UserActionsService
 }
 
 func NewVerificationService(
 	mail *mail.Client,
-	repo *repo.UserActionVerificationRepository,
+	repo *repo.UserVerificationRepo,
 	sService *SessionService,
-	uService *UserService,
 	uaService *UserActionsService,
-) *VerificationService {
-	return &VerificationService{
+) *UserVerificationService {
+	return &UserVerificationService{
 		mail:      mail,
 		repo:      repo,
 		sService:  sService,
-		uService:  uService,
 		uaService: uaService,
 	}
 }
 
-func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos.RequestVerificationDto) error {
+func (s *UserVerificationService) RequestVerification(ctx context.Context, sendTo *models.User, dto *dtos.RequestVerificationDto) error {
 	parsedAction := models.ActionFromString(dto.Action)
 	if parsedAction == -1 {
 		// TODO: create proper error
 		return errors.New("action doesn't exists")
 	}
 
-	u, err := s.uService.GetByEmail(ctx, dto.Email)
-	if err != nil {
-		return err
-	}
-
 	var action *models.UserAction
-	a, err := s.uaService.GetOne(ctx, parsedAction, &u.ID)
+	a, err := s.uaService.GetOne(ctx, parsedAction, &sendTo.ID)
 	if err != nil {
 		if errors.Is(pgx.ErrNoRows, err) {
 			_, err := s.uaService.Create(ctx, parsedAction, &u.ID)
@@ -82,7 +74,7 @@ func (s *VerificationService) RequestVerification(ctx context.Context, dto *dtos
 	return nil
 }
 
-func (s *VerificationService) GenerateAndSend(ctx context.Context, email string, action *models.UserAction) error {
+func (s *UserVerificationService) GenerateAndSend(ctx context.Context, email string, action *models.UserAction) error {
 	exVerification, err := s.repo.GetByActionId(ctx, &action.ID)
 	if err != nil {
 		if ok := !errors.Is(sql.ErrNoRows, err); !ok {
@@ -130,7 +122,7 @@ func (s *VerificationService) GenerateAndSend(ctx context.Context, email string,
 	return nil
 }
 
-func (s *VerificationService) Verify(ctx context.Context, token string) (*models.UserActionVerification, error) {
+func (s *UserVerificationService) Verify(ctx context.Context, token string) (*models.UserActionVerification, error) {
 	record, err := s.repo.GetByToken(ctx, token)
 	if err != nil {
 		if ok := errors.Is(pgx.ErrNoRows, err); ok {
@@ -147,7 +139,7 @@ func (s *VerificationService) Verify(ctx context.Context, token string) (*models
 	return record, nil
 }
 
-func (s *VerificationService) Delete(ctx context.Context, uv *models.UserActionVerification) error {
+func (s *UserVerificationService) Delete(ctx context.Context, uv *models.UserActionVerification) error {
 	if err := s.uaService.Delete(ctx, uv.UserAction); err != nil {
 		return err
 	}
@@ -155,11 +147,11 @@ func (s *VerificationService) Delete(ctx context.Context, uv *models.UserActionV
 	return s.DeleteToken(ctx, uv.Token)
 }
 
-func (s *VerificationService) DeleteToken(ctx context.Context, token string) error {
+func (s *UserVerificationService) DeleteToken(ctx context.Context, token string) error {
 	return s.repo.DeleteByToken(ctx, token)
 }
 
-func (s *VerificationService) HandlePasswordReset(ctx context.Context, userID *uuid.UUID, sessionData *dtos.SessionDataDto) (*responses.SessionResponse, error) {
+func (s *UserVerificationService) HandlePasswordReset(ctx context.Context, userID *uuid.UUID, sessionData *dtos.SessionDataDto) (*responses.SessionResponse, error) {
 	session, err := s.sService.Create(ctx, userID, sessionData)
 	if err != nil {
 		return nil, err
@@ -178,6 +170,6 @@ func (s *VerificationService) HandlePasswordReset(ctx context.Context, userID *u
 	return models.ToSessionResponse(session), nil
 }
 
-func (s *VerificationService) HandleVerifyUser(ctx context.Context, userID uuid.UUID) error {
+func (s *UserVerificationService) HandleVerifyUser(ctx context.Context, userID uuid.UUID) error {
 	return s.uService.VerifyUser(ctx, &userID)
 }

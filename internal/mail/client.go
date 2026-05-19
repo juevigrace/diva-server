@@ -10,26 +10,25 @@ import (
 )
 
 type Client struct {
-	apiKey    string
+	rc        *resend.Client
 	fromEmail string
 }
 
 func NewClient(apiKey, fromEmail string) *Client {
 	return &Client{
-		apiKey:    apiKey,
+		rc:        resend.NewClient(apiKey),
 		fromEmail: fromEmail,
 	}
 }
 
 func (c *Client) Send(ctx context.Context, to, subject string, component templ.Component) error {
-	client := resend.NewClient(c.apiKey)
 
 	var sb strings.Builder
 	if err := component.Render(ctx, &sb); err != nil {
 		return err
 	}
 
-	_, err := client.Emails.SendWithContext(ctx, &resend.SendEmailRequest{
+	_, err := c.rc.Emails.SendWithContext(ctx, &resend.SendEmailRequest{
 		From:    c.fromEmail,
 		To:      []string{to},
 		Subject: subject,

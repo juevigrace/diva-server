@@ -11,6 +11,45 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createUserPermission = `-- name: CreateUserPermission :exec
+insert into diva_user_permissions (
+    permission_id,
+    user_id,
+    granted_by,
+    granted,
+    granted_at,
+    expires_at
+) values (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6
+) on conflict (permission_id, user_id) do nothing
+`
+
+type CreateUserPermissionParams struct {
+	PermissionID pgtype.UUID
+	UserID       pgtype.UUID
+	GrantedBy    pgtype.UUID
+	Granted      bool
+	GrantedAt    pgtype.Timestamptz
+	ExpiresAt    pgtype.Timestamptz
+}
+
+func (q *Queries) CreateUserPermission(ctx context.Context, arg CreateUserPermissionParams) error {
+	_, err := q.db.Exec(ctx, createUserPermission,
+		arg.PermissionID,
+		arg.UserID,
+		arg.GrantedBy,
+		arg.Granted,
+		arg.GrantedAt,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
 const deleteAllUserPermissions = `-- name: DeleteAllUserPermissions :exec
 delete from diva_user_permissions
 where user_id = $1
@@ -38,13 +77,13 @@ func (q *Queries) DeleteUserPermission(ctx context.Context, arg DeleteUserPermis
 
 const getUserPermission = `-- name: GetUserPermission :one
 select
-    up.permission_id as permissionId,
-    up.user_id as userId,
-    up.granted_by as grantedBy,
+    up.permission_id,
+    up.user_id,
+    up.granted_by,
     up.granted,
-    up.granted_at as grantedAt,
-    up.expires_at as expiresAt,
-    up.updated_at as updatedAt
+    up.granted_at,
+    up.expires_at,
+    up.updated_at
 from diva_user_permissions up
 where up.permission_id = $1 and up.user_id = $2
 `
@@ -54,71 +93,51 @@ type GetUserPermissionParams struct {
 	UserID       pgtype.UUID
 }
 
-type GetUserPermissionRow struct {
-	Permissionid pgtype.UUID
-	Userid       pgtype.UUID
-	Grantedby    pgtype.UUID
-	Granted      bool
-	Grantedat    pgtype.Timestamptz
-	Expiresat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserPermission(ctx context.Context, arg GetUserPermissionParams) (GetUserPermissionRow, error) {
+func (q *Queries) GetUserPermission(ctx context.Context, arg GetUserPermissionParams) (DivaUserPermission, error) {
 	row := q.db.QueryRow(ctx, getUserPermission, arg.PermissionID, arg.UserID)
-	var i GetUserPermissionRow
+	var i DivaUserPermission
 	err := row.Scan(
-		&i.Permissionid,
-		&i.Userid,
-		&i.Grantedby,
+		&i.PermissionID,
+		&i.UserID,
+		&i.GrantedBy,
 		&i.Granted,
-		&i.Grantedat,
-		&i.Expiresat,
-		&i.Updatedat,
+		&i.GrantedAt,
+		&i.ExpiresAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserPermissions = `-- name: GetUserPermissions :many
 select
-    up.permission_id as permissionId,
-    up.user_id as userId,
-    up.granted_by as grantedBy,
+    up.permission_id,
+    up.user_id,
+    up.granted_by,
     up.granted,
-    up.granted_at as grantedAt,
-    up.expires_at as expiresAt,
-    up.updated_at as updatedAt
+    up.granted_at,
+    up.expires_at,
+    up.updated_at
 from diva_user_permissions up
 where up.user_id = $1 and up.granted = true
 `
 
-type GetUserPermissionsRow struct {
-	Permissionid pgtype.UUID
-	Userid       pgtype.UUID
-	Grantedby    pgtype.UUID
-	Granted      bool
-	Grantedat    pgtype.Timestamptz
-	Expiresat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([]GetUserPermissionsRow, error) {
+func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([]DivaUserPermission, error) {
 	rows, err := q.db.Query(ctx, getUserPermissions, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetUserPermissionsRow
+	var items []DivaUserPermission
 	for rows.Next() {
-		var i GetUserPermissionsRow
+		var i DivaUserPermission
 		if err := rows.Scan(
-			&i.Permissionid,
-			&i.Userid,
-			&i.Grantedby,
+			&i.PermissionID,
+			&i.UserID,
+			&i.GrantedBy,
 			&i.Granted,
-			&i.Grantedat,
-			&i.Expiresat,
-			&i.Updatedat,
+			&i.GrantedAt,
+			&i.ExpiresAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -130,96 +149,28 @@ func (q *Queries) GetUserPermissions(ctx context.Context, userID pgtype.UUID) ([
 	return items, nil
 }
 
-const grantPermission = `-- name: GrantPermission :exec
-insert into diva_user_permissions (
-    permission_id,
-    user_id,
-    granted_by,
-    granted,
-    granted_at,
-    expires_at,
-    updated_at
-) values (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7
-) on conflict (permission_id, user_id) do update
-set
-    granted = $4,
-    granted_by = $3,
-    granted_at = $5,
-    expires_at = $6,
-    updated_at = now()
-`
-
-type GrantPermissionParams struct {
-	PermissionID pgtype.UUID
-	UserID       pgtype.UUID
-	GrantedBy    pgtype.UUID
-	Granted      bool
-	GrantedAt    pgtype.Timestamptz
-	ExpiresAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-}
-
-func (q *Queries) GrantPermission(ctx context.Context, arg GrantPermissionParams) error {
-	_, err := q.db.Exec(ctx, grantPermission,
-		arg.PermissionID,
-		arg.UserID,
-		arg.GrantedBy,
-		arg.Granted,
-		arg.GrantedAt,
-		arg.ExpiresAt,
-		arg.UpdatedAt,
-	)
-	return err
-}
-
-const revokePermission = `-- name: RevokePermission :exec
-update diva_user_permissions
-set
-    granted = false,
-    updated_at = now()
-where permission_id = $1 and user_id = $2
-`
-
-type RevokePermissionParams struct {
-	PermissionID pgtype.UUID
-	UserID       pgtype.UUID
-}
-
-func (q *Queries) RevokePermission(ctx context.Context, arg RevokePermissionParams) error {
-	_, err := q.db.Exec(ctx, revokePermission, arg.PermissionID, arg.UserID)
-	return err
-}
-
-const updatePermissionGrant = `-- name: UpdatePermissionGrant :exec
+const updateUserPermission = `-- name: UpdateUserPermission :exec
 update diva_user_permissions
 set
     granted = $1,
-    granted_by = $2,
-    granted_at = now(),
+    granted_at = $2,
     expires_at = $3,
     updated_at = now()
 where permission_id = $4 and user_id = $5
 `
 
-type UpdatePermissionGrantParams struct {
+type UpdateUserPermissionParams struct {
 	Granted      bool
-	GrantedBy    pgtype.UUID
+	GrantedAt    pgtype.Timestamptz
 	ExpiresAt    pgtype.Timestamptz
 	PermissionID pgtype.UUID
 	UserID       pgtype.UUID
 }
 
-func (q *Queries) UpdatePermissionGrant(ctx context.Context, arg UpdatePermissionGrantParams) error {
-	_, err := q.db.Exec(ctx, updatePermissionGrant,
+func (q *Queries) UpdateUserPermission(ctx context.Context, arg UpdateUserPermissionParams) error {
+	_, err := q.db.Exec(ctx, updateUserPermission,
 		arg.Granted,
-		arg.GrantedBy,
+		arg.GrantedAt,
 		arg.ExpiresAt,
 		arg.PermissionID,
 		arg.UserID,

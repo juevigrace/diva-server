@@ -226,6 +226,18 @@ func (ns NullThemeType) Value() (driver.Value, error) {
 	return string(ns.ThemeType), nil
 }
 
+type DivaAction struct {
+	ID     pgtype.UUID
+	Name   string
+	UserID pgtype.UUID
+}
+
+type DivaActionVerification struct {
+	ActionID  pgtype.UUID
+	Token     string
+	ExpiresAt pgtype.Timestamptz
+}
+
 type DivaPermission struct {
 	ID          pgtype.UUID
 	Name        string
@@ -256,24 +268,13 @@ type DivaUser struct {
 	ID           pgtype.UUID
 	Username     string
 	Email        string
+	PhoneNumber  string
 	PasswordHash string
 	Verified     bool
 	Role         RoleType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
-}
-
-type DivaUserAction struct {
-	ID     pgtype.UUID
-	Name   string
-	UserID pgtype.UUID
-}
-
-type DivaUserActionVerification struct {
-	ActionID  pgtype.UUID
-	Token     string
-	ExpiresAt pgtype.Timestamptz
 }
 
 type DivaUserPermission struct {
@@ -299,11 +300,11 @@ type DivaUserPreference struct {
 }
 
 type DivaUserProfile struct {
-	UserID      pgtype.UUID
-	FirstName   string
-	LastName    string
-	BirthDate   pgtype.Timestamptz
-	PhoneNumber string
-	Alias       string
-	Bio         string
+	UserID    pgtype.UUID
+	FirstName string
+	LastName  string
+	BirthDate pgtype.Timestamptz
+	Alias     string
+	Bio       string
+	Avatar    string
 }

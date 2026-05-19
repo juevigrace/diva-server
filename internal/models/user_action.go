@@ -14,12 +14,12 @@ var (
 )
 
 type UserAction struct {
-	ID           uuid.UUID
-	Action       Action
-	Verification *UserActionVerification
+	ID     uuid.UUID
+	Action Action
 }
 
 type UserActionVerification struct {
+	Action    UserAction
 	Token     string
 	ExpiresAt time.Time
 }

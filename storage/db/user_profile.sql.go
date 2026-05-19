@@ -17,7 +17,6 @@ insert into diva_user_profile (
     first_name,
     last_name,
     birth_date,
-    phone_number,
     alias,
     bio
 ) values (
@@ -26,19 +25,17 @@ insert into diva_user_profile (
     $3,
     $4,
     $5,
-    $6,
-    $7
+    $6
 )
 `
 
 type CreateUserProfileParams struct {
-	UserID      pgtype.UUID
-	FirstName   string
-	LastName    string
-	BirthDate   pgtype.Timestamptz
-	PhoneNumber string
-	Alias       string
-	Bio         string
+	UserID    pgtype.UUID
+	FirstName string
+	LastName  string
+	BirthDate pgtype.Timestamptz
+	Alias     string
+	Bio       string
 }
 
 func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) error {
@@ -47,7 +44,6 @@ func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfilePa
 		arg.FirstName,
 		arg.LastName,
 		arg.BirthDate,
-		arg.PhoneNumber,
 		arg.Alias,
 		arg.Bio,
 	)
@@ -66,62 +62,28 @@ func (q *Queries) DeleteUserProfile(ctx context.Context, userID pgtype.UUID) err
 
 const getUserProfileByUserID = `-- name: GetUserProfileByUserID :one
 select
-    up.user_id as userId,
-    up.first_name as firstName,
-    up.last_name as lastName,
-    up.birth_date as birthDate,
-    up.phone_number as phoneNumber,
-    up.alias,
-    up.bio
+    up.user_id, up.first_name, up.last_name, up.birth_date, up.alias, up.bio, up.avatar
 from diva_user_profile up
 where up.user_id = $1
 `
 
-type GetUserProfileByUserIDRow struct {
-	Userid      pgtype.UUID
-	Firstname   string
-	Lastname    string
-	Birthdate   pgtype.Timestamptz
-	Phonenumber string
-	Alias       string
-	Bio         string
-}
-
-func (q *Queries) GetUserProfileByUserID(ctx context.Context, userID pgtype.UUID) (GetUserProfileByUserIDRow, error) {
+func (q *Queries) GetUserProfileByUserID(ctx context.Context, userID pgtype.UUID) (DivaUserProfile, error) {
 	row := q.db.QueryRow(ctx, getUserProfileByUserID, userID)
-	var i GetUserProfileByUserIDRow
+	var i DivaUserProfile
 	err := row.Scan(
-		&i.Userid,
-		&i.Firstname,
-		&i.Lastname,
-		&i.Birthdate,
-		&i.Phonenumber,
+		&i.UserID,
+		&i.FirstName,
+		&i.LastName,
+		&i.BirthDate,
 		&i.Alias,
 		&i.Bio,
+		&i.Avatar,
 	)
 	return i, err
 }
 
-const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
-update diva_user_profile
-set
-    phone_number = $1
-where user_id = $2
-`
-
-type UpdatePhoneNumberParams struct {
-	PhoneNumber string
-	UserID      pgtype.UUID
-}
-
-func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
-	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.PhoneNumber, arg.UserID)
-	return err
-}
-
 const updateUserProfile = `-- name: UpdateUserProfile :exec
-update diva_user_profile
-set
+update diva_user_profile set
     first_name = $1,
     last_name = $2,
     birth_date = $3,
@@ -148,5 +110,21 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.Bio,
 		arg.UserID,
 	)
+	return err
+}
+
+const updateUserProfileAvatar = `-- name: UpdateUserProfileAvatar :exec
+update diva_user_profile set
+    avatar = $1
+where user_id = $2
+`
+
+type UpdateUserProfileAvatarParams struct {
+	Avatar string
+	UserID pgtype.UUID
+}
+
+func (q *Queries) UpdateUserProfileAvatar(ctx context.Context, arg UpdateUserProfileAvatarParams) error {
+	_, err := q.db.Exec(ctx, updateUserProfileAvatar, arg.Avatar, arg.UserID)
 	return err
 }

@@ -10,42 +10,40 @@ import (
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserProfileRepository struct {
+type UserProfileRepo struct {
 	queries *db.Queries
 }
 
-func NewUserProfileRepository(queries *db.Queries) *UserProfileRepository {
-	return &UserProfileRepository{queries: queries}
+func NewUserProfileRepo(queries *db.Queries) *UserProfileRepo {
+	return &UserProfileRepo{queries: queries}
 }
 
-func (r *UserProfileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserProfile, error) {
+func (r *UserProfileRepo) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserProfile, error) {
 	row, err := r.queries.GetUserProfileByUserID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
 	return &models.UserProfile{
-		FirstName:   row.Firstname,
-		LastName:    row.Lastname,
-		BirthDate:   row.Birthdate.Time.UnixMilli(),
-		PhoneNumber: row.Phonenumber,
-		Alias:       row.Alias,
-		Bio:         row.Bio,
+		FirstName: row.FirstName,
+		LastName:  row.LastName,
+		BirthDate: row.BirthDate.Time.UnixMilli(),
+		Alias:     row.Alias,
+		Bio:       row.Bio,
 	}, nil
 }
 
-func (r *UserProfileRepository) Create(ctx context.Context, userID uuid.UUID, profile *models.UserProfile) error {
+func (r *UserProfileRepo) Create(ctx context.Context, userID uuid.UUID, profile *models.UserProfile) error {
 	return r.queries.CreateUserProfile(ctx, db.CreateUserProfileParams{
-		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
-		FirstName:   profile.FirstName,
-		LastName:    profile.LastName,
-		BirthDate:   pgtype.Timestamptz{Time: time.UnixMilli(profile.BirthDate), Valid: true},
-		PhoneNumber: profile.PhoneNumber,
-		Alias:       profile.Alias,
-		Bio:         profile.Bio,
+		UserID:    pgtype.UUID{Bytes: userID, Valid: true},
+		FirstName: profile.FirstName,
+		LastName:  profile.LastName,
+		BirthDate: pgtype.Timestamptz{Time: time.UnixMilli(profile.BirthDate), Valid: true},
+		Alias:     profile.Alias,
+		Bio:       profile.Bio,
 	})
 }
 
-func (r *UserProfileRepository) Update(ctx context.Context, userID uuid.UUID, profile *models.UserProfile) error {
+func (r *UserProfileRepo) Update(ctx context.Context, userID uuid.UUID, profile *models.UserProfile) error {
 	return r.queries.UpdateUserProfile(ctx, db.UpdateUserProfileParams{
 		FirstName: profile.FirstName,
 		LastName:  profile.LastName,
@@ -56,13 +54,13 @@ func (r *UserProfileRepository) Update(ctx context.Context, userID uuid.UUID, pr
 	})
 }
 
-func (r *UserProfileRepository) UpdatePhoneNumber(ctx context.Context, phoneNumber string, userID uuid.UUID) error {
-	return r.queries.UpdatePhoneNumber(ctx, db.UpdatePhoneNumberParams{
-		PhoneNumber: phoneNumber,
-		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
+func (r *UserProfileRepo) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatar string) error {
+	return r.queries.UpdateUserProfileAvatar(ctx, db.UpdateUserProfileAvatarParams{
+		UserID: pgtype.UUID{Bytes: userID, Valid: true},
+		Avatar: avatar,
 	})
 }
 
-func (r *UserProfileRepository) Delete(ctx context.Context, userID uuid.UUID) error {
+func (r *UserProfileRepo) Delete(ctx context.Context, userID uuid.UUID) error {
 	return r.queries.DeleteUserProfile(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 }

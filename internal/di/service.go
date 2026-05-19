@@ -9,7 +9,7 @@ type ServiceModule struct {
 	User            *service.UserService
 	Session         *service.SessionService
 	Auth            *service.AuthService
-	Verification    *service.VerificationService
+	Verification    *service.UserVerificationService
 	UserPermission  *service.UserPermissionService
 	UserPreferences *service.UserPreferencesService
 	UserActions     *service.UserActionsService

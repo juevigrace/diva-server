@@ -9,20 +9,33 @@ import (
 )
 
 type UserActionsService struct {
-	repo *repo.UserActionsRepository
+	repo *repo.UserActionsRepo
 }
 
-func NewUserActionsService(repo *repo.UserActionsRepository) *UserActionsService {
-	return &UserActionsService{repo: repo}
+func NewUserActionsService(repo *repo.UserActionsRepo) *UserActionsService {
+	return &UserActionsService{
+		repo: repo,
+	}
 }
 
-func (s *UserActionsService) Create(ctx context.Context, action models.Action, userID *uuid.UUID) (*uuid.UUID, error) {
+func (s *UserActionsService) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserAction, error) {
+	return s.repo.ListByUser(ctx, userID)
+}
+
+func (s *UserActionsService) GetOneByID(ctx context.Context, id uuid.UUID) (*models.UserAction, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *UserActionsService) GetOneByName(ctx context.Context, userID uuid.UUID, action models.Action) (*models.UserAction, error) {
+	return s.repo.GetByUserAndName(ctx, userID, action)
+}
+
+func (s *UserActionsService) Create(ctx context.Context, userID uuid.UUID, action models.Action) (*uuid.UUID, error) {
 	id := uuid.New()
 
-	if err := s.repo.Create(ctx, &models.UserAction{
+	if err := s.repo.Create(ctx, userID, &models.UserAction{
 		ID:     id,
 		Action: action,
-		UserID: *userID,
 	}); err != nil {
 		return nil, err
 	}
@@ -30,34 +43,10 @@ func (s *UserActionsService) Create(ctx context.Context, action models.Action, u
 	return &id, nil
 }
 
-func (s *UserActionsService) GetAll(ctx context.Context, userID *uuid.UUID) ([]*models.UserAction, error) {
-	actions, err := s.repo.GetAll(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*models.UserAction, len(actions))
-	for i, a := range actions {
-		result[i] = &models.UserAction{
-			ID:     a.ID.Bytes,
-			Action: models.ActionFromString(a.ActionName),
-		}
-	}
-	return result, nil
+func (s *UserActionsService) Delete(ctx context.Context, id uuid.UUID) error {
+	return s.repo.Delete(ctx, id)
 }
 
-func (s *UserActionsService) GetOne(ctx context.Context, action models.Action, userID *uuid.UUID) (*models.UserAction, error) {
-	return s.repo.GetOne(ctx, action, userID)
-}
-
-func (s *UserActionsService) Delete(ctx context.Context, userAction *models.UserAction) error {
-	return s.repo.Delete(ctx, userAction)
-}
-
-func (s *UserActionsService) DeleteByUser(ctx context.Context, userID *uuid.UUID) error {
+func (s *UserActionsService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
 	return s.repo.DeleteByUser(ctx, userID)
-}
-
-func (s *UserActionsService) CreateBatch(ctx context.Context, userActions []*models.UserAction) error {
-	return s.repo.CreateBatch(ctx, userActions)
 }

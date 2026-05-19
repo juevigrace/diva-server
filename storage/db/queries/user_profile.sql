@@ -1,12 +1,6 @@
 -- name: GetUserProfileByUserID :one
 select
-    up.user_id as userId,
-    up.first_name as firstName,
-    up.last_name as lastName,
-    up.birth_date as birthDate,
-    up.phone_number as phoneNumber,
-    up.alias,
-    up.bio
+    up.user_id, up.first_name, up.last_name, up.birth_date, up.alias, up.bio, up.avatar
 from diva_user_profile up
 where up.user_id = $1
 ;
@@ -17,7 +11,6 @@ insert into diva_user_profile (
     first_name,
     last_name,
     birth_date,
-    phone_number,
     alias,
     bio
 ) values (
@@ -26,13 +19,11 @@ insert into diva_user_profile (
     $3,
     $4,
     $5,
-    $6,
-    $7
+    $6
 );
 
 -- name: UpdateUserProfile :exec
-update diva_user_profile
-set
+update diva_user_profile set
     first_name = $1,
     last_name = $2,
     birth_date = $3,
@@ -40,12 +31,12 @@ set
     bio = $5
 where user_id = $6;
 
--- name: UpdatePhoneNumber :exec
-update diva_user_profile
-set
-    phone_number = $1
+-- name: UpdateUserProfileAvatar :exec
+update diva_user_profile set
+    avatar = $1
 where user_id = $2;
 
 -- name: DeleteUserProfile :exec
 delete from diva_user_profile
-where user_id = $1;
+where user_id = $1
+;

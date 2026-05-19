@@ -15,12 +15,12 @@ import (
 
 type VerificationHandler struct {
 	sService *service.SessionService
-	vService *service.VerificationService
+	vService *service.UserVerificationService
 }
 
 func NewVerificationHandler(
 	sService *service.SessionService,
-	vService *service.VerificationService,
+	vService *service.UserVerificationService,
 ) *VerificationHandler {
 	return &VerificationHandler{
 		sService: sService,

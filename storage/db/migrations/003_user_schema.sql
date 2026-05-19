@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS diva_user (
     id UUID NOT NULL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
+    phone_number VARCHAR(30) NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     role role_type NOT NULL DEFAULT 'USER',
@@ -17,9 +18,9 @@ CREATE TABLE IF NOT EXISTS diva_user_profile(
     first_name VARCHAR(255) NOT NULL DEFAULT '',
     last_name VARCHAR(255) NOT NULL DEFAULT '',
     birth_date TIMESTAMPTZ DEFAULT NULL,
-    phone_number VARCHAR(30) NOT NULL DEFAULT '',
     alias VARCHAR(255) NOT NULL DEFAULT '',
     bio VARCHAR(255) NOT NULL DEFAULT '',
+    avatar TEXT NOT NULL DEFAULT '',
     FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE RESTRICT
 );
 

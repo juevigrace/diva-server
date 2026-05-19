@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUsers = `-- name: CountUsers :one
+select count(*) from diva_user
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :exec
 insert into diva_user (
     id,
@@ -18,18 +29,14 @@ insert into diva_user (
     email,
     password_hash,
     verified,
-    role,
-    created_at,
-    updated_at
+    role
 ) values (
     $1,
     $2,
     $3,
     $4,
     $5,
-    $6,
-    $7,
-    $8
+    $6
 )
 `
 
@@ -40,8 +47,6 @@ type CreateUserParams struct {
 	PasswordHash string
 	Verified     bool
 	Role         RoleType
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
@@ -52,8 +57,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.PasswordHash,
 		arg.Verified,
 		arg.Role,
-		arg.CreatedAt,
-		arg.UpdatedAt,
 	)
 	return err
 }
@@ -73,41 +76,31 @@ select
     u.id as id,
     u.username,
     u.email,
-    u.password_hash as passwordHash,
+    u.phone_number,
+    u.password_hash,
     u.verified,
     u.role,
-    u.created_at as createdAt,
-    u.updated_at as updatedAt,
-    u.deleted_at as deletedAt
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.email = $1
 `
 
-type GetUserByEmailRow struct {
-	ID           pgtype.UUID
-	Username     string
-	Email        string
-	Passwordhash string
-	Verified     bool
-	Role         RoleType
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-	Deletedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (DivaUser, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
+	var i DivaUser
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
 		&i.Email,
-		&i.Passwordhash,
+		&i.PhoneNumber,
+		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
-		&i.Createdat,
-		&i.Updatedat,
-		&i.Deletedat,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -117,41 +110,31 @@ select
     u.id as id,
     u.username,
     u.email,
-    u.password_hash as passwordHash,
+    u.phone_number,
+    u.password_hash,
     u.verified,
     u.role,
-    u.created_at as createdAt,
-    u.updated_at as updatedAt,
-    u.deleted_at as deletedAt
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.id = $1
 `
 
-type GetUserByIDRow struct {
-	ID           pgtype.UUID
-	Username     string
-	Email        string
-	Passwordhash string
-	Verified     bool
-	Role         RoleType
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-	Deletedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (DivaUser, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i GetUserByIDRow
+	var i DivaUser
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
 		&i.Email,
-		&i.Passwordhash,
+		&i.PhoneNumber,
+		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
-		&i.Createdat,
-		&i.Updatedat,
-		&i.Deletedat,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -161,41 +144,31 @@ select
     u.id as id,
     u.username,
     u.email,
-    u.password_hash as passwordHash,
+    u.phone_number,
+    u.password_hash,
     u.verified,
     u.role,
-    u.created_at as createdAt,
-    u.updated_at as updatedAt,
-    u.deleted_at as deletedAt
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 where u.username = $1
 `
 
-type GetUserByUsernameRow struct {
-	ID           pgtype.UUID
-	Username     string
-	Email        string
-	Passwordhash string
-	Verified     bool
-	Role         RoleType
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-	Deletedat    pgtype.Timestamptz
-}
-
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (DivaUser, error) {
 	row := q.db.QueryRow(ctx, getUserByUsername, username)
-	var i GetUserByUsernameRow
+	var i DivaUser
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
 		&i.Email,
-		&i.Passwordhash,
+		&i.PhoneNumber,
+		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
-		&i.Createdat,
-		&i.Updatedat,
-		&i.Deletedat,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -205,47 +178,44 @@ select
     u.id as id,
     u.username,
     u.email,
-    u.password_hash as passwordHash,
+    u.phone_number,
+    u.password_hash,
     u.verified,
     u.role,
-    u.created_at as createdAt,
-    u.updated_at as updatedAt,
-    u.deleted_at as deletedAt
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
 from diva_user u
 order by u.created_at desc
+limit $1
+offset $2
 `
 
-type ListUsersRow struct {
-	ID           pgtype.UUID
-	Username     string
-	Email        string
-	Passwordhash string
-	Verified     bool
-	Role         RoleType
-	Createdat    pgtype.Timestamptz
-	Updatedat    pgtype.Timestamptz
-	Deletedat    pgtype.Timestamptz
+type ListUsersParams struct {
+	Limit  int32
+	Offset int32
 }
 
-func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
-	rows, err := q.db.Query(ctx, listUsers)
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUser, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListUsersRow
+	var items []DivaUser
 	for rows.Next() {
-		var i ListUsersRow
+		var i DivaUser
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
 			&i.Email,
-			&i.Passwordhash,
+			&i.PhoneNumber,
+			&i.PasswordHash,
 			&i.Verified,
 			&i.Role,
-			&i.Createdat,
-			&i.Updatedat,
-			&i.Deletedat,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -258,8 +228,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 }
 
 const restoreUser = `-- name: RestoreUser :exec
-update diva_user
-set
+update diva_user set
     deleted_at = null
 where id = $1
 `
@@ -270,8 +239,7 @@ func (q *Queries) RestoreUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const softDeleteUser = `-- name: SoftDeleteUser :exec
-update diva_user
-set
+update diva_user set
     deleted_at = now()
 where id = $1
 `
@@ -282,8 +250,7 @@ func (q *Queries) SoftDeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const updateEmail = `-- name: UpdateEmail :exec
-update diva_user
-set
+update diva_user set
     email = $1,
     updated_at = now()
 where id = $2
@@ -300,8 +267,7 @@ func (q *Queries) UpdateEmail(ctx context.Context, arg UpdateEmailParams) error 
 }
 
 const updatePassword = `-- name: UpdatePassword :exec
-update diva_user
-set
+update diva_user set
     password_hash = $1,
     updated_at = now()
 where id = $2
@@ -317,9 +283,25 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 	return err
 }
 
+const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
+update diva_user set
+    phone_number = $1,
+    updated_at = now()
+where id = $2
+`
+
+type UpdatePhoneNumberParams struct {
+	PhoneNumber string
+	ID          pgtype.UUID
+}
+
+func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
+	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.PhoneNumber, arg.ID)
+	return err
+}
+
 const updateRole = `-- name: UpdateRole :exec
-update diva_user
-set
+update diva_user set
     role = $1,
     updated_at = now()
 where id = $2
@@ -336,8 +318,7 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) error {
 }
 
 const updateUsername = `-- name: UpdateUsername :exec
-update diva_user
-set
+update diva_user set
     username = $1,
     updated_at = now()
 where id = $2
@@ -354,8 +335,7 @@ func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) 
 }
 
 const updateVerified = `-- name: UpdateVerified :exec
-update diva_user
-set
+update diva_user set
     verified = $1,
     updated_at = now()
 where id = $2

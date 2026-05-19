@@ -6,21 +6,21 @@ import (
 )
 
 type RepoModule struct {
-	User            *repo.UserRepository
-	Session         *repo.SessionRepository
-	UserPreferences *repo.UserPreferencesRepository
-	UserPermission  *repo.UserPermissionRepository
-	Verification    *repo.UserActionVerificationRepository
-	Action          *repo.UserActionsRepository
+	User            *repo.UserRepo
+	Session         *repo.SessionRepo
+	UserPreferences *repo.UserPreferencesRepo
+	UserPermission  *repo.UserPermsRepo
+	Verification    *repo.UserVerificationRepo
+	Action          *repo.UserActionsRepo
 }
 
 func NewRepoModule(queries *db.Queries) *RepoModule {
 	return &RepoModule{
-		User:            repo.NewUserRepository(queries),
-		Session:         repo.NewSessionRepository(queries),
-		UserPreferences: repo.NewUserPreferencesRepository(queries),
-		UserPermission:  repo.NewUserPermissionRepository(queries),
-		Verification:    repo.NewVerificationRepository(queries),
-		Action:          repo.NewUserActionsRepository(queries),
+		User:            repo.NewUserRepo(queries),
+		Session:         repo.NewSessionRepo(queries),
+		UserPreferences: repo.NewUserPreferencesRepo(queries),
+		UserPermission:  repo.NewUserPermsRepo(queries),
+		Verification:    repo.NewUserVerificationRepo(queries),
+		Action:          repo.NewUserActionsRepo(queries),
 	}
 }

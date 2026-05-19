@@ -1,13 +1,13 @@
 package util
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/models"
 )
 
 type JwtData struct {
@@ -35,28 +35,20 @@ var (
 	}
 )
 
-func CreateAccessToken(sessionId *uuid.UUID) (string, error) {
+func CreateAccessToken(sessionId uuid.UUID) (string, error) {
 	var accessExpiration time.Time = time.Now().UTC().Add(1 * time.Hour)
 	claims := &userClaims{
-		SessionID: *sessionId,
+		SessionID: sessionId,
 	}
 	return createJWT(claims, accessExpiration)
 }
 
-func CreateRefreshToken(sessionId *uuid.UUID) (string, error) {
+func CreateRefreshToken(sessionId uuid.UUID) (string, error) {
 	var refreshExpiration time.Time = time.Now().UTC().Add(24 * time.Hour)
-	claims := &userClaims{
-		SessionID: *sessionId,
-	}
-	return createJWT(claims, refreshExpiration)
-}
-
-func CreateResetToken(userId, sessionId uuid.UUID) (string, error) {
-	var resetExpiration time.Time = time.Now().UTC().Add(10 * time.Minute)
 	claims := &userClaims{
 		SessionID: sessionId,
 	}
-	return createJWT(claims, resetExpiration)
+	return createJWT(claims, refreshExpiration)
 }
 
 func createJWT(claims *userClaims, expiration time.Time) (string, error) {
@@ -87,15 +79,15 @@ func ValidateJWT(tokenString string) (*JWTClaims, error) {
 
 	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid reset token")
+		return nil, models.ErrTokenNotValid
 	}
 
 	if len(claims.Audience) > 1 || claims.Audience[0] != "api" {
-		return nil, errors.New("permission denied")
+		return nil, models.ErrBadAudience
 	}
 
 	if claims.Issuer != Issuer {
-		return nil, errors.New("permission denied")
+		return nil, models.ErrBadIssuer
 	}
 
 	return claims, nil

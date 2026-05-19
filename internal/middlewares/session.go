@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -17,15 +16,14 @@ type contextKey string
 
 const sessionContextKey contextKey = "session"
 
-type SessionCall func(ctx context.Context, sessionId *uuid.UUID) (*models.Session, error)
+type SessionCall func(ctx context.Context, sessionId uuid.UUID) (*models.Session, error)
 
 func SessionMiddleware(session SessionCall) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			s, err := extractSession(session, r)
 			if err != nil {
-				log.Printf("Session error: %s\n", err.Error())
-				responses.WriteJSON(w, responses.RespondUnauthorized(nil, "you're not authorized to access this endpoint"))
+				responses.WriteJSON(w, responses.RespondUnauthorized(nil, models.ErrNotAuthorized.Error()))
 				return
 			}
 			ctx := context.WithValue(r.Context(), sessionContextKey, s)
@@ -46,7 +44,7 @@ func extractSession(sessionCall SessionCall, r *http.Request) (*models.Session, 
 		return nil, err
 	}
 
-	session, err := sessionCall(r.Context(), &claims.SessionID)
+	session, err := sessionCall(r.Context(), claims.SessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,13 +56,14 @@ func extractJWTFromHeader(r *http.Request) (*util.JWTClaims, error) {
 	authHeader := r.Header.Get("Authorization")
 
 	if !strings.HasPrefix(authHeader, "Bearer") {
-		return nil, errors.New("permission denied")
+		return nil, models.ErrHeaderNotValid
 	}
 
 	tokenString := strings.Split(authHeader, " ")[1]
 	claims, err := util.ValidateJWT(tokenString)
 	if err != nil {
-		return nil, errors.New("permission denied")
+		log.Printf("jwt invalid: %s\n", err.Error())
+		return nil, models.ErrNotAuthorized
 	}
 
 	return claims, nil
