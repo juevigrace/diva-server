@@ -37,37 +37,17 @@ func NewVerificationService(
 	}
 }
 
-func (s *UserVerificationService) RequestVerification(ctx context.Context, sendTo *models.User, dto *dtos.RequestVerificationDto) error {
-	parsedAction := models.ActionFromString(dto.Action)
-	if parsedAction == -1 {
-		// TODO: create proper error
-		return errors.New("action doesn't exists")
-	}
-
-	var action *models.UserAction
-	a, err := s.uaService.GetOne(ctx, parsedAction, &sendTo.ID)
+func (s *UserVerificationService) RequestVerification(
+	ctx context.Context,
+	sendTo *models.User,
+	action models.Action,
+) error {
+	a, err := s.uaService.GetOneByName(ctx, sendTo.ID, action)
 	if err != nil {
-		if errors.Is(pgx.ErrNoRows, err) {
-			_, err := s.uaService.Create(ctx, parsedAction, &u.ID)
-			if err != nil {
-				return err
-			}
-			action, err = s.uaService.GetOne(ctx, parsedAction, &u.ID)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		action = a
+		return err
 	}
 
-	if err := s.GenerateAndSend(ctx, u.Email, &models.UserAction{
-		ID:     action.ID,
-		Action: action.Action,
-		UserID: action.UserID,
-	}); err != nil {
+	if err := s.GenerateAndSend(ctx, sendTo.Email, a); err != nil {
 		return err
 	}
 

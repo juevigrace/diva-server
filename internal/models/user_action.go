@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ErrTokenExpired = errors.New("token expired")
-	ErrTokenInvalid = errors.New("token invalid")
+	ErrTokenExpired   = errors.New("token expired")
+	ErrTokenInvalid   = errors.New("token invalid")
+	ErrActionNotFound = errors.New("action not found")
 )
 
 type UserAction struct {
@@ -38,7 +39,7 @@ func (a Action) String() string {
 	case ActionPasswordReset:
 		return "PASSWORD_RESET"
 	default:
-		return "UNKNOWN"
+		return ""
 	}
 }
 

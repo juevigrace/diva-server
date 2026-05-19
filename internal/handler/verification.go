@@ -15,15 +15,18 @@ import (
 
 type VerificationHandler struct {
 	sService *service.SessionService
+	uService *service.UserService
 	vService *service.UserVerificationService
 }
 
 func NewVerificationHandler(
 	sService *service.SessionService,
+	uService *service.UserService,
 	vService *service.UserVerificationService,
 ) *VerificationHandler {
 	return &VerificationHandler{
 		sService: sService,
+		uService: uService,
 		vService: vService,
 	}
 }
@@ -47,7 +50,19 @@ func (h *VerificationHandler) requestVerification(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := h.vService.RequestVerification(r.Context(), &dto); err != nil {
+	u, err := h.uService.GetByEmail(r.Context(), dto.Email)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	parsedAction := models.ActionFromString(dto.Action)
+	if parsedAction == -1 {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, models.ErrActionNotFound.Error()))
+		return
+	}
+
+	if err := h.vService.RequestVerification(r.Context(), u, &parsedAction); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
