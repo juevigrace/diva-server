@@ -33,11 +33,13 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var dto dtos.UserPreferencesDto
+	var dto dtos.CreateUserPreferencesDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
+
+	dto.Device = session.Device
 
 	if err := h.service.Create(r.Context(), session.User.ID, &dto); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
@@ -48,7 +50,7 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 }
 
 func (h *UserPreferencesHandler) updatePreferences(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.UserPreferencesDto
+	var dto dtos.UpdateUserPreferencesDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return

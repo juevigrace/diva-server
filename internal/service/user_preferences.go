@@ -30,27 +30,22 @@ func (s *UserPreferencesService) GetByDevice(ctx context.Context, device string)
 	return s.repo.GetByDevice(ctx, device)
 }
 
-func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.UserPreferencesDto) error {
-	id, err := uuid.Parse(dto.ID)
-	if err != nil {
-		return err
-	}
-
+func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
-		ID:                  id,
+		ID:                  uuid.New(),
 		Device:              dto.Device,
 		Theme:               models.ThemeFromString(dto.Theme),
 		OnboardingCompleted: dto.OnboardingCompleted,
 		Language:            dto.Language,
 		LastSyncAt:          time.Now().UTC().UnixMilli(),
-		CreatedAt:           dto.CreatedAt,
-		UpdatedAt:           dto.UpdatedAt,
+		CreatedAt:           time.Now().UTC().UnixMilli(),
+		UpdatedAt:           time.Now().UTC().UnixMilli(),
 	}
 
 	return s.repo.Create(ctx, userID, pref)
 }
 
-func (s *UserPreferencesService) Update(ctx context.Context, dto *dtos.UserPreferencesDto) error {
+func (s *UserPreferencesService) Update(ctx context.Context, dto *dtos.UpdateUserPreferencesDto) error {
 	id, err := uuid.Parse(dto.ID)
 	if err != nil {
 		return err
@@ -61,7 +56,7 @@ func (s *UserPreferencesService) Update(ctx context.Context, dto *dtos.UserPrefe
 		Theme:      models.ThemeFromString(dto.Theme),
 		Language:   dto.Language,
 		LastSyncAt: time.Now().UTC().UnixMilli(),
-		UpdatedAt:  dto.UpdatedAt,
+		UpdatedAt:  time.Now().UTC().UnixMilli(),
 	}
 
 	return s.repo.Update(ctx, pref)

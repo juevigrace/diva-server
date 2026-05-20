@@ -20,13 +20,13 @@ type ServiceModule struct {
 func NewServiceModule(repos *RepoModule, mailClient *mail.Client) *ServiceModule {
 	session := service.NewSessionService(repos.Session)
 	uAction := service.NewUserActionsService(repos.Action)
-	user := service.NewUserService(repos.User, uAction)
 	userPermission := service.NewUserPermissionService(repos.UserPermission)
 	userPreferences := service.NewUserPreferencesService(repos.UserPreferences)
 	userProfile := service.NewUserProfileService(repos.UserProfile)
 	permission := service.NewPermissionService(repos.Permissions)
 	verification := service.NewVerificationService(mailClient, repos.Verification, session, uAction)
-	auth := service.NewAuthService(user, verification, session)
+	user := service.NewUserService(repos.User, uAction, verification)
+	auth := service.NewAuthService(user, uAction, verification, session)
 
 	return &ServiceModule{
 		User:            user,

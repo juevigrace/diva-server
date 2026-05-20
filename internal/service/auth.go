@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
@@ -11,30 +12,33 @@ import (
 )
 
 type AuthService struct {
-	userService    *UserService
-	uvService      *UserVerificationService
-	sessionService *SessionService
+	sService  *SessionService
+	uService  *UserService
+	uaService *UserActionsService
+	uvService *UserVerificationService
 }
 
 func NewAuthService(
-	userService *UserService,
+	uService *UserService,
+	uaService *UserActionsService,
 	uvService *UserVerificationService,
-	sessionService *SessionService,
+	sService *SessionService,
 ) *AuthService {
 	return &AuthService{
-		userService:    userService,
-		sessionService: sessionService,
-		uvService:      uvService,
+		sService:  sService,
+		uService:  uService,
+		uaService: uaService,
+		uvService: uvService,
 	}
 }
 
 func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*responses.SessionResponse, error) {
-	userID, err := s.userService.Create(ctx, &dto.User)
+	userID, err := s.uService.Create(ctx, &dto.User)
 	if err != nil {
 		return nil, err
 	}
 
-	session, err := s.sessionService.Create(ctx, userID, models.SESSION_NORMAL, &dto.SessionData)
+	session, err := s.sService.Create(ctx, userID, models.SESSION_NORMAL, &dto.SessionData)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +47,7 @@ func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*respons
 }
 
 func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.SessionResponse, error) {
-	user, err := s.userService.GetByUsernameOrEmail(ctx, dto.Username)
+	user, err := s.uService.GetByUsernameOrEmail(ctx, dto.Username)
 	if err != nil {
 		return nil, models.ErrInvalidCredentials
 	}
@@ -52,7 +56,7 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*respons
 		return nil, models.ErrInvalidCredentials
 	}
 
-	session, err := s.sessionService.Create(ctx, user.ID, models.SESSION_NORMAL, &dto.SessionData)
+	session, err := s.sService.Create(ctx, user.ID, models.SESSION_NORMAL, &dto.SessionData)
 	if err != nil {
 		return nil, err
 	}
@@ -61,17 +65,17 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*respons
 }
 
 func (s *AuthService) SignOut(ctx context.Context, sessionID uuid.UUID) error {
-	return s.sessionService.Close(ctx, sessionID)
+	return s.sService.Close(ctx, sessionID)
 }
 
 func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto *dtos.SessionDataDto) (*responses.SessionResponse, error) {
 	if session.Device != dto.Device || session.UserAgent != dto.UserAgent {
-		if err := s.sessionService.Close(ctx, session.ID); err != nil {
+		if err := s.sService.Close(ctx, session.ID); err != nil {
 			return nil, err
 		}
 		return nil, models.ErrSessionInvalid
 	}
-	updated, err := s.sessionService.Update(ctx, session)
+	updated, err := s.sService.Update(ctx, session)
 	if err != nil {
 		return nil, err
 	}
@@ -93,12 +97,16 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, dto *dtos.Forgo
 		return nil, models.ErrActionNotVerified
 	}
 
-	session, err := s.sessionService.CreateTemporal(ctx, dbUV.Action.UserID, &dto.SessionData)
+	session, err := s.sService.CreateTemporal(ctx, dbUV.Action.UserID, &dto.SessionData)
 	if err != nil {
 		return nil, err
 	}
 
-	go func() {}()
+	go func() {
+		if err := s.uaService.Delete(ctx, dbUV.Action.ID); err != nil {
+			log.Printf("action error: %v", err)
+		}
+	}()
 
 	return session, nil
 }
@@ -108,15 +116,15 @@ func (s *AuthService) ForgotPasswordUpdate(
 	session *models.Session,
 	dto *dtos.UpdatePasswordDto,
 ) error {
-	if err := s.userService.UpdatePassword(ctx, session, dto.NewPassword); err != nil {
+	if err := s.uService.UpdatePassword(ctx, session, dto.NewPassword); err != nil {
 		return err
 	}
 
-	if err := s.sessionService.Delete(ctx, session.ID); err != nil {
+	if err := s.sService.Delete(ctx, session.ID); err != nil {
 		return err
 	}
 
-	if err := s.sessionService.CloseAllByUser(ctx, session.User.ID); err != nil {
+	if err := s.sService.CloseAllByUser(ctx, session.User.ID); err != nil {
 		return err
 	}
 

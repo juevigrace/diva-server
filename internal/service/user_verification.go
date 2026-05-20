@@ -10,7 +10,6 @@ import (
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/repo"
 	"github.com/juevigrace/diva-server/internal/util"
 )
@@ -54,16 +53,23 @@ func (s *UserVerificationService) RequestVerification(
 	ctx context.Context,
 	user *models.User,
 	dto *dtos.RequestActionVerificationDto,
-) (*responses.UserActionResponse, error) {
+) (*models.UserAction, error) {
 	parsedAction := models.ActionFromString(dto.Action)
 	if parsedAction == -1 {
 		return nil, models.ErrActionNotFound
 	}
 
-	verification, err := s.Generate(ctx, user.ID, parsedAction)
+	dbAction, err := s.uaService.GetOneByName(ctx, user.ID, parsedAction)
 	if err != nil {
 		return nil, err
 	}
+
+	verification, err := s.Generate(ctx, dbAction)
+	if err != nil {
+		return nil, err
+	}
+
+	verification.Action = *dbAction
 
 	if err := s.mail.SendVerificationEmail(ctx, user.Email, verification); err != nil {
 		if err := s.Delete(ctx, verification.Action.ID); err != nil {
@@ -72,23 +78,14 @@ func (s *UserVerificationService) RequestVerification(
 		return nil, err
 	}
 
-	return &responses.UserActionResponse{
-		ID:         verification.Action.ID.String(),
-		ActionName: verification.Action.Name.String(),
-	}, nil
+	return &verification.Action, nil
 }
 
 func (s *UserVerificationService) Generate(
 	ctx context.Context,
-	userID uuid.UUID,
-	action models.Action,
+	action *models.UserAction,
 ) (*models.UserActionVerification, error) {
-	dbAction, err := s.uaService.GetOneByName(ctx, userID, action)
-	if err != nil {
-		return nil, err
-	}
-
-	exists, err := s.repo.GetByID(ctx, dbAction.ID)
+	exists, err := s.repo.GetByID(ctx, action.ID)
 	if err != nil {
 		if ok := errors.Is(pgx.ErrNoRows, err); ok {
 			token, err := util.GenerateOTPCode()
@@ -97,7 +94,7 @@ func (s *UserVerificationService) Generate(
 			}
 
 			params := &models.UserActionVerification{
-				Action:    *dbAction,
+				Action:    *action,
 				Token:     token,
 				ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
 			}
@@ -106,7 +103,7 @@ func (s *UserVerificationService) Generate(
 				return nil, err
 			}
 
-			return s.Generate(ctx, userID, action)
+			return params, nil
 		} else {
 			return nil, err
 		}
@@ -116,7 +113,7 @@ func (s *UserVerificationService) Generate(
 		if err := s.Delete(ctx, exists.Action.ID); err != nil {
 			return nil, err
 		}
-		return s.Generate(ctx, userID, action)
+		return s.Generate(ctx, action)
 	}
 
 	return exists, nil

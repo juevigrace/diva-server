@@ -50,12 +50,15 @@ type DeleteUserPermissionDto struct {
 	PermissionId string `json:"permission_id" validate:"required,uuid"`
 }
 
-type UserPreferencesDto struct {
-	ID                  string `json:"id" validate:"required,uuid"`
-	Device              string `json:"device" validate:"required,max=100"`
+type CreateUserPreferencesDto struct {
+	Device              string `json:"-"`
 	Theme               string `json:"theme" validate:"required,oneof=LIGHT DARK SYSTEM"`
 	OnboardingCompleted bool   `json:"onboarding_completed" validate:"required"`
 	Language            string `json:"language" validate:"required,max=10"`
-	CreatedAt           int64  `json:"created_at" validate:"required,gt=0"`
-	UpdatedAt           int64  `json:"updated_at" validate:"required,gt=0"`
+}
+
+type UpdateUserPreferencesDto struct {
+	ID       string `json:"id" validate:"required,uuid"`
+	Theme    string `json:"theme" validate:"required,oneof=LIGHT DARK SYSTEM"`
+	Language string `json:"language" validate:"required,max=10"`
 }

@@ -17,8 +17,16 @@ type UserService struct {
 	uvService *UserVerificationService
 }
 
-func NewUserService(repo *repo.UserRepo, uaService *UserActionsService) *UserService {
-	return &UserService{repo: repo, uaService: uaService}
+func NewUserService(
+	repo *repo.UserRepo,
+	uaService *UserActionsService,
+	uvService *UserVerificationService,
+) *UserService {
+	return &UserService{
+		repo:      repo,
+		uaService: uaService,
+		uvService: uvService,
+	}
 }
 
 func (s *UserService) Count(ctx context.Context) (int64, error) {

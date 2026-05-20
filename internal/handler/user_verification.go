@@ -56,7 +56,7 @@ func (h *UserVerificationHandler) requestVerification(w http.ResponseWriter, r *
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(res, "check your email"))
+	responses.WriteJSON(w, responses.RespondOk(res.Response(), "check your email"))
 }
 
 func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request) {
