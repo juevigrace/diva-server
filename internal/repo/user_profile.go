@@ -60,7 +60,3 @@ func (r *UserProfileRepo) UpdateAvatar(ctx context.Context, userID uuid.UUID, av
 		Avatar: avatar,
 	})
 }
-
-func (r *UserProfileRepo) Delete(ctx context.Context, userID uuid.UUID) error {
-	return r.queries.DeleteUserProfile(ctx, pgtype.UUID{Bytes: userID, Valid: true})
-}

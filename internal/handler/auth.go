@@ -39,6 +39,7 @@ func (h *AuthHandler) Routes(r chi.Router) {
 
 		auth.Route("/forgot", func(forgot chi.Router) {
 			forgot.Route("/password", func(pass chi.Router) {
+				pass.Post("/confirm", h.forgotPasswordConfirm)
 				pass.Group(func(upPass chi.Router) {
 					upPass.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
 					upPass.Patch("/", h.forgotPasswordUpdate)
@@ -101,7 +102,7 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.authService.SignOut(r.Context(), &session.ID); err != nil {
+	if err := h.authService.SignOut(r.Context(), session.ID); err != nil {
 		if errors.Is(err, models.ErrSessionInvalid) {
 			responses.WriteJSON(w, responses.RespondUnauthorized(nil, err.Error()))
 			return
@@ -141,6 +142,24 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(res, "Session refreshed"))
+}
+
+func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Request) {
+	var dto dtos.ForgotPasswordConfirmDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
+
+	session, err := h.authService.ForgotPasswordConfirm(r.Context(), &dto)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(session, "Success"))
 }
 
 func (h *AuthHandler) forgotPasswordUpdate(w http.ResponseWriter, r *http.Request) {

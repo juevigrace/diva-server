@@ -45,7 +45,6 @@ type UserPreferencesResponse struct {
 }
 
 type UserActionResponse struct {
-	UserID     *string `json:"user_id,omitempty"`
-	ID         string  `json:"id"`
-	ActionName string  `json:"action_name"`
+	ID         string `json:"id"`
+	ActionName string `json:"action_name"`
 }

@@ -37,8 +37,36 @@ func (s *UserService) GetByUsername(ctx context.Context, username string) (*mode
 	return s.repo.GetByUsername(ctx, username)
 }
 
+func (s *UserService) CheckUsernameAvailable(ctx context.Context, username string) (bool, error) {
+	_, err := s.GetByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(models.ErrUserNotFound, err) {
+			return true, nil
+		} else {
+			return false, err
+		}
+	}
+	return false, nil
+}
+
 func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	return s.repo.GetByEmail(ctx, email)
+}
+
+func (s *UserService) CheckEmailAvailable(ctx context.Context, email string) (bool, error) {
+	_, err := s.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(models.ErrUserNotFound, err) {
+			return true, nil
+		} else {
+			return false, err
+		}
+	}
+	return false, nil
+}
+
+func (s *UserService) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
+	return s.repo.GetByUsernameOrEmail(ctx, value)
 }
 
 func (s *UserService) IsUsernameAvailable(ctx context.Context, username string) (bool, error) {
@@ -86,13 +114,32 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 
 	// TODO: need to create any other user related data here
 
-	// TODO: create verification for action before this
-
-	if _, err := s.uaService.Create(ctx, models.ActionUserVerification, &id); err != nil {
+	if _, err := s.uaService.Create(ctx, id, models.ActionUserVerification); err != nil {
 		return uuid.Nil, err
 	}
 
 	return id, nil
+}
+
+func (s *UserService) VerifyUser(ctx context.Context, actionID uuid.UUID) error {
+	dbAction, err := s.uvService.GetOneById(ctx, actionID)
+	if err != nil {
+		return err
+	}
+
+	if !dbAction.Verified {
+		return models.ErrActionNotVerified
+	}
+
+	if err := s.repo.UpdateVerified(ctx, true, dbAction.Action.UserID); err != nil {
+		return err
+	}
+
+	if err := s.uaService.Delete(ctx, dbAction.Action.ID); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *UserService) UpdatePassword(ctx context.Context, session *models.Session, newPassword string) error {
@@ -106,22 +153,6 @@ func (s *UserService) UpdatePassword(ctx context.Context, session *models.Sessio
 	}
 
 	return s.repo.UpdatePassword(ctx, newHash, session.User.ID)
-}
-
-func (s *UserService) VerifyUser(ctx context.Context, userID uuid.UUID) error {
-	if err := s.repo.UpdateVerified(ctx, true, userID); err != nil {
-		return err
-	}
-
-	// TODO: delete action here
-	// if err := s.uaService.Delete(ctx, &models.UserAction{
-	// 	UserID: userID,
-	// 	Action: models.ActionUserVerification,
-	// }); err != nil {
-	// 	return err
-	// }
-
-	return nil
 }
 
 func (s *UserService) UpdatePhoneNumber(ctx context.Context, phone string, userID uuid.UUID) error {

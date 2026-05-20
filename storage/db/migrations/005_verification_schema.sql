@@ -10,9 +10,11 @@ CREATE TABLE IF NOT EXISTS diva_action(
 CREATE TABLE IF NOT EXISTS diva_action_verification (
     action_id UUID NOT NULL PRIMARY KEY,
     token CHAR(6) NOT NULL,
+    verified BOOL NOT NULL DEFAULT FALSE,
     expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ NOT NULL,
     UNIQUE(action_id, token),
-    FOREIGN KEY(action_id) REFERENCES diva_user_action(id)
+    FOREIGN KEY(action_id) REFERENCES diva_action(id) ON DELETE CASCADE
 );
 -- +goose StatementEnd
 -- +goose Down

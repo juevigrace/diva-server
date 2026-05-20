@@ -43,10 +43,9 @@ func (h *UserHandler) Routes(r chi.Router) {
 		})
 
 		u.Route("/{id}", func(uid chi.Router) {
-			uid.Get("/", h.getUserByID)
 			uid.Group(func(admin chi.Router) {
 				admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-				admin.Put("/", h.updateUser)
+				admin.Get("/", h.getUserByID)
 				admin.Delete("/", h.deleteUser)
 			})
 		})
@@ -104,21 +103,7 @@ func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
 
 	res := make([]*responses.UserResponse, len(users))
 	for i, u := range users {
-		res[i] = &responses.UserResponse{
-			ID:           u.ID.String(),
-			Email:        u.Email,
-			Username:     u.Username,
-			BirthDate:    u.BirthDate,
-			PhoneNumber:  u.PhoneNumber,
-			Alias:        u.Alias,
-			Avatar:       u.Avatar,
-			Bio:          u.Bio,
-			UserVerified: u.Verified,
-			Role:         u.Role.String(),
-			CreatedAt:    u.CreatedAt,
-			UpdatedAt:    u.UpdatedAt,
-			DeletedAt:    u.DeletedAt,
-		}
+		res[i] = u.Response()
 	}
 
 	paginatedRes := responses.NewPaginatedResponse(res, pagination.GetPage(), pagination.GetLimit(), total)
@@ -168,6 +153,17 @@ func (h *UserHandler) checkEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	if session.User.Role != models.ROLE_ADMIN {
+		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
+		return
+	}
+
 	idParam := chi.URLParam(r, "id")
 	if idParam == "" {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, "id is required"))
@@ -180,7 +176,7 @@ func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.GetByID(r.Context(), &id)
+	user, err := h.userService.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, models.ErrUserNotFound) {
 			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
@@ -190,21 +186,7 @@ func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(&responses.UserResponse{
-		ID:           user.ID.String(),
-		Email:        "",
-		Username:     user.Username,
-		BirthDate:    user.BirthDate,
-		PhoneNumber:  "",
-		Alias:        user.Alias,
-		Avatar:       user.Avatar,
-		Bio:          user.Bio,
-		UserVerified: user.Verified,
-		Role:         "",
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
-		DeletedAt:    user.DeletedAt,
-	}, "User retrieved"))
+	responses.WriteJSON(w, responses.RespondOk(user.Response(), "User retrieved"))
 }
 
 func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
@@ -234,39 +216,6 @@ func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
 	responses.WriteJSON(w, responses.RespondCreated(map[string]string{"id": userID.String()}, "User created"))
 }
 
-func (h *UserHandler) updateUser(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	var dto dtos.UpdateProfileDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.userService.UpdateProfile(r.Context(), id, &dto); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "User updated"))
-}
-
 func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	session, ok := middlewares.GetSessionFromContext(r.Context())
 	if !ok {
@@ -286,7 +235,7 @@ func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.Delete(r.Context(), &id); err != nil {
+	if err := h.userService.Delete(r.Context(), id); err != nil {
 		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
 		return
 	}

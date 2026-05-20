@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS diva_user_profile(
     alias VARCHAR(255) NOT NULL DEFAULT '',
     bio VARCHAR(255) NOT NULL DEFAULT '',
     avatar TEXT NOT NULL DEFAULT '',
-    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE RESTRICT
+    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS diva_user_permissions (
@@ -33,9 +33,9 @@ CREATE TABLE IF NOT EXISTS diva_user_permissions (
     expires_at TIMESTAMPTZ DEFAULT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (permission_id, user_id),
-    FOREIGN KEY (permission_id) REFERENCES diva_permissions(id),
+    FOREIGN KEY (permission_id) REFERENCES diva_permissions(id) ON DELETE CASCADE,
     FOREIGN KEY (granted_by) REFERENCES diva_user(id),
-    FOREIGN KEY (user_id) REFERENCES diva_user(id)
+    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS diva_user_preferences (
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS diva_user_preferences (
     last_sync_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE RESTRICT
+    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );
 -- +goose StatementEnd
 -- +goose Down

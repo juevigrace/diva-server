@@ -35,7 +35,7 @@ func (h *UserPermissionHandler) getPermission(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	dto, err := h.service.Get(r.Context(), session.User.ID)
+	dto, err := h.service.GetByUser(r.Context(), session.User.ID)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -45,13 +45,19 @@ func (h *UserPermissionHandler) getPermission(w http.ResponseWriter, r *http.Req
 }
 
 func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
 	var dto dtos.UserPermissionDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.service.Create(r.Context(), &dto); err != nil {
+	if err := h.service.Create(r.Context(), session, &dto); err != nil {
 		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
 		return
 	}

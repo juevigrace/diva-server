@@ -33,9 +33,10 @@ func (s *UserActionsService) GetOneByName(ctx context.Context, userID uuid.UUID,
 func (s *UserActionsService) Create(ctx context.Context, userID uuid.UUID, action models.Action) (*uuid.UUID, error) {
 	id := uuid.New()
 
-	if err := s.repo.Create(ctx, userID, &models.UserAction{
+	if err := s.repo.Create(ctx, &models.UserAction{
 		ID:     id,
-		Action: action,
+		Name:   action,
+		UserID: userID,
 	}); err != nil {
 		return nil, err
 	}

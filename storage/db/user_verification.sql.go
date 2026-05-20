@@ -15,22 +15,34 @@ const createVerification = `-- name: CreateVerification :exec
 insert into diva_action_verification (
     action_id,
     token,
-    expires_at
+    verified,
+    expires_at,
+    used_at
 ) values (
     $1,
     $2,
-    $3
+    $3,
+    $4,
+    $5
 )
 `
 
 type CreateVerificationParams struct {
 	ActionID  pgtype.UUID
 	Token     string
+	Verified  bool
 	ExpiresAt pgtype.Timestamptz
+	UsedAt    pgtype.Timestamptz
 }
 
 func (q *Queries) CreateVerification(ctx context.Context, arg CreateVerificationParams) error {
-	_, err := q.db.Exec(ctx, createVerification, arg.ActionID, arg.Token, arg.ExpiresAt)
+	_, err := q.db.Exec(ctx, createVerification,
+		arg.ActionID,
+		arg.Token,
+		arg.Verified,
+		arg.ExpiresAt,
+		arg.UsedAt,
+	)
 	return err
 }
 
@@ -45,14 +57,45 @@ func (q *Queries) DeleteVerification(ctx context.Context, actionID pgtype.UUID) 
 }
 
 const getVerification = `-- name: GetVerification :one
-select v.action_id, v.token, v.expires_at
+select v.action_id, v.token, v.expires_at, v.used_at, v.verified
 from diva_action_verification v
 where v.action_id = $1
 `
 
-func (q *Queries) GetVerification(ctx context.Context, actionID pgtype.UUID) (DivaActionVerification, error) {
+type GetVerificationRow struct {
+	ActionID  pgtype.UUID
+	Token     string
+	ExpiresAt pgtype.Timestamptz
+	UsedAt    pgtype.Timestamptz
+	Verified  bool
+}
+
+func (q *Queries) GetVerification(ctx context.Context, actionID pgtype.UUID) (GetVerificationRow, error) {
 	row := q.db.QueryRow(ctx, getVerification, actionID)
-	var i DivaActionVerification
-	err := row.Scan(&i.ActionID, &i.Token, &i.ExpiresAt)
+	var i GetVerificationRow
+	err := row.Scan(
+		&i.ActionID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.Verified,
+	)
 	return i, err
+}
+
+const updateVerification = `-- name: UpdateVerification :exec
+update diva_action_verification set
+    verified = $1,
+    used_at = now()
+where action_id = $2
+`
+
+type UpdateVerificationParams struct {
+	Verified bool
+	ActionID pgtype.UUID
+}
+
+func (q *Queries) UpdateVerification(ctx context.Context, arg UpdateVerificationParams) error {
+	_, err := q.db.Exec(ctx, updateVerification, arg.Verified, arg.ActionID)
+	return err
 }

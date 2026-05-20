@@ -49,7 +49,3 @@ func (s *UserProfileService) UpdateAvatar(ctx context.Context, userID uuid.UUID,
 	// TODO: handle here file of the image
 	return s.repo.UpdateAvatar(ctx, userID, avatar)
 }
-
-func (s *UserProfileService) Delete(ctx context.Context, userID uuid.UUID) error {
-	return s.repo.Delete(ctx, userID)
-}

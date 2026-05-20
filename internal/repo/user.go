@@ -72,6 +72,28 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User, err
 	}, nil
 }
 
+func (r *UserRepo) GetByUsernameOrEmail(ctx context.Context, email string) (*models.User, error) {
+	row, err := r.queries.GetUserByUsernameOrEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, models.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &models.User{
+		ID:           row.ID.Bytes,
+		Username:     row.Username,
+		Email:        row.Email,
+		PhoneNumber:  row.PhoneNumber,
+		PasswordHash: row.PasswordHash,
+		Verified:     row.Verified,
+		Role:         models.RoleFromDB(row.Role),
+		CreatedAt:    row.CreatedAt.Time.UnixMilli(),
+		UpdatedAt:    row.UpdatedAt.Time.UnixMilli(),
+		DeletedAt:    models.ToInt64Ptr(row.DeletedAt),
+	}, nil
+}
+
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	row, err := r.queries.GetUserByEmail(ctx, email)
 	if err != nil {

@@ -12,7 +12,8 @@ import (
 )
 
 const countUsers = `-- name: CountUsers :one
-select count(*) from diva_user
+select count(*)
+from diva_user
 `
 
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
@@ -157,6 +158,40 @@ where u.username = $1
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (DivaUser, error) {
 	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i DivaUser
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PhoneNumber,
+		&i.PasswordHash,
+		&i.Verified,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
+select
+    u.id as id,
+    u.username,
+    u.email,
+    u.phone_number,
+    u.password_hash,
+    u.verified,
+    u.role,
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
+from diva_user u
+where u.email = $1 or u.username = $1
+`
+
+func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, email string) (DivaUser, error) {
+	row := q.db.QueryRow(ctx, getUserByUsernameOrEmail, email)
 	var i DivaUser
 	err := row.Scan(
 		&i.ID,

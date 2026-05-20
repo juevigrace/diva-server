@@ -14,6 +14,22 @@ from diva_user u
 where u.id = $1
 ;
 
+-- name: GetUserByUsernameOrEmail :one
+select
+    u.id as id,
+    u.username,
+    u.email,
+    u.phone_number,
+    u.password_hash,
+    u.verified,
+    u.role,
+    u.created_at,
+    u.updated_at,
+    u.deleted_at
+from diva_user u
+where u.email = $1 or u.username = $1
+;
+
 -- name: GetUserByEmail :one
 select
     u.id as id,
@@ -123,7 +139,9 @@ where id = $1
 ;
 
 -- name: CountUsers :one
-select count(*) from diva_user;
+select count(*)
+from diva_user
+;
 
 -- name: SoftDeleteUser :exec
 update diva_user set

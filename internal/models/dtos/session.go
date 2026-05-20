@@ -16,3 +16,8 @@ type SessionDataDto struct {
 	IpAddress string `json:"-"`
 	UserAgent string `json:"user_agent" validate:"required,max=255"`
 }
+
+type ForgotPasswordConfirmDto struct {
+	ActionID    string         `json:"id" validate:"required,uuid"`
+	SessionData SessionDataDto `json:"session_data" validate:"required"`
+}

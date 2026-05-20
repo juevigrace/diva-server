@@ -27,7 +27,8 @@ func (r *UserActionsRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]*
 	for i, row := range rows {
 		actions[i] = &models.UserAction{
 			ID:     row.ID.Bytes,
-			Action: models.ActionFromString(row.Name),
+			Name:   models.ActionFromString(row.Name),
+			UserID: row.UserID.Bytes,
 		}
 	}
 
@@ -42,7 +43,8 @@ func (r *UserActionsRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Us
 
 	return &models.UserAction{
 		ID:     row.ID.Bytes,
-		Action: models.ActionFromString(row.Name),
+		Name:   models.ActionFromString(row.Name),
+		UserID: row.UserID.Bytes,
 	}, nil
 }
 
@@ -57,15 +59,16 @@ func (r *UserActionsRepo) GetByUserAndName(ctx context.Context, userID uuid.UUID
 
 	return &models.UserAction{
 		ID:     row.ID.Bytes,
-		Action: models.ActionFromString(row.Name),
+		Name:   models.ActionFromString(row.Name),
+		UserID: row.UserID.Bytes,
 	}, nil
 }
 
-func (r *UserActionsRepo) Create(ctx context.Context, userID uuid.UUID, ua *models.UserAction) error {
+func (r *UserActionsRepo) Create(ctx context.Context, ua *models.UserAction) error {
 	return r.queries.CreateUserAction(ctx, db.CreateUserActionParams{
 		ID:     pgtype.UUID{Bytes: ua.ID, Valid: true},
-		Name:   ua.Action.String(),
-		UserID: pgtype.UUID{Bytes: userID, Valid: true},
+		Name:   ua.Name.String(),
+		UserID: pgtype.UUID{Bytes: ua.UserID, Valid: true},
 	})
 }
 

@@ -8,7 +8,7 @@ type HandlerModule struct {
 	Auth         *handler.AuthHandler
 	User         *handler.UserHandler
 	Session      *handler.SessionHandler
-	Verification *handler.VerificationHandler
+	Verification *handler.UserVerificationHandler
 }
 
 func NewHandlerModule(services *ServiceModule) *HandlerModule {
@@ -18,10 +18,10 @@ func NewHandlerModule(services *ServiceModule) *HandlerModule {
 	userPermission := handler.NewUserPermissionHandler(services.UserPermission)
 	userPreferences := handler.NewUserPreferencesHandler(services.UserPreferences)
 	uActionHandler := handler.NewUserActionsHandler(services.UserActions)
-	userMe := handler.NewUserMeHandler(services.User, userPreferences, uActionHandler)
+	userMe := handler.NewUserMeHandler(services.User, services.UserProfile, userPreferences, uActionHandler)
 	user := handler.NewUserHandler(services.Session, services.User, userMe, userPermission)
 
-	verification := handler.NewVerificationHandler(services.Session, services.Verification)
+	verification := handler.NewVerificationHandler(services.Session, services.User, services.Verification)
 
 	return &HandlerModule{
 		Auth:         auth,

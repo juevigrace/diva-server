@@ -11,20 +11,23 @@ import (
 )
 
 type UserMeHandler struct {
-	userService *service.UserService
-	pHandler    *UserPreferencesHandler
-	aHandler    *UserActionsHandler
+	uService  *service.UserService
+	upService *service.UserProfileService
+	pHandler  *UserPreferencesHandler
+	aHandler  *UserActionsHandler
 }
 
 func NewUserMeHandler(
-	userService *service.UserService,
+	uService *service.UserService,
+	upService *service.UserProfileService,
 	pHandler *UserPreferencesHandler,
 	aHandler *UserActionsHandler,
 ) *UserMeHandler {
 	return &UserMeHandler{
-		userService: userService,
-		pHandler:    pHandler,
-		aHandler:    aHandler,
+		uService:  uService,
+		upService: upService,
+		pHandler:  pHandler,
+		aHandler:  aHandler,
 	}
 }
 
@@ -47,13 +50,13 @@ func (h *UserMeHandler) getMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.GetByID(r.Context(), &session.User.ID)
+	user, err := h.uService.GetByID(r.Context(), session.User.ID)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(user.ToUserResponse(), "Good"))
+	responses.WriteJSON(w, responses.RespondOk(user.Response(), "Good"))
 }
 
 func (h *UserMeHandler) updateMe(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +72,7 @@ func (h *UserMeHandler) updateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.UpdateProfile(r.Context(), session.User.ID, &dto); err != nil {
+	if err := h.upService.Update(r.Context(), session.User.ID, &dto); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
@@ -84,7 +87,7 @@ func (h *UserMeHandler) deleteMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.Delete(r.Context(), &session.User.ID); err != nil {
+	if err := h.uService.Delete(r.Context(), session.User.ID); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}

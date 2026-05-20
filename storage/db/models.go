@@ -235,7 +235,9 @@ type DivaAction struct {
 type DivaActionVerification struct {
 	ActionID  pgtype.UUID
 	Token     string
+	Verified  bool
 	ExpiresAt pgtype.Timestamptz
+	UsedAt    pgtype.Timestamptz
 }
 
 type DivaPermission struct {

@@ -9,20 +9,24 @@ import (
 )
 
 var (
-	ErrTokenExpired   = errors.New("token expired")
-	ErrTokenInvalid   = errors.New("token invalid")
-	ErrActionNotFound = errors.New("action not found")
+	ErrTokenExpired      = errors.New("token expired")
+	ErrTokenInvalid      = errors.New("token invalid")
+	ErrActionNotFound    = errors.New("action not found")
+	ErrActionNotVerified = errors.New("action not verified")
 )
 
 type UserAction struct {
 	ID     uuid.UUID
-	Action Action
+	Name   Action
+	UserID uuid.UUID
 }
 
 type UserActionVerification struct {
 	Action    UserAction
 	Token     string
 	ExpiresAt time.Time
+	UsedAt    time.Time
+	Verified  bool
 }
 
 type Action int
@@ -54,15 +58,9 @@ func ActionFromString(s string) Action {
 	}
 }
 
-func (ua *UserAction) Response(id *uuid.UUID) *responses.UserActionResponse {
-	var userID *string = new(string)
-	if id != nil {
-		*userID = id.String()
-	}
-
+func (ua *UserAction) Response() *responses.UserActionResponse {
 	return &responses.UserActionResponse{
-		UserID:     userID,
 		ID:         ua.ID.String(),
-		ActionName: ua.Action.String(),
+		ActionName: ua.Name.String(),
 	}
 }

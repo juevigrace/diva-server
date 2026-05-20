@@ -27,7 +27,7 @@ func (s *SessionService) GetByID(ctx context.Context, sessionID uuid.UUID) (*mod
 	return s.repo.GetByID(ctx, sessionID)
 }
 
-func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.SessionDataDto) (*models.Session, error) {
+func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, sType models.SessionType, dto *dtos.SessionDataDto) (*models.Session, error) {
 	sessionID := uuid.New()
 	accessToken, err := util.CreateAccessToken(sessionID)
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, dto *dtos
 		IpAddress:    dto.IpAddress,
 		UserAgent:    dto.UserAgent,
 		Status:       models.SESSION_ACTIVE,
-		Type:         models.SESSION_NORMAL,
+		Type:         sType,
 		ExpiresAt:    expiration.UnixMilli(),
 	}
 
@@ -62,6 +62,10 @@ func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, dto *dtos
 	}
 
 	return s.GetByID(ctx, sessionID)
+}
+
+func (s *SessionService) CreateTemporal(ctx context.Context, userID uuid.UUID, dto *dtos.SessionDataDto) (*models.Session, error) {
+	return s.Create(ctx, userID, models.SESSION_TEMPORAL, dto)
 }
 
 func (s *SessionService) Update(ctx context.Context, session *models.Session) (*models.Session, error) {

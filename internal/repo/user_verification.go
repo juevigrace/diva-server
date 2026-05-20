@@ -23,8 +23,11 @@ func (r *UserVerificationRepo) GetByID(ctx context.Context, id uuid.UUID) (*mode
 		return nil, err
 	}
 	return &models.UserActionVerification{
+		Action:    models.UserAction{ID: row.ActionID.Bytes},
 		Token:     row.Token,
 		ExpiresAt: row.ExpiresAt.Time,
+		UsedAt:    row.UsedAt.Time,
+		Verified:  row.Verified,
 	}, nil
 }
 
@@ -33,6 +36,13 @@ func (r *UserVerificationRepo) Create(ctx context.Context, v *models.UserActionV
 		ActionID:  pgtype.UUID{Bytes: v.Action.ID, Valid: true},
 		Token:     v.Token,
 		ExpiresAt: pgtype.Timestamptz{Time: v.ExpiresAt, Valid: true},
+	})
+}
+
+func (r *UserVerificationRepo) Verify(ctx context.Context, id uuid.UUID) error {
+	return r.queries.UpdateVerification(ctx, db.UpdateVerificationParams{
+		Verified: true,
+		ActionID: pgtype.UUID{Bytes: id, Valid: true},
 	})
 }
 

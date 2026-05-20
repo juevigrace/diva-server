@@ -58,7 +58,6 @@ func main() {
 		Email:    serverConf.RootEmail,
 		Username: serverConf.RootUsername,
 		Password: serverConf.RootPassword,
-		Alias:    serverConf.RootUsername,
 	}
 
 	id, err := serviceModule.User.Create(context.Background(), &user)

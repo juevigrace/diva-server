@@ -35,8 +35,3 @@ where user_id = $6;
 update diva_user_profile set
     avatar = $1
 where user_id = $2;
-
--- name: DeleteUserProfile :exec
-delete from diva_user_profile
-where user_id = $1
-;
