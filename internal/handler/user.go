@@ -47,6 +47,9 @@ func (h *UserHandler) Routes(r chi.Router) {
 				admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
 				admin.Get("/", h.getUserByID)
 				admin.Delete("/", h.deleteUser)
+				admin.Patch("/username", h.updateUsername)
+				admin.Patch("/email", h.updateEmail)
+				admin.Patch("/phone", h.updatePhoneNumber)
 			})
 		})
 
@@ -64,15 +67,21 @@ func (h *UserHandler) Routes(r chi.Router) {
 	})
 }
 
-func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 	session, ok := middlewares.GetSessionFromContext(r.Context())
 	if !ok {
 		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
+		return false
 	}
-
 	if session.User.Role != models.ROLE_ADMIN {
 		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
+		return false
+	}
+	return true
+}
+
+func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
 		return
 	}
 
@@ -153,14 +162,7 @@ func (h *UserHandler) checkEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
+	if !h.requireAdmin(w, r) {
 		return
 	}
 
@@ -190,14 +192,7 @@ func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
+	if !h.requireAdmin(w, r) {
 		return
 	}
 
@@ -217,14 +212,7 @@ func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
+	if !h.requireAdmin(w, r) {
 		return
 	}
 
@@ -241,4 +229,82 @@ func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(nil, "User deleted"))
+}
+
+func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+
+	idParam := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
+		return
+	}
+
+	var dto dtos.UpdateUsernameDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.userService.UpdateUsername(r.Context(), dto.Username, id); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "Username updated"))
+}
+
+func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+
+	idParam := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
+		return
+	}
+
+	var dto dtos.UpdateEmailDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.userService.UpdateEmail(r.Context(), dto.Email, id); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "Email updated"))
+}
+
+func (h *UserHandler) updatePhoneNumber(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+
+	idParam := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
+		return
+	}
+
+	var dto dtos.UpdatePhoneNumberDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.userService.UpdatePhoneNumber(r.Context(), dto.PhoneNumber, id); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "Phone number updated"))
 }

@@ -36,7 +36,11 @@ func (h *UserMeHandler) Routes(r chi.Router) {
 		me.Get("/", h.getMe)
 		me.Put("/", h.updateMe)
 		me.Delete("/", h.deleteMe)
-		me.Patch("/email", func(w http.ResponseWriter, r *http.Request) {})
+		me.Patch("/email", h.updateEmail)
+		me.Patch("/username", h.updateUsername)
+		me.Patch("/phone", h.updatePhoneNumber)
+		me.Post("/profile", h.createProfile)
+		me.Put("/profile/avatar", h.updateAvatar)
 
 		h.pHandler.Routes(me)
 		h.aHandler.Routes(me)
@@ -93,4 +97,93 @@ func (h *UserMeHandler) deleteMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(nil, "User deleted"))
+}
+
+func (h *UserMeHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	var dto dtos.UpdateEmailDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.uService.UpdateEmail(r.Context(), dto.Email, session.User.ID); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "Email updated"))
+}
+
+func (h *UserMeHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	var dto dtos.UpdateUsernameDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.uService.UpdateUsername(r.Context(), dto.Username, session.User.ID); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "Username updated"))
+}
+
+func (h *UserMeHandler) updatePhoneNumber(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	var dto dtos.UpdatePhoneNumberDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.uService.UpdatePhoneNumber(r.Context(), dto.PhoneNumber, session.User.ID); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "Phone number updated"))
+}
+
+func (h *UserMeHandler) createProfile(w http.ResponseWriter, r *http.Request) {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
+		return
+	}
+
+	var dto dtos.CreateProfileDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err := h.upService.Create(r.Context(), session.User.ID, &dto); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondCreated(nil, "Profile created"))
+}
+
+func (h *UserMeHandler) updateAvatar(w http.ResponseWriter, r *http.Request) {
+	// TODO: handle file upload
+	responses.WriteJSON(w, responses.RespondOk(nil, "Avatar updated"))
 }
