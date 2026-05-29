@@ -12,20 +12,26 @@ import (
 )
 
 type UserService struct {
-	repo      *repo.UserRepo
-	uaService *UserActionsService
-	uvService *UserVerificationService
+	repo       *repo.UserRepo
+	uaService  *UserActionsService
+	upService  *UserPermissionService
+	uprService *UserProfileService
+	uvService  *UserVerificationService
 }
 
 func NewUserService(
 	repo *repo.UserRepo,
 	uaService *UserActionsService,
+	upService *UserPermissionService,
+	uprService *UserProfileService,
 	uvService *UserVerificationService,
 ) *UserService {
 	return &UserService{
-		repo:      repo,
-		uaService: uaService,
-		uvService: uvService,
+		repo:       repo,
+		uaService:  uaService,
+		uvService:  uvService,
+		upService:  upService,
+		uprService: uprService,
 	}
 }
 
@@ -33,12 +39,33 @@ func (s *UserService) Count(ctx context.Context) (int64, error) {
 	return s.repo.Count(ctx)
 }
 
-func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination) ([]*models.User, error) {
+func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination) ([]models.User, error) {
 	return s.repo.ListUsers(ctx, pagination.GetLimit(), pagination.GetOffset())
 }
 
 func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
-	return s.repo.GetByID(ctx, userID)
+	dbUser, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	dbProfile, err := s.uprService.GetByUserID(ctx, dbUser.ID)
+	if err != nil {
+		return nil, err
+	}
+	dbUser.Profile = dbProfile
+
+	dbPerms, err := s.upService.GetByUser(ctx, dbUser.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dbUser.Permissions = make(map[models.PermissionAction]models.UserPermission, len(dbPerms))
+	for _, perm := range dbPerms {
+		dbUser.Permissions[perm.Permission.Action] = perm
+	}
+
+	return dbUser, nil
 }
 
 func (s *UserService) GetByUsername(ctx context.Context, username string) (*models.User, error) {
@@ -150,8 +177,13 @@ func (s *UserService) VerifyUser(ctx context.Context, actionID uuid.UUID) error 
 	return nil
 }
 
-func (s *UserService) UpdatePassword(ctx context.Context, session *models.Session, newPassword string) error {
-	if util.ValidatePassword(newPassword, session.User.PasswordHash) {
+func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPassword string) error {
+	dbUser, err := s.GetByID(ctx, uid)
+	if err != nil {
+		return err
+	}
+
+	if util.ValidatePassword(newPassword, dbUser.PasswordHash) {
 		return models.ErrSamePassword
 	}
 
@@ -160,7 +192,11 @@ func (s *UserService) UpdatePassword(ctx context.Context, session *models.Sessio
 		return err
 	}
 
-	return s.repo.UpdatePassword(ctx, newHash, session.User.ID)
+	if err := s.repo.UpdatePassword(ctx, newHash, uid); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *UserService) UpdatePhoneNumber(ctx context.Context, phone string, userID uuid.UUID) error {
@@ -175,6 +211,18 @@ func (s *UserService) UpdateEmail(ctx context.Context, email string, userID uuid
 	return s.repo.UpdateEmail(ctx, email, userID)
 }
 
-func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
+func (s *UserService) UpdateVerified(ctx context.Context, verified bool, userID uuid.UUID) error {
+	return s.repo.UpdateVerified(ctx, verified, userID)
+}
+
+func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {
+	return s.repo.UpdateRole(ctx, role, userID)
+}
+
+func (s *UserService) SoftDelete(ctx context.Context, userID uuid.UUID) error {
 	return s.repo.SoftDelete(ctx, userID)
+}
+
+func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
+	return s.repo.Delete(ctx, userID)
 }

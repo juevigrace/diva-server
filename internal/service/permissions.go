@@ -38,22 +38,18 @@ func (s *PermissionService) Create(ctx context.Context, dto *dtos.CreatePermissi
 		ID:          uuid.New(),
 		Name:        dto.Name,
 		Description: dto.Description,
-		Action:      dto.Action,
+		Action:      models.PermissionActionFromString(dto.Action),
 		RoleLevel:   models.RoleFromString(dto.RoleLevel),
 	}
 	return s.repo.Create(ctx, perm)
 }
 
-func (s *PermissionService) Update(ctx context.Context, dto *dtos.UpdatePermissionDto) error {
-	id, err := uuid.Parse(dto.ID)
-	if err != nil {
-		return err
-	}
+func (s *PermissionService) Update(ctx context.Context, pid uuid.UUID, dto *dtos.UpdatePermissionDto) error {
 	perm := &models.Permission{
-		ID:          id,
+		ID:          pid,
 		Name:        dto.Name,
 		Description: dto.Description,
-		Action:      dto.Action,
+		Action:      models.PermissionActionFromString(dto.Action),
 		RoleLevel:   models.RoleFromString(dto.RoleLevel),
 	}
 	return s.repo.Update(ctx, perm)

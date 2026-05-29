@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
@@ -20,125 +19,144 @@ func NewSessionHandler(svc *service.SessionService) *SessionHandler {
 }
 
 func (h *SessionHandler) Routes(r chi.Router) {
-	r.Route("/sessions", func(sessions chi.Router) {
-		sessions.Group(func(protected chi.Router) {
-			protected.Use(middlewares.SessionMiddleware(h.Service.GetByID))
-			protected.Get("/", h.list)
-			protected.Get("/{id}", h.getByID)
-			protected.Delete("/{id}", h.close)
-		})
-
-		sessions.Group(func(admin chi.Router) {
-			admin.Use(middlewares.SessionMiddleware(h.Service.GetByID))
-			admin.Delete("/expired", h.deleteExpired)
-		})
+	r.Route("/sessions", func(s chi.Router) {
+		s.Get("/", h.list)
+		s.Get("/{sid}", h.getByID)
+		s.Delete("/{sid}", h.close)
+		s.Delete("/expired", h.deleteExpired)
 	})
 }
 
-func (h *SessionHandler) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return false
-	}
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
-		return false
-	}
-	return true
-}
-
 func (h *SessionHandler) list(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	sessions, err := h.Service.GetByUser(r.Context(), session.User.ID)
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	res := make([]*responses.SessionResponse, len(sessions))
-	for i, s := range sessions {
-		res[i] = models.ToSessionResponse(s)
+	sessions, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != uid
+		},
+		func(session *models.Session) (*[]*models.Session, error) {
+			sessions, err := h.Service.GetByUser(r.Context(), session.User.ID)
+			if err != nil {
+				return nil, err
+			}
+			return &sessions, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(res, "Sessions retrieved"))
+	res := make([]*responses.SessionResponse, len(*sessions))
+	for i, s := range *sessions {
+		res[i] = s.Response()
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(res, "sessions retrieved"))
 }
 
+// TODO: finished here
 func (h *SessionHandler) getByID(w http.ResponseWriter, r *http.Request) {
-	currentSession, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	s, err := h.Service.GetByID(r.Context(), id)
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if currentSession.User.ID != s.User.ID && currentSession.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "access denied"))
+	sid, err := middlewares.GetUUIDFromURL(r, "sid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(models.ToSessionResponse(s), "Session retrieved"))
+	session, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != uid
+		},
+		func(session *models.Session) (*models.Session, error) {
+			dbSession, err := h.Service.GetByID(r.Context(), sid)
+			if err != nil {
+				return nil, err
+			}
+
+			if dbSession.User.ID != uid {
+				return nil, models.ErrForbidden
+			}
+
+			return dbSession, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(session.Response(), "Session retrieved"))
 }
 
 func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
-	currentSession, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	target, err := h.Service.GetByID(r.Context(), id)
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if currentSession.User.ID != target.User.ID && currentSession.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "access denied"))
+	sid, err := middlewares.GetUUIDFromURL(r, "sid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.Service.Close(r.Context(), id); err != nil {
-		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != uid
+		},
+		func(session *models.Session) (*models.Session, error) {
+			target, err := h.Service.GetByID(r.Context(), sid)
+			if err != nil {
+				return nil, err
+			}
+
+			if session.User.Role == models.ROLE_USER && target.User.ID != uid {
+				return nil, models.ErrForbidden
+			}
+
+			if err := h.Service.Close(r.Context(), sid); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(nil, "Session closed"))
+	responses.WriteJSON(w, responses.RespondOk(nil, "session closed"))
 }
 
 func (h *SessionHandler) deleteExpired(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
+	_, err := middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+		return requester.Role == models.ROLE_USER
+	}, func(session *models.Session) (*any, error) {
+		if err := h.Service.DeleteExpired(r.Context()); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		handleReqError(w, err)
 		return
 	}
 
-	if err := h.Service.DeleteExpired(r.Context()); err != nil {
-		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "Expired sessions deleted"))
+	responses.WriteJSON(w, responses.RespondOk(nil, "expired sessions deleted"))
 }

@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
@@ -21,88 +20,114 @@ func NewUserActionsHandler(svc *service.UserActionsService, sessionService *serv
 }
 
 func (h *UserActionsHandler) Routes(r chi.Router) {
-	r.Route("/actions", func(auth chi.Router) {
-		auth.Get("/", h.getActions)
-
-		auth.Group(func(admin chi.Router) {
-			admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-			admin.Get("/{id}", h.getActionByID)
-			admin.Delete("/{id}", h.deleteAction)
+	r.Route("/{uid}/actions", func(uid chi.Router) {
+		uid.Get("/", h.getAll)
+		uid.Get("/{aid}", h.getByID)
+	})
+	r.Route("/actions", func(ac chi.Router) {
+		ac.Route("/{aid}", func(aid chi.Router) {
+			aid.Delete("/", h.deleteAction)
 		})
 	})
 }
 
-func (h *UserActionsHandler) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return false
-	}
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
-		return false
-	}
-	return true
-}
-
-func (h *UserActionsHandler) getActions(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	actions, err := h.service.GetAllByUser(r.Context(), session.User.ID)
+func (h *UserActionsHandler) getAll(w http.ResponseWriter, r *http.Request) {
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	result := make([]*responses.UserActionResponse, len(actions))
-	for i, a := range actions {
-		result[i] = a.Response()
+	actions, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != uid
+		},
+		func(session *models.Session) (*[]models.UserAction, error) {
+			dbActions, err := h.service.GetAllByUser(r.Context(), uid)
+			if err != nil {
+				return nil, err
+			}
+
+			return &dbActions, err
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(result, "Success"))
+	res := make([]*responses.UserActionResponse, len(*actions))
+	for i, a := range *actions {
+		res[i] = a.Response()
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(res, "actions retrieved"))
 }
 
-func (h *UserActionsHandler) getActionByID(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	action, err := h.service.GetOneByID(r.Context(), id)
+func (h *UserActionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(action.Response(), "Action retrieved"))
+	actionID, err := middlewares.GetUUIDFromURL(r, "aid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	action, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != uid
+		},
+		func(session *models.Session) (*models.UserAction, error) {
+			dbAction, err := h.service.GetOneByID(r.Context(), actionID)
+			if err != nil {
+				return nil, err
+			}
+
+			if dbAction.UserID != uid {
+				return nil, models.ErrForbidden
+			}
+
+			return dbAction, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(action.Response(), "action retrieved"))
 }
 
 func (h *UserActionsHandler) deleteAction(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
+	actionID, err := middlewares.GetUUIDFromURL(r, "aid")
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	if err := h.service.Delete(r.Context(), id); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(nil, "Action deleted"))
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER
+		},
+		func(session *models.Session) (*models.UserAction, error) {
+			if err := h.service.Delete(r.Context(), actionID); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondNoContent(nil, "action deleted"))
 }

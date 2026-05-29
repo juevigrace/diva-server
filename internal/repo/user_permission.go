@@ -17,15 +17,15 @@ func NewUserPermsRepo(queries *db.Queries) *UserPermsRepo {
 	return &UserPermsRepo{queries: queries}
 }
 
-func (r *UserPermsRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPermission, error) {
+func (r *UserPermsRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]models.UserPermission, error) {
 	rows, err := r.queries.GetUserPermissions(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
 
-	perms := make([]*models.UserPermission, len(rows))
+	perms := make([]models.UserPermission, len(rows))
 	for i := range rows {
-		perms[i] = &models.UserPermission{
+		perms[i] = models.UserPermission{
 			Permission: models.Permission{ID: rows[i].PermissionID.Bytes},
 			GrantedBy:  models.FromUUIDPtr(rows[i].GrantedBy),
 			Granted:    rows[i].Granted,

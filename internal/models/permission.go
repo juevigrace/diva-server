@@ -11,11 +11,18 @@ var (
 	ErrPermissionDenied = errors.New("permission denied")
 )
 
+type PermissionAction int
+
+const (
+	PERMISSION_NONE = iota
+	PERMISSION_PASSWORD_UPDATE
+)
+
 type Permission struct {
 	ID          uuid.UUID
 	Name        string
 	Description string
-	Action      string
+	Action      PermissionAction
 	RoleLevel   Role
 	CreatedAt   int64
 	UpdatedAt   int64
@@ -27,9 +34,27 @@ func (p *Permission) Response() *responses.PermissionResponse {
 		ID:          p.ID.String(),
 		Name:        p.Name,
 		Description: p.Description,
-		Action:      p.Action,
+		Action:      p.Action.String(),
 		RoleLevel:   p.RoleLevel.String(),
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
+	}
+}
+
+func (p PermissionAction) String() string {
+	switch p {
+	case PERMISSION_PASSWORD_UPDATE:
+		return "PERMISSION_PASSWORD_UPDATE"
+	default:
+		return "PERMISSION_NONE"
+	}
+}
+
+func PermissionActionFromString(s string) PermissionAction {
+	switch s {
+	case "PERMISSION_PASSWORD_UPDATE":
+		return PERMISSION_PASSWORD_UPDATE
+	default:
+		return PERMISSION_NONE
 	}
 }

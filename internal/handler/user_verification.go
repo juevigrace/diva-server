@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -66,13 +65,7 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	parsedID, err := uuid.Parse(dto.ActionID)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	action, err := h.vService.Verify(r.Context(), parsedID, dto.Token)
+	action, err := h.vService.Verify(r.Context(), &dto)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return

@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/util"
 )
 
@@ -32,7 +31,7 @@ func NewAuthService(
 	}
 }
 
-func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*responses.SessionResponse, error) {
+func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*models.Session, error) {
 	userID, err := s.uService.Create(ctx, &dto.User)
 	if err != nil {
 		return nil, err
@@ -43,10 +42,10 @@ func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*respons
 		return nil, err
 	}
 
-	return models.ToSessionResponse(session), nil
+	return session, nil
 }
 
-func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*responses.SessionResponse, error) {
+func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*models.Session, error) {
 	user, err := s.uService.GetByUsernameOrEmail(ctx, dto.Username)
 	if err != nil {
 		return nil, models.ErrInvalidCredentials
@@ -61,14 +60,10 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*respons
 		return nil, err
 	}
 
-	return models.ToSessionResponse(session), nil
+	return session, nil
 }
 
-func (s *AuthService) SignOut(ctx context.Context, sessionID uuid.UUID) error {
-	return s.sService.Close(ctx, sessionID)
-}
-
-func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto *dtos.SessionDataDto) (*responses.SessionResponse, error) {
+func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto *dtos.SessionDataDto) (*models.Session, error) {
 	if session.Device != dto.Device || session.UserAgent != dto.UserAgent {
 		if err := s.sService.Close(ctx, session.ID); err != nil {
 			return nil, err
@@ -79,7 +74,7 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 	if err != nil {
 		return nil, err
 	}
-	return models.ToSessionResponse(updated), nil
+	return updated, nil
 }
 
 func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, dto *dtos.ForgotPasswordConfirmDto) (*models.Session, error) {
@@ -102,6 +97,8 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, dto *dtos.Forgo
 		return nil, err
 	}
 
+	// TODO: create user permission to update the password
+
 	go func() {
 		if err := s.uaService.Delete(ctx, dbUV.Action.ID); err != nil {
 			log.Printf("action error: %v", err)
@@ -111,22 +108,6 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, dto *dtos.Forgo
 	return session, nil
 }
 
-func (s *AuthService) ForgotPasswordUpdate(
-	ctx context.Context,
-	session *models.Session,
-	dto *dtos.UpdatePasswordDto,
-) error {
-	if err := s.uService.UpdatePassword(ctx, session, dto.NewPassword); err != nil {
-		return err
-	}
-
-	if err := s.sService.Delete(ctx, session.ID); err != nil {
-		return err
-	}
-
-	if err := s.sService.CloseAllByUser(ctx, session.User.ID); err != nil {
-		return err
-	}
-
-	return nil
+func (s *AuthService) SignOut(ctx context.Context, sessionID uuid.UUID) error {
+	return s.sService.Close(ctx, sessionID)
 }

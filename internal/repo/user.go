@@ -23,7 +23,7 @@ func (r *UserRepo) Count(ctx context.Context) (int64, error) {
 	return r.queries.CountUsers(ctx)
 }
 
-func (r *UserRepo) ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
+func (r *UserRepo) ListUsers(ctx context.Context, limit, offset int) ([]models.User, error) {
 	rows, err := r.queries.ListUsers(ctx, db.ListUsersParams{
 		Limit:  int32(limit),
 		Offset: int32(offset),
@@ -32,9 +32,9 @@ func (r *UserRepo) ListUsers(ctx context.Context, limit, offset int) ([]*models.
 		return nil, err
 	}
 
-	users := make([]*models.User, len(rows))
+	users := make([]models.User, len(rows))
 	for i := range rows {
-		users[i] = &models.User{
+		users[i] = models.User{
 			ID:           rows[i].ID.Bytes,
 			Username:     rows[i].Username,
 			Email:        rows[i].Email,

@@ -28,21 +28,6 @@ from diva_user_preferences up
 where up.user_id = $1
 ;
 
--- name: GetPreferencesByDevice :one
-select
-    up.id as id,
-    up.user_id,
-    up.device,
-    up.theme,
-    up.onboarding_completed,
-    up.language,
-    up.last_sync_at,
-    up.created_at,
-    up.updated_at
-from diva_user_preferences up
-where up.device = $1
-;
-
 -- name: CreateUserPreferences :exec
 insert into diva_user_preferences (
     id,

@@ -30,7 +30,7 @@ type Session struct {
 	UpdatedAt    int64
 }
 
-func ToSessionResponse(s *Session) *responses.SessionResponse {
+func (s *Session) Response() *responses.SessionResponse {
 	return &responses.SessionResponse{
 		SessionId:    s.ID.String(),
 		UserId:       s.User.ID.String(),

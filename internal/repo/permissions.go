@@ -32,7 +32,7 @@ func (r *PermissionsRepo) List(ctx context.Context, limit, offset int) ([]*model
 			ID:          rows[i].ID.Bytes,
 			Name:        rows[i].Name,
 			Description: rows[i].Description,
-			Action:      rows[i].Action,
+			Action:      models.PermissionActionFromString(rows[i].Action),
 			RoleLevel:   models.RoleFromDB(rows[i].RoleLevel),
 			CreatedAt:   rows[i].CreatedAt.Time.UnixMilli(),
 			UpdatedAt:   rows[i].UpdatedAt.Time.UnixMilli(),
@@ -55,7 +55,7 @@ func (r *PermissionsRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Pe
 		ID:          row.ID.Bytes,
 		Name:        row.Name,
 		Description: row.Description,
-		Action:      row.Action,
+		Action:      models.PermissionActionFromString(row.Action),
 		RoleLevel:   models.RoleFromDB(row.RoleLevel),
 		CreatedAt:   row.CreatedAt.Time.UnixMilli(),
 		UpdatedAt:   row.UpdatedAt.Time.UnixMilli(),
@@ -72,7 +72,7 @@ func (r *PermissionsRepo) GetByName(ctx context.Context, name string) (*models.P
 		ID:          row.ID.Bytes,
 		Name:        row.Name,
 		Description: row.Description,
-		Action:      row.Action,
+		Action:      models.PermissionActionFromString(row.Action),
 		RoleLevel:   models.RoleFromDB(row.RoleLevel),
 		CreatedAt:   row.CreatedAt.Time.UnixMilli(),
 		UpdatedAt:   row.UpdatedAt.Time.UnixMilli(),
@@ -85,7 +85,7 @@ func (r *PermissionsRepo) Create(ctx context.Context, perm *models.Permission) e
 		ID:          pgtype.UUID{Bytes: perm.ID, Valid: true},
 		Name:        perm.Name,
 		Description: perm.Description,
-		Action:      perm.Action,
+		Action:      perm.Action.String(),
 		RoleLevel:   perm.RoleLevel.ToDB(),
 	})
 }
@@ -94,7 +94,7 @@ func (r *PermissionsRepo) Update(ctx context.Context, perm *models.Permission) e
 	return r.queries.UpdatePermission(ctx, db.UpdatePermissionParams{
 		Name:        perm.Name,
 		Description: perm.Description,
-		Action:      perm.Action,
+		Action:      perm.Action.String(),
 		RoleLevel:   perm.RoleLevel.ToDB(),
 		ID:          pgtype.UUID{Bytes: perm.ID, Valid: true},
 	})

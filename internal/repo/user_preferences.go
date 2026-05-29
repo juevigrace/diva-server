@@ -57,23 +57,6 @@ func (r *UserPreferencesRepo) GetByID(ctx context.Context, id uuid.UUID) (*model
 	}, nil
 }
 
-func (r *UserPreferencesRepo) GetByDevice(ctx context.Context, device string) (*models.UserPreferences, error) {
-	row, err := r.queries.GetPreferencesByDevice(ctx, device)
-	if err != nil {
-		return nil, err
-	}
-	return &models.UserPreferences{
-		ID:                  row.ID.Bytes,
-		Device:              row.Device,
-		Theme:               models.ThemeFromDB(row.Theme),
-		OnboardingCompleted: row.OnboardingCompleted,
-		Language:            row.Language,
-		LastSyncAt:          row.LastSyncAt.Time.UnixMilli(),
-		CreatedAt:           row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:           row.UpdatedAt.Time.UnixMilli(),
-	}, nil
-}
-
 func (r *UserPreferencesRepo) Create(ctx context.Context, userID uuid.UUID, prefs *models.UserPreferences) error {
 	return r.queries.CreateUserPreferences(ctx, db.CreateUserPreferencesParams{
 		ID:                  pgtype.UUID{Bytes: prefs.ID, Valid: true},

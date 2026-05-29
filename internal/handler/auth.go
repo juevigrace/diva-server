@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/middlewares"
-	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
@@ -37,15 +35,7 @@ func (h *AuthHandler) Routes(r chi.Router) {
 			protected.Post("/refresh", h.refresh)
 		})
 
-		auth.Route("/forgot", func(forgot chi.Router) {
-			forgot.Route("/password", func(pass chi.Router) {
-				pass.Post("/confirm", h.forgotPasswordConfirm)
-				pass.Group(func(upPass chi.Router) {
-					upPass.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-					upPass.Patch("/", h.forgotPasswordUpdate)
-				})
-			})
-		})
+		auth.Post("/forgot/password/confirm", h.forgotPasswordConfirm)
 	})
 }
 
@@ -59,17 +49,11 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.authService.SignIn(r.Context(), &dto)
 	if err != nil {
-		res := new(responses.APIResponse)
-		if errors.Is(models.ErrInvalidCredentials, err) {
-			res = responses.RespondUnauthorized(nil, err.Error())
-		} else {
-			res = responses.RespondBadRequest(nil, err.Error())
-		}
-		responses.WriteJSON(w, res)
+		handleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(session, "Sign in successful"))
+	responses.WriteJSON(w, responses.RespondOk(session.Response(), "sign in successful"))
 }
 
 func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
@@ -82,11 +66,11 @@ func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.authService.SignUp(r.Context(), &dto)
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		handleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondCreated(session, "Sign up successful"))
+	responses.WriteJSON(w, responses.RespondCreated(session.Response(), "sign up successful"))
 }
 
 func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
@@ -103,11 +87,7 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authService.SignOut(r.Context(), session.ID); err != nil {
-		if errors.Is(err, models.ErrSessionInvalid) {
-			responses.WriteJSON(w, responses.RespondUnauthorized(nil, err.Error()))
-			return
-		}
-		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
+		handleReqError(w, err)
 		return
 	}
 
@@ -133,11 +113,7 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.authService.Refresh(r.Context(), session, &dto)
 	if err != nil {
-		if errors.Is(err, models.ErrSessionInvalid) {
-			responses.WriteJSON(w, responses.RespondUnauthorized(nil, err.Error()))
-			return
-		}
-		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
+		handleReqError(w, err)
 		return
 	}
 
@@ -154,31 +130,9 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 
 	session, err := h.authService.ForgotPasswordConfirm(r.Context(), &dto)
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		handleReqError(w, err)
 		return
-
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(session, "Success"))
-}
-
-func (h *AuthHandler) forgotPasswordUpdate(w http.ResponseWriter, r *http.Request) {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return
-	}
-
-	var dto dtos.UpdatePasswordDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.authService.ForgotPasswordUpdate(r.Context(), session, &dto); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "Password updated successfully"))
 }

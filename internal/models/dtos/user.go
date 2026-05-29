@@ -38,16 +38,19 @@ type UpdateEmailDto struct {
 	Email string `json:"email" validate:"required,email,max=100"`
 }
 
+type UpdateRole struct {
+	Role string `json:"role" validate:"required,oneof=USER MODERATOR ADMIN"`
+}
+
+type UpdateVerified struct {
+	Verified bool `json:"verified" validate:"required"`
+}
+
 type UserPermissionDto struct {
 	UserId       string `json:"user_id" validate:"required,uuid"`
 	PermissionId string `json:"permission_id" validate:"required,uuid"`
 	Granted      bool   `json:"granted" validate:"required"`
 	ExpiresAt    *int64 `json:"expires_at" validate:"required,omitempty,gt=0"`
-}
-
-type DeleteUserPermissionDto struct {
-	UserId       string `json:"user_id" validate:"required,uuid"`
-	PermissionId string `json:"permission_id" validate:"required,uuid"`
 }
 
 type CreateUserPreferencesDto struct {
@@ -58,7 +61,6 @@ type CreateUserPreferencesDto struct {
 }
 
 type UpdateUserPreferencesDto struct {
-	ID       string `json:"id" validate:"required,uuid"`
 	Theme    string `json:"theme" validate:"required,oneof=LIGHT DARK SYSTEM"`
 	Language string `json:"language" validate:"required,max=10"`
 }

@@ -73,7 +73,6 @@ func (s *Server) routes() {
 		handlerModule.Auth.Routes(api)
 		handlerModule.User.Routes(api)
 		handlerModule.Verification.Routes(api)
-		handlerModule.Session.Routes(api)
 		handlerModule.Permissions.Routes(api)
 	})
 

@@ -17,15 +17,15 @@ func NewUserActionsRepo(queries *db.Queries) *UserActionsRepo {
 	return &UserActionsRepo{queries: queries}
 }
 
-func (r *UserActionsRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserAction, error) {
+func (r *UserActionsRepo) ListByUser(ctx context.Context, userID uuid.UUID) ([]models.UserAction, error) {
 	rows, err := r.queries.ListActionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, err
 	}
 
-	actions := make([]*models.UserAction, len(rows))
+	actions := make([]models.UserAction, len(rows))
 	for i, row := range rows {
-		actions[i] = &models.UserAction{
+		actions[i] = models.UserAction{
 			ID:     row.ID.Bytes,
 			Name:   models.ActionFromString(row.Name),
 			UserID: row.UserID.Bytes,

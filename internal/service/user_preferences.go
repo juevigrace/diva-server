@@ -26,10 +26,6 @@ func (s *UserPreferencesService) GetByID(ctx context.Context, id uuid.UUID) (*mo
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *UserPreferencesService) GetByDevice(ctx context.Context, device string) (*models.UserPreferences, error) {
-	return s.repo.GetByDevice(ctx, device)
-}
-
 func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
 		ID:                  uuid.New(),
@@ -45,12 +41,7 @@ func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, d
 	return s.repo.Create(ctx, userID, pref)
 }
 
-func (s *UserPreferencesService) Update(ctx context.Context, dto *dtos.UpdateUserPreferencesDto) error {
-	id, err := uuid.Parse(dto.ID)
-	if err != nil {
-		return err
-	}
-
+func (s *UserPreferencesService) Update(ctx context.Context, id uuid.UUID, dto *dtos.UpdateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
 		ID:         id,
 		Theme:      models.ThemeFromString(dto.Theme),

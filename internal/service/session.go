@@ -12,11 +12,18 @@ import (
 )
 
 type SessionService struct {
-	repo *repo.SessionRepo
+	repo     *repo.SessionRepo
+	uService *UserService
 }
 
-func NewSessionService(repo *repo.SessionRepo) *SessionService {
-	return &SessionService{repo: repo}
+func NewSessionService(
+	repo *repo.SessionRepo,
+	uService *UserService,
+) *SessionService {
+	return &SessionService{
+		repo:     repo,
+		uService: uService,
+	}
 }
 
 func (s *SessionService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
@@ -24,7 +31,19 @@ func (s *SessionService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*mo
 }
 
 func (s *SessionService) GetByID(ctx context.Context, sessionID uuid.UUID) (*models.Session, error) {
-	return s.repo.GetByID(ctx, sessionID)
+	dbSession, err := s.repo.GetByID(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	dbUser, err := s.uService.GetByID(ctx, dbSession.User.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dbSession.User = *dbUser
+
+	return dbSession, nil
 }
 
 func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, sType models.SessionType, dto *dtos.SessionDataDto) (*models.Session, error) {

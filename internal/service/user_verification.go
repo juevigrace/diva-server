@@ -23,7 +23,6 @@ type UserVerificationService struct {
 func NewVerificationService(
 	mail *mail.Client,
 	repo *repo.UserVerificationRepo,
-	sService *SessionService,
 	uaService *UserActionsService,
 ) *UserVerificationService {
 	return &UserVerificationService{
@@ -68,7 +67,6 @@ func (s *UserVerificationService) RequestVerification(
 	if err != nil {
 		return nil, err
 	}
-
 	verification.Action = *dbAction
 
 	if err := s.mail.SendVerificationEmail(ctx, user.Email, verification); err != nil {
@@ -119,7 +117,12 @@ func (s *UserVerificationService) Generate(
 	return exists, nil
 }
 
-func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID, token string) (*models.UserAction, error) {
+func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyActionDto) (*models.UserAction, error) {
+	actionID, err := uuid.Parse(dto.ActionID)
+	if err != nil {
+		return nil, err
+	}
+
 	dbAction, err := s.uaService.GetOneByID(ctx, actionID)
 	if err != nil {
 		return nil, err
@@ -138,7 +141,7 @@ func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID
 		return nil, models.ErrTokenExpired
 	}
 
-	if record.Token != token {
+	if record.Token != dto.Token {
 		return nil, models.ErrTokenInvalid
 	}
 
@@ -146,9 +149,7 @@ func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID
 		return nil, err
 	}
 
-	record.Action = *dbAction
-
-	return &record.Action, nil
+	return dbAction, nil
 }
 
 func (s *UserVerificationService) Delete(ctx context.Context, id uuid.UUID) error {

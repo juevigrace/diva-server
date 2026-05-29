@@ -18,7 +18,7 @@ func NewUserActionsService(repo *repo.UserActionsRepo) *UserActionsService {
 	}
 }
 
-func (s *UserActionsService) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserAction, error) {
+func (s *UserActionsService) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]models.UserAction, error) {
 	return s.repo.ListByUser(ctx, userID)
 }
 

@@ -28,7 +28,7 @@ type User struct {
 	DeletedAt    *int64
 	Profile      *UserProfile
 	Actions      []UserAction
-	Permissions  []UserPermission
+	Permissions  map[PermissionAction]UserPermission
 	Preferences  UserPreferences
 }
 
@@ -46,8 +46,9 @@ type UserPermission struct {
 	GrantedBy  *uuid.UUID
 	Granted    bool
 	GrantedAt  *int64
-	ExpiresAt  *int64
-	UpdatedAt  int64
+	// TODO: change expiration time for enum with fixed times
+	ExpiresAt *int64
+	UpdatedAt int64
 }
 
 type UserPreferences struct {

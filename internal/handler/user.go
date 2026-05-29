@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -15,23 +13,32 @@ import (
 )
 
 type UserHandler struct {
-	sessionService  *service.SessionService
-	userService     *service.UserService
-	userMeHandler   *UserMeHandler
-	userPermHandler *UserPermissionHandler
+	sService    *service.SessionService
+	uService    *service.UserService
+	sHandler    *SessionHandler
+	uaHandler   *UserActionsHandler
+	upHandler   *UserPermissionHandler
+	uprHandler  *UserPreferencesHandler
+	uproHandler *UserProfileHandler
 }
 
 func NewUserHandler(
-	sessionService *service.SessionService,
-	userService *service.UserService,
-	userMeHandler *UserMeHandler,
-	userPermHandler *UserPermissionHandler,
+	sService *service.SessionService,
+	uService *service.UserService,
+	sHandler *SessionHandler,
+	uaHandler *UserActionsHandler,
+	upHandler *UserPermissionHandler,
+	uprHandler *UserPreferencesHandler,
+	uproHandler *UserProfileHandler,
 ) *UserHandler {
 	return &UserHandler{
-		sessionService:  sessionService,
-		userService:     userService,
-		userMeHandler:   userMeHandler,
-		userPermHandler: userPermHandler,
+		sService:    sService,
+		uService:    uService,
+		sHandler:    sHandler,
+		uaHandler:   uaHandler,
+		upHandler:   upHandler,
+		uprHandler:  uprHandler,
+		uproHandler: uproHandler,
 	}
 }
 
@@ -42,81 +49,36 @@ func (h *UserHandler) Routes(r chi.Router) {
 			check.Get("/email/{email}", h.checkEmail)
 		})
 
-		u.Route("/{id}", func(uid chi.Router) {
-			uid.Group(func(admin chi.Router) {
-				admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-				admin.Get("/", h.getUserByID)
-				admin.Delete("/", h.deleteUser)
-				admin.Patch("/username", h.updateUsername)
-				admin.Patch("/email", h.updateEmail)
-				admin.Patch("/phone", h.updatePhoneNumber)
-			})
-		})
-
-		u.Group(func(admin chi.Router) {
-			admin.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-			admin.Get("/", h.getUsers)
-			admin.Post("/", h.createUser)
-		})
-
 		u.Group(func(auth chi.Router) {
-			auth.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
-			h.userMeHandler.Routes(auth)
-			h.userPermHandler.Routes(auth)
+			auth.Use(middlewares.SessionMiddleware(h.sService.GetByID))
+
+			auth.Get("/", h.getAll)
+
+			auth.Route("/{uid}", func(one chi.Router) {
+				one.Get("/", h.getByID)
+
+				// REQUIRES PERMISSION
+				one.Patch("/email", h.updateEmail)
+				one.Patch("/phone", h.updatePhone)
+				one.Patch("/username", h.updateUsername)
+				one.Patch("/password", h.updatePassword)
+				one.Patch("/role", h.updateRole)
+				one.Patch("/verified", h.updateVerified)
+
+				one.Delete("/", h.softDelete)
+				one.Delete("/forever", h.delete)
+
+				h.sHandler.Routes(one)
+				h.uprHandler.Routes(one)
+				h.uproHandler.Routes(one)
+			})
+
+			auth.Post("/", h.create)
+
+			h.uaHandler.Routes(auth)
+			h.upHandler.Routes(auth)
 		})
 	})
-}
-
-func (h *UserHandler) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, "session not found"))
-		return false
-	}
-	if session.User.Role != models.ROLE_ADMIN {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, "admin access required"))
-		return false
-	}
-	return true
-}
-
-func (h *UserHandler) getUsers(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	pagination := models.NewPagination(1, 50).WithMaxLimit(100)
-
-	if p := r.URL.Query().Get("page"); p != "" {
-		if parsed, err := strconv.Atoi(p); err == nil && parsed >= 1 {
-			pagination.Page = parsed
-		}
-	}
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed >= 1 {
-			pagination.Limit = parsed
-		}
-	}
-
-	total, err := h.userService.Count(r.Context())
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	users, err := h.userService.GetAll(r.Context(), pagination)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	res := make([]*responses.UserResponse, len(users))
-	for i, u := range users {
-		res[i] = u.Response()
-	}
-
-	paginatedRes := responses.NewPaginatedResponse(res, pagination.GetPage(), pagination.GetLimit(), total)
-	responses.WriteJSON(w, responses.RespondOk(paginatedRes, "Users retrieved"))
 }
 
 func (h *UserHandler) checkUsername(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +88,7 @@ func (h *UserHandler) checkUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	available, err := h.userService.CheckUsernameAvailable(r.Context(), username)
+	available, err := h.uService.CheckUsernameAvailable(r.Context(), username)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -147,7 +109,7 @@ func (h *UserHandler) checkEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	available, err := h.userService.CheckEmailAvailable(r.Context(), email)
+	available, err := h.uService.CheckEmailAvailable(r.Context(), email)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -161,150 +123,351 @@ func (h *UserHandler) checkEmail(w http.ResponseWriter, r *http.Request) {
 	responses.WriteJSON(w, responses.RespondOk(nil, "email is available"))
 }
 
-func (h *UserHandler) getUserByID(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
+func (h *UserHandler) getAll(w http.ResponseWriter, r *http.Request) {
+	pagination := models.NewPagination(1, 50).WithMaxLimit(100)
 
-	idParam := chi.URLParam(r, "id")
-	if idParam == "" {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "id is required"))
-		return
-	}
-
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	user, err := h.userService.GetByID(r.Context(), id)
-	if err != nil {
-		if errors.Is(err, models.ErrUserNotFound) {
-			responses.WriteJSON(w, responses.RespondNotFound(nil, err.Error()))
-			return
+	if p := r.URL.Query().Get("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed >= 1 {
+			pagination.Page = parsed
 		}
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+	}
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed >= 1 {
+			pagination.Limit = parsed
+		}
+	}
+
+	users, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER
+		},
+		func(session *models.Session) (*[]models.User, error) {
+			dbUsers, err := h.uService.GetAll(r.Context(), pagination)
+			if err != nil {
+				return nil, err
+			}
+
+			return &dbUsers, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(user.Response(), "User retrieved"))
+	total, err := h.uService.Count(r.Context())
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	uRes := make([]*responses.UserResponse, len(*users))
+	for i, u := range *users {
+		uRes[i] = u.Response()
+	}
+
+	res := responses.NewPaginatedResponse(uRes, pagination.GetPage(), pagination.GetLimit(), total)
+
+	responses.WriteJSON(w, responses.RespondOk(res, "users retrieved"))
 }
 
-func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	var dto dtos.CreateUserDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	userID, err := h.userService.Create(r.Context(), &dto)
+func (h *UserHandler) getByID(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondCreated(map[string]string{"id": userID.String()}, "User created"))
+	res, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != id
+		},
+		func(session *models.Session) (*models.User, error) {
+			return h.uService.GetByID(r.Context(), id)
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(res.Response(), "user retrieved"))
 }
 
-func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
+func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
+	_, err := middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER
+		},
+		func(session *models.Session) (*int, error) {
+			var dto dtos.CreateUserDto
+			if err := middlewares.ValidateBody(&dto, r); err != nil {
+				return nil, err
+			}
 
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
+			if _, err := h.uService.Create(r.Context(), &dto); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
+		handleReqError(w, err)
 		return
 	}
 
-	if err := h.userService.Delete(r.Context(), id); err != nil {
-		responses.WriteJSON(w, responses.RespondInternalServerError(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "User deleted"))
-}
-
-func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	var dto dtos.UpdateUsernameDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.userService.UpdateUsername(r.Context(), dto.Username, id); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "Username updated"))
+	responses.WriteJSON(w, responses.RespondCreated(nil, "user created"))
 }
 
 func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	var dto dtos.UpdateEmailDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.userService.UpdateEmail(r.Context(), dto.Email, id); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != id
+		},
+		func(session *models.Session) (*any, error) {
+			var dto dtos.UpdateEmailDto
+			if err := middlewares.ValidateBody(&dto, r); err != nil {
+				return nil, err
+			}
+
+			if err := h.uService.UpdateEmail(r.Context(), dto.Email, session.User.ID); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(nil, "Email updated"))
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "email updated"))
 }
 
-func (h *UserHandler) updatePhoneNumber(w http.ResponseWriter, r *http.Request) {
-	if !h.requireAdmin(w, r) {
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := uuid.Parse(idParam)
+func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, "invalid id format"))
-		return
-	}
-
-	var dto dtos.UpdatePhoneNumberDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.userService.UpdatePhoneNumber(r.Context(), dto.PhoneNumber, id); err != nil {
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && (requester.ID != uid || !requester.Permissions[models.PERMISSION_PASSWORD_UPDATE].Granted)
+		},
+		func(session *models.Session) (*any, error) {
+			var dto dtos.UpdatePasswordDto
+			if err := middlewares.ValidateBody(&dto, r); err != nil {
+				return nil, err
+			}
+
+			if err := h.uService.UpdatePassword(r.Context(), uid, dto.NewPassword); err != nil {
+				return nil, err
+			}
+
+			if err := h.sService.CloseAllByUser(r.Context(), uid); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "password updated"))
+}
+
+func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(nil, "Phone number updated"))
+	_, err = middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+		return requester.Role == models.ROLE_USER && requester.ID != id
+	}, func(session *models.Session) (*any, error) {
+		var dto dtos.UpdateUsernameDto
+		if err := middlewares.ValidateBody(&dto, r); err != nil {
+			return nil, err
+		}
+
+		if err := h.uService.UpdateUsername(r.Context(), dto.Username, session.User.ID); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "username updated"))
+}
+
+func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	_, err = middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+		return requester.Role == models.ROLE_USER && requester.ID != id
+	}, func(session *models.Session) (*any, error) {
+		var dto dtos.UpdatePhoneNumberDto
+		if err := middlewares.ValidateBody(&dto, r); err != nil {
+			return nil, err
+		}
+
+		if err := h.uService.UpdatePhoneNumber(r.Context(), dto.PhoneNumber, id); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "phone number updated"))
+}
+
+func (h *UserHandler) updateRole(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER
+		},
+		func(session *models.Session) (*any, error) {
+			var dto dtos.UpdateRole
+			if err := middlewares.ValidateBody(&dto, r); err != nil {
+				return nil, err
+			}
+
+			if err := h.uService.UpdateRole(r.Context(), models.RoleFromString(dto.Role), id); err != nil {
+				return nil, err
+			}
+
+			return nil, err
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "role updated"))
+}
+
+func (h *UserHandler) updateVerified(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER
+		},
+		func(session *models.Session) (*any, error) {
+			var dto dtos.UpdateVerified
+			if err := middlewares.ValidateBody(&dto, r); err != nil {
+				return nil, err
+			}
+
+			if err := h.uService.UpdateVerified(r.Context(), dto.Verified, id); err != nil {
+				return nil, err
+			}
+
+			return nil, err
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "verified updated"))
+}
+
+func (h *UserHandler) softDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != id
+		},
+		func(session *models.Session) (*any, error) {
+			if err := h.uService.SoftDelete(r.Context(), id); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondNoContent(nil, "user deleted"))
+}
+
+func (h *UserHandler) delete(w http.ResponseWriter, r *http.Request) {
+	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	_, err = middlewares.RequiresOwnerOrPerms(
+		r,
+		func(requester *models.User) bool {
+			return requester.Role == models.ROLE_USER && requester.ID != id
+		},
+		func(session *models.Session) (*any, error) {
+			if err := h.uService.Delete(r.Context(), id); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondNoContent(nil, "user deleted forever"))
 }
