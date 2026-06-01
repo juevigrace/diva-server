@@ -18,18 +18,14 @@ insert into diva_user_preferences (
     device,
     theme,
     onboarding_completed,
-    language,
-    created_at,
-    updated_at
+    language
 ) values (
     $1,
     $2,
     $3,
     $4,
     $5,
-    $6,
-    $7,
-    $8
+    $6
 )
 `
 
@@ -40,8 +36,6 @@ type CreateUserPreferencesParams struct {
 	Theme               ThemeType
 	OnboardingCompleted bool
 	Language            string
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
 }
 
 func (q *Queries) CreateUserPreferences(ctx context.Context, arg CreateUserPreferencesParams) error {
@@ -52,8 +46,6 @@ func (q *Queries) CreateUserPreferences(ctx context.Context, arg CreateUserPrefe
 		arg.Theme,
 		arg.OnboardingCompleted,
 		arg.Language,
-		arg.CreatedAt,
-		arg.UpdatedAt,
 	)
 	return err
 }
@@ -76,38 +68,6 @@ where user_id = $1
 func (q *Queries) DeletePreferencesByUser(ctx context.Context, userID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deletePreferencesByUser, userID)
 	return err
-}
-
-const getPreferencesByDevice = `-- name: GetPreferencesByDevice :one
-select
-    up.id as id,
-    up.user_id,
-    up.device,
-    up.theme,
-    up.onboarding_completed,
-    up.language,
-    up.last_sync_at,
-    up.created_at,
-    up.updated_at
-from diva_user_preferences up
-where up.device = $1
-`
-
-func (q *Queries) GetPreferencesByDevice(ctx context.Context, device string) (DivaUserPreference, error) {
-	row := q.db.QueryRow(ctx, getPreferencesByDevice, device)
-	var i DivaUserPreference
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Device,
-		&i.Theme,
-		&i.OnboardingCompleted,
-		&i.Language,
-		&i.LastSyncAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const getPreferencesByID = `-- name: GetPreferencesByID :one
@@ -192,23 +152,17 @@ update diva_user_preferences set
     theme = $1,
     language = $2,
     last_sync_at = now(),
-    updated_at = $3
-where id = $4
+    updated_at = now()
+where id = $3
 `
 
 type UpdateUserPreferencesParams struct {
-	Theme     ThemeType
-	Language  string
-	UpdatedAt pgtype.Timestamptz
-	ID        pgtype.UUID
+	Theme    ThemeType
+	Language string
+	ID       pgtype.UUID
 }
 
 func (q *Queries) UpdateUserPreferences(ctx context.Context, arg UpdateUserPreferencesParams) error {
-	_, err := q.db.Exec(ctx, updateUserPreferences,
-		arg.Theme,
-		arg.Language,
-		arg.UpdatedAt,
-		arg.ID,
-	)
+	_, err := q.db.Exec(ctx, updateUserPreferences, arg.Theme, arg.Language, arg.ID)
 	return err
 }

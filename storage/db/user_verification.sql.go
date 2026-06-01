@@ -11,58 +11,46 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createVerification = `-- name: CreateVerification :exec
+const createUserVerification = `-- name: CreateUserVerification :exec
 insert into diva_action_verification (
     action_id,
     token,
-    verified,
-    expires_at,
-    used_at
+    expires_at
 ) values (
     $1,
     $2,
-    $3,
-    $4,
-    $5
+    $3
 )
 `
 
-type CreateVerificationParams struct {
+type CreateUserVerificationParams struct {
 	ActionID  pgtype.UUID
 	Token     string
-	Verified  bool
 	ExpiresAt pgtype.Timestamptz
-	UsedAt    pgtype.Timestamptz
 }
 
-func (q *Queries) CreateVerification(ctx context.Context, arg CreateVerificationParams) error {
-	_, err := q.db.Exec(ctx, createVerification,
-		arg.ActionID,
-		arg.Token,
-		arg.Verified,
-		arg.ExpiresAt,
-		arg.UsedAt,
-	)
+func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) error {
+	_, err := q.db.Exec(ctx, createUserVerification, arg.ActionID, arg.Token, arg.ExpiresAt)
 	return err
 }
 
-const deleteVerification = `-- name: DeleteVerification :exec
+const deleteUserVerification = `-- name: DeleteUserVerification :exec
 delete from diva_action_verification
 where action_id = $1
 `
 
-func (q *Queries) DeleteVerification(ctx context.Context, actionID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteVerification, actionID)
+func (q *Queries) DeleteUserVerification(ctx context.Context, actionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserVerification, actionID)
 	return err
 }
 
-const getVerification = `-- name: GetVerification :one
+const getUserVerification = `-- name: GetUserVerification :one
 select v.action_id, v.token, v.expires_at, v.used_at, v.verified
 from diva_action_verification v
 where v.action_id = $1
 `
 
-type GetVerificationRow struct {
+type GetUserVerificationRow struct {
 	ActionID  pgtype.UUID
 	Token     string
 	ExpiresAt pgtype.Timestamptz
@@ -70,9 +58,9 @@ type GetVerificationRow struct {
 	Verified  bool
 }
 
-func (q *Queries) GetVerification(ctx context.Context, actionID pgtype.UUID) (GetVerificationRow, error) {
-	row := q.db.QueryRow(ctx, getVerification, actionID)
-	var i GetVerificationRow
+func (q *Queries) GetUserVerification(ctx context.Context, actionID pgtype.UUID) (GetUserVerificationRow, error) {
+	row := q.db.QueryRow(ctx, getUserVerification, actionID)
+	var i GetUserVerificationRow
 	err := row.Scan(
 		&i.ActionID,
 		&i.Token,
@@ -83,19 +71,19 @@ func (q *Queries) GetVerification(ctx context.Context, actionID pgtype.UUID) (Ge
 	return i, err
 }
 
-const updateVerification = `-- name: UpdateVerification :exec
+const updateUserVerification = `-- name: UpdateUserVerification :exec
 update diva_action_verification set
     verified = $1,
     used_at = now()
 where action_id = $2
 `
 
-type UpdateVerificationParams struct {
+type UpdateUserVerificationParams struct {
 	Verified bool
 	ActionID pgtype.UUID
 }
 
-func (q *Queries) UpdateVerification(ctx context.Context, arg UpdateVerificationParams) error {
-	_, err := q.db.Exec(ctx, updateVerification, arg.Verified, arg.ActionID)
+func (q *Queries) UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error {
+	_, err := q.db.Exec(ctx, updateUserVerification, arg.Verified, arg.ActionID)
 	return err
 }

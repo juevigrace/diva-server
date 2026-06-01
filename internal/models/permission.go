@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 var (
@@ -38,6 +39,19 @@ func (p *Permission) Response() *responses.PermissionResponse {
 		RoleLevel:   p.RoleLevel.String(),
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
+	}
+}
+
+func PermissionFromDB(row *db.DivaPermission) *Permission {
+	return &Permission{
+		ID:          FromUUID(),
+		Name:        "",
+		Description: "",
+		Action:      0,
+		RoleLevel:   0,
+		CreatedAt:   0,
+		UpdatedAt:   0,
+		DeletedAt:   new(int64),
 	}
 }
 

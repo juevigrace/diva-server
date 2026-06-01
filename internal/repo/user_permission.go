@@ -27,7 +27,7 @@ func (r *UserPermsRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]mode
 	for i := range rows {
 		perms[i] = models.UserPermission{
 			Permission: models.Permission{ID: rows[i].PermissionID.Bytes},
-			GrantedBy:  models.FromUUIDPtr(rows[i].GrantedBy),
+			GrantedBy:  models.FromPGUUIDPtr(rows[i].GrantedBy),
 			Granted:    rows[i].Granted,
 			GrantedAt:  models.ToInt64Ptr(rows[i].GrantedAt),
 			ExpiresAt:  models.ToInt64Ptr(rows[i].ExpiresAt),
@@ -48,7 +48,7 @@ func (r *UserPermsRepo) GetOneByUser(ctx context.Context, userID uuid.UUID, perm
 
 	return &models.UserPermission{
 		Permission: models.Permission{ID: row.PermissionID.Bytes},
-		GrantedBy:  models.FromUUIDPtr(row.GrantedBy),
+		GrantedBy:  models.FromPGUUIDPtr(row.GrantedBy),
 		Granted:    row.Granted,
 		GrantedAt:  models.ToInt64Ptr(row.GrantedAt),
 		ExpiresAt:  models.ToInt64Ptr(row.ExpiresAt),

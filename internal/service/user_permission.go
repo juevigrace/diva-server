@@ -7,25 +7,42 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/repo"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserPermissionService struct {
-	repo     *repo.UserPermsRepo
+	queries  *db.Queries
 	pService *PermissionService
 }
 
-func NewUserPermissionService(repo *repo.UserPermsRepo, pService *PermissionService) *UserPermissionService {
+func NewUserPermissionService(queries *db.Queries, pService *PermissionService) *UserPermissionService {
 	return &UserPermissionService{
-		repo:     repo,
 		pService: pService,
+		queries:  queries,
 	}
 }
 
 func (s *UserPermissionService) GetByUser(ctx context.Context, userID uuid.UUID) ([]models.UserPermission, error) {
-	dbUPerm, err := s.repo.GetByUser(ctx, userID)
+	rows, err := s.queries.GetUserPermissions(ctx, models.ToUUIDPtr(&userID))
 	if err != nil {
 		return nil, err
+	}
+
+	perms := make([]models.UserPermission, len(rows))
+	for i := range rows {
+		dbPerm, err := s.pService.GetByID(ctx, rows[i].PermissionID.Bytes)
+		if err != nil {
+			continue
+		}
+
+		perms[i] = models.UserPermission{
+			Permission: ,
+			GrantedBy:  models.FromUUIDPtr(rows[i].GrantedBy),
+			Granted:    rows[i].Granted,
+			GrantedAt:  models.ToInt64Ptr(rows[i].GrantedAt),
+			ExpiresAt:  models.ToInt64Ptr(rows[i].ExpiresAt),
+			UpdatedAt:  rows[i].UpdatedAt.Time.UnixMilli(),
+		}
 	}
 
 	for _, up := range dbUPerm {

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS diva_action_verification (
     token CHAR(6) NOT NULL,
     verified BOOL NOT NULL DEFAULT FALSE,
     expires_at TIMESTAMPTZ NOT NULL,
-    used_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ DEFAULT NULL,
     UNIQUE(action_id, token),
     FOREIGN KEY(action_id) REFERENCES diva_action(id) ON DELETE CASCADE
 );

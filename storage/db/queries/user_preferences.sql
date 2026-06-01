@@ -35,18 +35,14 @@ insert into diva_user_preferences (
     device,
     theme,
     onboarding_completed,
-    language,
-    created_at,
-    updated_at
+    language
 ) values (
     $1,
     $2,
     $3,
     $4,
     $5,
-    $6,
-    $7,
-    $8
+    $6
 );
 
 -- name: UpdateUserPreferences :exec
@@ -54,8 +50,8 @@ update diva_user_preferences set
     theme = $1,
     language = $2,
     last_sync_at = now(),
-    updated_at = $3
-where id = $4;
+    updated_at = now()
+where id = $3;
 
 -- name: DeletePreferences :exec
 delete from diva_user_preferences

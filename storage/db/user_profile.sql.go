@@ -50,16 +50,6 @@ func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfilePa
 	return err
 }
 
-const deleteUserProfile = `-- name: DeleteUserProfile :exec
-delete from diva_user_profile
-where user_id = $1
-`
-
-func (q *Queries) DeleteUserProfile(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteUserProfile, userID)
-	return err
-}
-
 const getUserProfileByUserID = `-- name: GetUserProfileByUserID :one
 select
     up.user_id, up.first_name, up.last_name, up.birth_date, up.alias, up.bio, up.avatar

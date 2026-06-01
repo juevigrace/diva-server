@@ -10,24 +10,24 @@ import (
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/repo"
 	"github.com/juevigrace/diva-server/internal/util"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserVerificationService struct {
 	mail      *mail.Client
-	repo      *repo.UserVerificationRepo
+	queries   *db.Queries
 	uaService *UserActionsService
 }
 
 func NewVerificationService(
 	mail *mail.Client,
-	repo *repo.UserVerificationRepo,
+	queries *db.Queries,
 	uaService *UserActionsService,
 ) *UserVerificationService {
 	return &UserVerificationService{
 		mail:      mail,
-		repo:      repo,
+		queries:   queries,
 		uaService: uaService,
 	}
 }
@@ -38,14 +38,18 @@ func (s *UserVerificationService) GetOneById(ctx context.Context, actionID uuid.
 		return nil, err
 	}
 
-	dbUV, err := s.repo.GetByID(ctx, actionID)
+	row, err := s.queries.GetUserVerification(ctx, models.ToUUIDPtr(&actionID))
 	if err != nil {
 		return nil, err
 	}
 
-	dbUV.Action = *dbAction
-
-	return dbUV, nil
+	return &models.UserActionVerification{
+		Action:    *dbAction,
+		Token:     row.Token,
+		ExpiresAt: row.ExpiresAt.Time,
+		UsedAt:    row.UsedAt.Time,
+		Verified:  row.Verified,
+	}, nil
 }
 
 func (s *UserVerificationService) RequestVerification(
@@ -79,13 +83,14 @@ func (s *UserVerificationService) RequestVerification(
 	return &verification.Action, nil
 }
 
+// TODO: this could be improved
 func (s *UserVerificationService) Generate(
 	ctx context.Context,
 	action *models.UserAction,
 ) (*models.UserActionVerification, error) {
-	exists, err := s.repo.GetByID(ctx, action.ID)
+	exists, err := s.GetOneById(ctx, action.ID)
 	if err != nil {
-		if ok := errors.Is(pgx.ErrNoRows, err); ok {
+		if errors.Is(pgx.ErrNoRows, err) {
 			token, err := util.GenerateOTPCode()
 			if err != nil {
 				return nil, err
@@ -97,7 +102,7 @@ func (s *UserVerificationService) Generate(
 				ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
 			}
 
-			if err := s.repo.Create(ctx, params); err != nil {
+			if err := s.queries.CreateUserVerification(ctx, *params.DBCreate()); err != nil {
 				return nil, err
 			}
 
@@ -123,12 +128,7 @@ func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyAc
 		return nil, err
 	}
 
-	dbAction, err := s.uaService.GetOneByID(ctx, actionID)
-	if err != nil {
-		return nil, err
-	}
-
-	record, err := s.repo.GetByID(ctx, dbAction.ID)
+	record, err := s.GetOneById(ctx, actionID)
 	if err != nil {
 		if ok := errors.Is(pgx.ErrNoRows, err); ok {
 			return nil, models.ErrActionNotFound
@@ -145,13 +145,18 @@ func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyAc
 		return nil, models.ErrTokenInvalid
 	}
 
-	if err := s.repo.Verify(ctx, dbAction.ID); err != nil {
+	params := db.UpdateUserVerificationParams{
+		Verified: true,
+		ActionID: models.ToUUIDPtr(&actionID),
+	}
+
+	if err := s.queries.UpdateUserVerification(ctx, params); err != nil {
 		return nil, err
 	}
 
-	return dbAction, nil
+	return &record.Action, nil
 }
 
 func (s *UserVerificationService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.repo.Delete(ctx, id)
+	return s.queries.DeleteUserVerification(ctx, models.ToUUIDPtr(&id))
 }

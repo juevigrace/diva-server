@@ -6,19 +6,25 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/repo"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserProfileService struct {
-	repo *repo.UserProfileRepo
+	queries *db.Queries
 }
 
-func NewUserProfileService(repo *repo.UserProfileRepo) *UserProfileService {
-	return &UserProfileService{repo: repo}
+func NewUserProfileService(queries *db.Queries) *UserProfileService {
+	return &UserProfileService{
+		queries: queries,
+	}
 }
 
 func (s *UserProfileService) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserProfile, error) {
-	return s.repo.GetByUserID(ctx, userID)
+	row, err := s.queries.GetUserProfileByUserID(ctx, models.ToUUIDPtr(&userID))
+	if err != nil {
+		return nil, err
+	}
+	return models.UserProfileFromDB(&row), nil
 }
 
 func (s *UserProfileService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.CreateProfileDto) error {
@@ -29,8 +35,7 @@ func (s *UserProfileService) Create(ctx context.Context, userID uuid.UUID, dto *
 		Alias:     dto.Alias,
 		Bio:       dto.Bio,
 	}
-
-	return s.repo.Create(ctx, userID, profile)
+	return s.queries.CreateUserProfile(ctx, *profile.DBCreate(userID))
 }
 
 func (s *UserProfileService) Update(ctx context.Context, userID uuid.UUID, dto *dtos.UpdateProfileDto) error {
@@ -41,11 +46,13 @@ func (s *UserProfileService) Update(ctx context.Context, userID uuid.UUID, dto *
 		Alias:     dto.Alias,
 		Bio:       dto.Bio,
 	}
-
-	return s.repo.Update(ctx, userID, profile)
+	return s.queries.UpdateUserProfile(ctx, *profile.DBUpdate(userID))
 }
 
 func (s *UserProfileService) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatar string) error {
 	// TODO: handle here file of the image
-	return s.repo.UpdateAvatar(ctx, userID, avatar)
+	return s.queries.UpdateUserProfileAvatar(ctx, db.UpdateUserProfileAvatarParams{
+		Avatar: avatar,
+		UserID: models.ToUUIDPtr(&userID),
+	})
 }

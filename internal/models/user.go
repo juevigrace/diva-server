@@ -2,9 +2,12 @@ package models
 
 import (
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models/responses"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 var (
@@ -128,5 +131,92 @@ func (up *UserPreferences) Response(id *uuid.UUID) *responses.UserPreferencesRes
 		LastSyncAt:          up.LastSyncAt,
 		CreatedAt:           up.CreatedAt,
 		UpdatedAt:           up.UpdatedAt,
+	}
+}
+
+func (up *UserPermission) DBCreate(userID uuid.UUID) *db.CreateUserPermissionParams {
+	return &db.CreateUserPermissionParams{
+		PermissionID: pgtype.UUID{Bytes: up.Permission.ID, Valid: true},
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+		GrantedBy:    ToUUIDPtr(up.GrantedBy),
+		Granted:      up.Granted,
+		GrantedAt:    ToTimestamptzPtr(up.GrantedAt),
+		ExpiresAt:    ToTimestamptzPtr(up.ExpiresAt),
+	}
+}
+
+func (up *UserPreferences) DBCreate(id uuid.UUID) *db.CreateUserPreferencesParams {
+	return &db.CreateUserPreferencesParams{
+		ID:                  pgtype.UUID{Bytes: up.ID, Valid: true},
+		UserID:              pgtype.UUID{Bytes: id, Valid: true},
+		Device:              up.Device,
+		Theme:               up.Theme.ToDB(),
+		OnboardingCompleted: up.OnboardingCompleted,
+		Language:            up.Language,
+	}
+}
+
+func (up *UserPreferences) DBUpdate() *db.UpdateUserPreferencesParams {
+	return &db.UpdateUserPreferencesParams{
+		ID:       pgtype.UUID{Bytes: up.ID, Valid: true},
+		Theme:    up.Theme.ToDB(),
+		Language: up.Language,
+	}
+}
+
+func (up *UserProfile) DBCreate(id uuid.UUID) *db.CreateUserProfileParams {
+	return &db.CreateUserProfileParams{
+		UserID:    pgtype.UUID{Bytes: id, Valid: true},
+		FirstName: up.FirstName,
+		LastName:  up.LastName,
+		BirthDate: pgtype.Timestamptz{Time: time.UnixMilli(up.BirthDate), Valid: true},
+		Alias:     up.Alias,
+		Bio:       up.Bio,
+	}
+}
+
+func (up *UserProfile) DBUpdate(id uuid.UUID) *db.UpdateUserProfileParams {
+	return &db.UpdateUserProfileParams{
+		UserID:    pgtype.UUID{Bytes: id, Valid: true},
+		FirstName: up.FirstName,
+		LastName:  up.LastName,
+		BirthDate: pgtype.Timestamptz{Time: time.UnixMilli(up.BirthDate), Valid: true},
+		Alias:     up.Alias,
+		Bio:       up.Bio,
+	}
+}
+
+func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPermission {
+	return &UserPermission{
+		Permission: *perm,
+		GrantedBy:  FromPGUUIDPtr(row.GrantedBy),
+		Granted:    row.Granted,
+		GrantedAt:  ToInt64Ptr(row.GrantedAt),
+		ExpiresAt:  ToInt64Ptr(row.ExpiresAt),
+		UpdatedAt:  row.GrantedAt.Time.UnixMilli(),
+	}
+}
+
+func UserPrefsFromDB(row *db.DivaUserPreference) *UserPreferences {
+	return &UserPreferences{
+		ID:                  row.ID.Bytes,
+		Device:              row.Device,
+		Theme:               ThemeFromDB(row.Theme),
+		OnboardingCompleted: row.OnboardingCompleted,
+		Language:            row.Language,
+		LastSyncAt:          row.LastSyncAt.Time.UnixMilli(),
+		CreatedAt:           row.CreatedAt.Time.UnixMilli(),
+		UpdatedAt:           row.UpdatedAt.Time.UnixMilli(),
+	}
+}
+
+func UserProfileFromDB(row *db.DivaUserProfile) *UserProfile {
+	return &UserProfile{
+		FirstName: row.FirstName,
+		LastName:  row.LastName,
+		BirthDate: row.BirthDate.Time.UnixMilli(),
+		Alias:     row.Alias,
+		Bio:       row.Bio,
+		Avatar:    row.Avatar,
 	}
 }

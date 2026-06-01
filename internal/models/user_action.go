@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models/responses"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 var (
@@ -62,5 +64,19 @@ func (ua *UserAction) Response() *responses.UserActionResponse {
 	return &responses.UserActionResponse{
 		ID:         ua.ID.String(),
 		ActionName: ua.Name.String(),
+	}
+}
+
+func (uv *UserActionVerification) DBCreate() *db.CreateUserVerificationParams {
+	return &db.CreateUserVerificationParams{
+		ActionID: pgtype.UUID{
+			Bytes: uv.Action.ID,
+			Valid: true,
+		},
+		Token: uv.Token,
+		ExpiresAt: pgtype.Timestamptz{
+			Time:  uv.ExpiresAt,
+			Valid: true,
+		},
 	}
 }

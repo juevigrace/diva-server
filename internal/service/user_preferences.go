@@ -2,28 +2,44 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/repo"
+	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserPreferencesService struct {
-	repo *repo.UserPreferencesRepo
+	queries *db.Queries
 }
 
-func NewUserPreferencesService(repo *repo.UserPreferencesRepo) *UserPreferencesService {
-	return &UserPreferencesService{repo: repo}
+func NewUserPreferencesService(queries *db.Queries) *UserPreferencesService {
+	return &UserPreferencesService{
+		queries: queries,
+	}
 }
 
 func (s *UserPreferencesService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPreferences, error) {
-	return s.repo.GetByUser(ctx, userID)
+	rows, err := s.queries.GetPreferencesByUser(ctx, models.ToUUIDPtr(&userID))
+	if err != nil {
+		return nil, err
+	}
+
+	prefs := make([]*models.UserPreferences, len(rows))
+	for i := range rows {
+		prefs[i] = models.UserPrefsFromDB(&rows[i])
+	}
+
+	return prefs, nil
 }
 
 func (s *UserPreferencesService) GetByID(ctx context.Context, id uuid.UUID) (*models.UserPreferences, error) {
-	return s.repo.GetByID(ctx, id)
+	row, err := s.queries.GetPreferencesByID(ctx, models.ToUUIDPtr(&id))
+	if err != nil {
+		return nil, err
+	}
+
+	return models.UserPrefsFromDB(&row), nil
 }
 
 func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
@@ -33,30 +49,25 @@ func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, d
 		Theme:               models.ThemeFromString(dto.Theme),
 		OnboardingCompleted: dto.OnboardingCompleted,
 		Language:            dto.Language,
-		LastSyncAt:          time.Now().UTC().UnixMilli(),
-		CreatedAt:           time.Now().UTC().UnixMilli(),
-		UpdatedAt:           time.Now().UTC().UnixMilli(),
 	}
 
-	return s.repo.Create(ctx, userID, pref)
+	return s.queries.CreateUserPreferences(ctx, *pref.DBCreate(userID))
 }
 
 func (s *UserPreferencesService) Update(ctx context.Context, id uuid.UUID, dto *dtos.UpdateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
-		ID:         id,
-		Theme:      models.ThemeFromString(dto.Theme),
-		Language:   dto.Language,
-		LastSyncAt: time.Now().UTC().UnixMilli(),
-		UpdatedAt:  time.Now().UTC().UnixMilli(),
+		ID:       id,
+		Theme:    models.ThemeFromString(dto.Theme),
+		Language: dto.Language,
 	}
 
-	return s.repo.Update(ctx, pref)
+	return s.queries.UpdateUserPreferences(ctx, *pref.DBUpdate())
 }
 
 func (s *UserPreferencesService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.repo.Delete(ctx, id)
+	return s.queries.DeletePreferences(ctx, models.ToUUIDPtr(&id))
 }
 
 func (s *UserPreferencesService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
-	return s.repo.DeleteByUser(ctx, userID)
+	return s.queries.DeletePreferencesByUser(ctx, models.ToUUIDPtr(&userID))
 }
