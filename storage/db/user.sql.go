@@ -29,15 +29,13 @@ insert into diva_user (
     username,
     email,
     password_hash,
-    verified,
     role
 ) values (
     $1,
     $2,
     $3,
     $4,
-    $5,
-    $6
+    $5
 )
 `
 
@@ -46,7 +44,6 @@ type CreateUserParams struct {
 	Username     string
 	Email        string
 	PasswordHash string
-	Verified     bool
 	Role         RoleType
 }
 
@@ -56,7 +53,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 		arg.Username,
 		arg.Email,
 		arg.PasswordHash,
-		arg.Verified,
 		arg.Role,
 	)
 	return err

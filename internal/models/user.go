@@ -2,10 +2,8 @@ package models
 
 import (
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -134,21 +132,41 @@ func (up *UserPreferences) Response(id *uuid.UUID) *responses.UserPreferencesRes
 	}
 }
 
-func (up *UserPermission) DBCreate(userID uuid.UUID) *db.CreateUserPermissionParams {
-	return &db.CreateUserPermissionParams{
-		PermissionID: pgtype.UUID{Bytes: up.Permission.ID, Valid: true},
-		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
-		GrantedBy:    ToUUIDPtr(up.GrantedBy),
-		Granted:      up.Granted,
-		GrantedAt:    ToTimestamptzPtr(up.GrantedAt),
-		ExpiresAt:    ToTimestamptzPtr(up.ExpiresAt),
+func (u *User) DBCreate() *db.CreateUserParams {
+	return &db.CreateUserParams{
+		ID:           UUIDPtrToDB(&u.ID),
+		Username:     u.Username,
+		Email:        u.Email,
+		PasswordHash: u.PasswordHash,
+		Role:         u.Role.ToDB(),
 	}
 }
 
-func (up *UserPreferences) DBCreate(id uuid.UUID) *db.CreateUserPreferencesParams {
+func (up *UserPermission) DBCreate(userID uuid.UUID) *db.CreateUserPermissionParams {
+	return &db.CreateUserPermissionParams{
+		PermissionID: UUIDPtrToDB(&up.Permission.ID),
+		UserID:       UUIDPtrToDB(&userID),
+		GrantedBy:    UUIDPtrToDB(up.GrantedBy),
+		Granted:      up.Granted,
+		GrantedAt:    IntPtrToDBTime(up.GrantedAt),
+		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
+	}
+}
+
+func (up *UserPermission) DBUpdate(userID uuid.UUID) *db.UpdateUserPermissionParams {
+	return &db.UpdateUserPermissionParams{
+		PermissionID: UUIDPtrToDB(&up.Permission.ID),
+		UserID:       UUIDPtrToDB(&userID),
+		Granted:      up.Granted,
+		GrantedAt:    IntPtrToDBTime(up.GrantedAt),
+		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
+	}
+}
+
+func (up *UserPreferences) DBCreate(userID uuid.UUID) *db.CreateUserPreferencesParams {
 	return &db.CreateUserPreferencesParams{
-		ID:                  pgtype.UUID{Bytes: up.ID, Valid: true},
-		UserID:              pgtype.UUID{Bytes: id, Valid: true},
+		ID:                  UUIDPtrToDB(&up.ID),
+		UserID:              UUIDPtrToDB(&userID),
 		Device:              up.Device,
 		Theme:               up.Theme.ToDB(),
 		OnboardingCompleted: up.OnboardingCompleted,
@@ -158,42 +176,57 @@ func (up *UserPreferences) DBCreate(id uuid.UUID) *db.CreateUserPreferencesParam
 
 func (up *UserPreferences) DBUpdate() *db.UpdateUserPreferencesParams {
 	return &db.UpdateUserPreferencesParams{
-		ID:       pgtype.UUID{Bytes: up.ID, Valid: true},
+		ID:       UUIDPtrToDB(&up.ID),
 		Theme:    up.Theme.ToDB(),
 		Language: up.Language,
 	}
 }
 
-func (up *UserProfile) DBCreate(id uuid.UUID) *db.CreateUserProfileParams {
+func (up *UserProfile) DBCreate(userID uuid.UUID) *db.CreateUserProfileParams {
 	return &db.CreateUserProfileParams{
-		UserID:    pgtype.UUID{Bytes: id, Valid: true},
+		UserID:    UUIDPtrToDB(&userID),
 		FirstName: up.FirstName,
 		LastName:  up.LastName,
-		BirthDate: pgtype.Timestamptz{Time: time.UnixMilli(up.BirthDate), Valid: true},
+		BirthDate: IntPtrToDBTime(&up.BirthDate),
 		Alias:     up.Alias,
 		Bio:       up.Bio,
 	}
 }
 
-func (up *UserProfile) DBUpdate(id uuid.UUID) *db.UpdateUserProfileParams {
+func (up *UserProfile) DBUpdate(userID uuid.UUID) *db.UpdateUserProfileParams {
 	return &db.UpdateUserProfileParams{
-		UserID:    pgtype.UUID{Bytes: id, Valid: true},
+		UserID:    UUIDPtrToDB(&userID),
 		FirstName: up.FirstName,
 		LastName:  up.LastName,
-		BirthDate: pgtype.Timestamptz{Time: time.UnixMilli(up.BirthDate), Valid: true},
+		BirthDate: IntPtrToDBTime(&up.BirthDate),
 		Alias:     up.Alias,
 		Bio:       up.Bio,
+	}
+}
+
+func UserFromDB(row *db.DivaUser) *User {
+	return &User{
+		ID:           DBUUIDToUUID(row.ID),
+		Username:     row.Username,
+		Email:        row.Email,
+		PhoneNumber:  row.PhoneNumber,
+		PasswordHash: row.PasswordHash,
+		Verified:     row.Verified,
+		Role:         RoleFromDB(row.Role),
+		CreatedAt:    DBTimeToInt(row.CreatedAt),
+		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
+		DeletedAt:    DBTimeToIntPtr(row.DeletedAt),
 	}
 }
 
 func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPermission {
 	return &UserPermission{
 		Permission: *perm,
-		GrantedBy:  FromPGUUIDPtr(row.GrantedBy),
+		GrantedBy:  DBUUIDToUUIDPtr(row.GrantedBy),
 		Granted:    row.Granted,
-		GrantedAt:  ToInt64Ptr(row.GrantedAt),
-		ExpiresAt:  ToInt64Ptr(row.ExpiresAt),
-		UpdatedAt:  row.GrantedAt.Time.UnixMilli(),
+		GrantedAt:  DBTimeToIntPtr(row.GrantedAt),
+		ExpiresAt:  DBTimeToIntPtr(row.ExpiresAt),
+		UpdatedAt:  DBTimeToInt(row.UpdatedAt),
 	}
 }
 
@@ -204,9 +237,9 @@ func UserPrefsFromDB(row *db.DivaUserPreference) *UserPreferences {
 		Theme:               ThemeFromDB(row.Theme),
 		OnboardingCompleted: row.OnboardingCompleted,
 		Language:            row.Language,
-		LastSyncAt:          row.LastSyncAt.Time.UnixMilli(),
-		CreatedAt:           row.CreatedAt.Time.UnixMilli(),
-		UpdatedAt:           row.UpdatedAt.Time.UnixMilli(),
+		LastSyncAt:          DBTimeToInt(row.LastSyncAt),
+		CreatedAt:           DBTimeToInt(row.CreatedAt),
+		UpdatedAt:           DBTimeToInt(row.UpdatedAt),
 	}
 }
 
@@ -214,7 +247,7 @@ func UserProfileFromDB(row *db.DivaUserProfile) *UserProfile {
 	return &UserProfile{
 		FirstName: row.FirstName,
 		LastName:  row.LastName,
-		BirthDate: row.BirthDate.Time.UnixMilli(),
+		BirthDate: DBTimeToInt(row.BirthDate),
 		Alias:     row.Alias,
 		Bio:       row.Bio,
 		Avatar:    row.Avatar,

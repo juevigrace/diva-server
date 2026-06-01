@@ -38,7 +38,7 @@ func (s *UserVerificationService) GetOneById(ctx context.Context, actionID uuid.
 		return nil, err
 	}
 
-	row, err := s.queries.GetUserVerification(ctx, models.ToUUIDPtr(&actionID))
+	row, err := s.queries.GetUserVerification(ctx, models.UUIDPtrToDB(&actionID))
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyAc
 
 	params := db.UpdateUserVerificationParams{
 		Verified: true,
-		ActionID: models.ToUUIDPtr(&actionID),
+		ActionID: models.UUIDPtrToDB(&actionID),
 	}
 
 	if err := s.queries.UpdateUserVerification(ctx, params); err != nil {
@@ -158,5 +158,5 @@ func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyAc
 }
 
 func (s *UserVerificationService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.queries.DeleteUserVerification(ctx, models.ToUUIDPtr(&id))
+	return s.queries.DeleteUserVerification(ctx, models.UUIDPtrToDB(&id))
 }

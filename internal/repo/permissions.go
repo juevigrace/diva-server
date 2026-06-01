@@ -36,7 +36,7 @@ func (r *PermissionsRepo) List(ctx context.Context, limit, offset int) ([]*model
 			RoleLevel:   models.RoleFromDB(rows[i].RoleLevel),
 			CreatedAt:   rows[i].CreatedAt.Time.UnixMilli(),
 			UpdatedAt:   rows[i].UpdatedAt.Time.UnixMilli(),
-			DeletedAt:   models.ToInt64Ptr(rows[i].DeletedAt),
+			DeletedAt:   models.DBTimeToIntPtr(rows[i].DeletedAt),
 		}
 	}
 	return permissions, nil
@@ -59,7 +59,7 @@ func (r *PermissionsRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Pe
 		RoleLevel:   models.RoleFromDB(row.RoleLevel),
 		CreatedAt:   row.CreatedAt.Time.UnixMilli(),
 		UpdatedAt:   row.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:   models.ToInt64Ptr(row.DeletedAt),
+		DeletedAt:   models.DBTimeToIntPtr(row.DeletedAt),
 	}, nil
 }
 
@@ -76,7 +76,7 @@ func (r *PermissionsRepo) GetByName(ctx context.Context, name string) (*models.P
 		RoleLevel:   models.RoleFromDB(row.RoleLevel),
 		CreatedAt:   row.CreatedAt.Time.UnixMilli(),
 		UpdatedAt:   row.UpdatedAt.Time.UnixMilli(),
-		DeletedAt:   models.ToInt64Ptr(row.DeletedAt),
+		DeletedAt:   models.DBTimeToIntPtr(row.DeletedAt),
 	}, nil
 }
 

@@ -44,14 +44,14 @@ func (p *Permission) Response() *responses.PermissionResponse {
 
 func PermissionFromDB(row *db.DivaPermission) *Permission {
 	return &Permission{
-		ID:          FromUUID(),
-		Name:        "",
-		Description: "",
-		Action:      0,
-		RoleLevel:   0,
-		CreatedAt:   0,
-		UpdatedAt:   0,
-		DeletedAt:   new(int64),
+		ID:          DBUUIDToUUID(row.ID),
+		Name:        row.Name,
+		Description: row.Description,
+		Action:      PermissionActionFromString(row.Action),
+		RoleLevel:   RoleFromDB(row.RoleLevel),
+		CreatedAt:   DBTimeToInt(row.CreatedAt),
+		UpdatedAt:   DBTimeToInt(row.UpdatedAt),
+		DeletedAt:   DBTimeToIntPtr(row.DeletedAt),
 	}
 }
 

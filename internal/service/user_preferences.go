@@ -20,7 +20,7 @@ func NewUserPreferencesService(queries *db.Queries) *UserPreferencesService {
 }
 
 func (s *UserPreferencesService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPreferences, error) {
-	rows, err := s.queries.GetPreferencesByUser(ctx, models.ToUUIDPtr(&userID))
+	rows, err := s.queries.GetPreferencesByUser(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (s *UserPreferencesService) GetByUser(ctx context.Context, userID uuid.UUID
 }
 
 func (s *UserPreferencesService) GetByID(ctx context.Context, id uuid.UUID) (*models.UserPreferences, error) {
-	row, err := s.queries.GetPreferencesByID(ctx, models.ToUUIDPtr(&id))
+	row, err := s.queries.GetPreferencesByID(ctx, models.UUIDPtrToDB(&id))
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +65,9 @@ func (s *UserPreferencesService) Update(ctx context.Context, id uuid.UUID, dto *
 }
 
 func (s *UserPreferencesService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.queries.DeletePreferences(ctx, models.ToUUIDPtr(&id))
+	return s.queries.DeletePreferences(ctx, models.UUIDPtrToDB(&id))
 }
 
 func (s *UserPreferencesService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.DeletePreferencesByUser(ctx, models.ToUUIDPtr(&userID))
+	return s.queries.DeletePreferencesByUser(ctx, models.UUIDPtrToDB(&userID))
 }

@@ -67,6 +67,14 @@ func (ua *UserAction) Response() *responses.UserActionResponse {
 	}
 }
 
+func (ua *UserAction) DBCreate() *db.CreateUserActionParams {
+	return &db.CreateUserActionParams{
+		ID:     UUIDPtrToDB(&ua.ID),
+		Name:   ua.Name.String(),
+		UserID: UUIDPtrToDB(&ua.UserID),
+	}
+}
+
 func (uv *UserActionVerification) DBCreate() *db.CreateUserVerificationParams {
 	return &db.CreateUserVerificationParams{
 		ActionID: pgtype.UUID{
@@ -78,5 +86,13 @@ func (uv *UserActionVerification) DBCreate() *db.CreateUserVerificationParams {
 			Time:  uv.ExpiresAt,
 			Valid: true,
 		},
+	}
+}
+
+func UserActionFromDB(row *db.DivaAction) *UserAction {
+	return &UserAction{
+		ID:     DBUUIDToUUID(row.ID),
+		Name:   ActionFromString(row.Name),
+		UserID: DBUUIDToUUID(row.UserID),
 	}
 }

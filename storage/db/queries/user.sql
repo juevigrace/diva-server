@@ -86,15 +86,13 @@ insert into diva_user (
     username,
     email,
     password_hash,
-    verified,
     role
 ) values (
     $1,
     $2,
     $3,
     $4,
-    $5,
-    $6
+    $5
 );
 
 -- name: UpdateUsername :exec

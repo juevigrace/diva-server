@@ -20,7 +20,7 @@ func NewUserProfileService(queries *db.Queries) *UserProfileService {
 }
 
 func (s *UserProfileService) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserProfile, error) {
-	row, err := s.queries.GetUserProfileByUserID(ctx, models.ToUUIDPtr(&userID))
+	row, err := s.queries.GetUserProfileByUserID(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +53,6 @@ func (s *UserProfileService) UpdateAvatar(ctx context.Context, userID uuid.UUID,
 	// TODO: handle here file of the image
 	return s.queries.UpdateUserProfileAvatar(ctx, db.UpdateUserProfileAvatarParams{
 		Avatar: avatar,
-		UserID: models.ToUUIDPtr(&userID),
+		UserID: models.UUIDPtrToDB(&userID),
 	})
 }

@@ -23,71 +23,39 @@ func NewUserPermissionService(queries *db.Queries, pService *PermissionService) 
 }
 
 func (s *UserPermissionService) GetByUser(ctx context.Context, userID uuid.UUID) ([]models.UserPermission, error) {
-	rows, err := s.queries.GetUserPermissions(ctx, models.ToUUIDPtr(&userID))
+	rows, err := s.queries.GetUserPermissions(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		return nil, err
 	}
 
 	perms := make([]models.UserPermission, len(rows))
 	for i := range rows {
-		dbPerm, err := s.pService.GetByID(ctx, rows[i].PermissionID.Bytes)
+		perm, err := s.pService.GetByID(ctx, rows[i].PermissionID.Bytes)
 		if err != nil {
 			continue
 		}
 
-		perms[i] = models.UserPermission{
-			Permission: ,
-			GrantedBy:  models.FromUUIDPtr(rows[i].GrantedBy),
-			Granted:    rows[i].Granted,
-			GrantedAt:  models.ToInt64Ptr(rows[i].GrantedAt),
-			ExpiresAt:  models.ToInt64Ptr(rows[i].ExpiresAt),
-			UpdatedAt:  rows[i].UpdatedAt.Time.UnixMilli(),
-		}
+		perms[i] = *models.UserPermissionFromDB(&rows[i], perm)
 	}
 
-	for _, up := range dbUPerm {
-		dbPerm, err := s.pService.GetByID(ctx, up.Permission.ID)
-		if err != nil {
-			continue
-		}
-		up.Permission = models.Permission{
-			ID:          dbPerm.ID,
-			Name:        dbPerm.Name,
-			Description: dbPerm.Description,
-			Action:      dbPerm.Action,
-			RoleLevel:   dbPerm.RoleLevel,
-			CreatedAt:   dbPerm.CreatedAt,
-			UpdatedAt:   dbPerm.UpdatedAt,
-			DeletedAt:   dbPerm.DeletedAt,
-		}
-	}
-
-	return dbUPerm, nil
+	return perms, nil
 }
 
-func (s *UserPermissionService) GetOneByUser(ctx context.Context, userID uuid.UUID, permissionID uuid.UUID) (*models.UserPermission, error) {
-	dbUPerm, err := s.repo.GetOneByUser(ctx, userID, permissionID)
+func (s *UserPermissionService) GetOneByUser(ctx context.Context, userID, permissionID uuid.UUID) (*models.UserPermission, error) {
+	row, err := s.queries.GetUserPermission(ctx, db.GetUserPermissionParams{
+		PermissionID: models.UUIDPtrToDB(&permissionID),
+		UserID:       models.UUIDPtrToDB(&userID),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	dbPerm, err := s.pService.GetByID(ctx, dbUPerm.Permission.ID)
+	dbPerm, err := s.pService.GetByID(ctx, models.DBUUIDToUUID(row.PermissionID))
 	if err != nil {
 		return nil, err
 	}
 
-	dbUPerm.Permission = models.Permission{
-		ID:          dbPerm.ID,
-		Name:        dbPerm.Name,
-		Description: dbPerm.Description,
-		Action:      dbPerm.Action,
-		RoleLevel:   dbPerm.RoleLevel,
-		CreatedAt:   dbPerm.CreatedAt,
-		UpdatedAt:   dbPerm.UpdatedAt,
-		DeletedAt:   dbPerm.DeletedAt,
-	}
-
-	return dbUPerm, nil
+	return models.UserPermissionFromDB(&row, dbPerm), nil
 }
 
 // TODO: expiration time might better be set here manually instead of being passed from the dto
@@ -96,10 +64,12 @@ func (s *UserPermissionService) Create(ctx context.Context, session *models.Sess
 	if err != nil {
 		return err
 	}
+
 	userID, err := uuid.Parse(dto.UserId)
 	if err != nil {
 		return err
 	}
+
 	grantedAt := new(int64)
 	if dto.Granted {
 		*grantedAt = time.Now().UTC().UnixMilli()
@@ -113,7 +83,7 @@ func (s *UserPermissionService) Create(ctx context.Context, session *models.Sess
 		ExpiresAt:  dto.ExpiresAt,
 	}
 
-	return s.repo.Create(ctx, userID, perm)
+	return s.queries.CreateUserPermission(ctx, *perm.DBCreate(userID))
 }
 
 func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermissionDto) error {
@@ -121,10 +91,12 @@ func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermis
 	if err != nil {
 		return err
 	}
+
 	userID, err := uuid.Parse(dto.UserId)
 	if err != nil {
 		return err
 	}
+
 	grantedAt := new(int64)
 	if dto.Granted {
 		*grantedAt = time.Now().UTC().UnixMilli()
@@ -137,13 +109,16 @@ func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermis
 		ExpiresAt:  dto.ExpiresAt,
 	}
 
-	return s.repo.Update(ctx, userID, params)
+	return s.queries.UpdateUserPermission(ctx, *params.DBUpdate(userID))
 }
 
 func (s *UserPermissionService) Delete(ctx context.Context, uid, pid uuid.UUID) error {
-	return s.repo.Delete(ctx, uid, pid)
+	return s.queries.DeleteUserPermission(ctx, db.DeleteUserPermissionParams{
+		PermissionID: models.UUIDPtrToDB(&pid),
+		UserID:       models.UUIDPtrToDB(&uid),
+	})
 }
 
 func (s *UserPermissionService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
-	return s.repo.DeleteByUser(ctx, userID)
+	return s.queries.DeleteAllUserPermissions(ctx, models.UUIDPtrToDB(&userID))
 }
