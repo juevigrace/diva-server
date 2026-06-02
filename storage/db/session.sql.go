@@ -98,13 +98,13 @@ func (q *Queries) DeleteSessionsByUser(ctx context.Context, userID pgtype.UUID) 
 
 const getSessionByID = `-- name: GetSessionByID :one
 select
-    s.id as id,
+    s.id,
     s.user_id,
     s.access_token,
     s.refresh_token,
     s.device,
-    s.status,
     s.type,
+    s.status,
     s.ip_address,
     s.user_agent,
     s.expires_at,
@@ -114,32 +114,17 @@ from diva_session s
 where s.id = $1
 `
 
-type GetSessionByIDRow struct {
-	ID           pgtype.UUID
-	UserID       pgtype.UUID
-	AccessToken  string
-	RefreshToken string
-	Device       string
-	Status       SessionStatusType
-	Type         SessionType
-	IpAddress    string
-	UserAgent    string
-	ExpiresAt    pgtype.Timestamptz
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-}
-
-func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessionByIDRow, error) {
+func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (DivaSession, error) {
 	row := q.db.QueryRow(ctx, getSessionByID, id)
-	var i GetSessionByIDRow
+	var i DivaSession
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.AccessToken,
 		&i.RefreshToken,
 		&i.Device,
-		&i.Status,
 		&i.Type,
+		&i.Status,
 		&i.IpAddress,
 		&i.UserAgent,
 		&i.ExpiresAt,
@@ -151,13 +136,13 @@ func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (GetSessio
 
 const listSessionsByUser = `-- name: ListSessionsByUser :many
 select
-    s.id as id,
+    s.id,
     s.user_id,
     s.access_token,
     s.refresh_token,
     s.device,
-    s.status,
     s.type,
+    s.status,
     s.ip_address,
     s.user_agent,
     s.expires_at,
@@ -168,38 +153,23 @@ where s.user_id = $1
 order by created_at desc
 `
 
-type ListSessionsByUserRow struct {
-	ID           pgtype.UUID
-	UserID       pgtype.UUID
-	AccessToken  string
-	RefreshToken string
-	Device       string
-	Status       SessionStatusType
-	Type         SessionType
-	IpAddress    string
-	UserAgent    string
-	ExpiresAt    pgtype.Timestamptz
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-}
-
-func (q *Queries) ListSessionsByUser(ctx context.Context, userID pgtype.UUID) ([]ListSessionsByUserRow, error) {
+func (q *Queries) ListSessionsByUser(ctx context.Context, userID pgtype.UUID) ([]DivaSession, error) {
 	rows, err := q.db.Query(ctx, listSessionsByUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListSessionsByUserRow
+	var items []DivaSession
 	for rows.Next() {
-		var i ListSessionsByUserRow
+		var i DivaSession
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.AccessToken,
 			&i.RefreshToken,
 			&i.Device,
-			&i.Status,
 			&i.Type,
+			&i.Status,
 			&i.IpAddress,
 			&i.UserAgent,
 			&i.ExpiresAt,

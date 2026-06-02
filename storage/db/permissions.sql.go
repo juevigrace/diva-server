@@ -12,7 +12,8 @@ import (
 )
 
 const countPermissions = `-- name: CountPermissions :one
-select count(*) from diva_permissions
+select count(*)
+from diva_permissions
 `
 
 func (q *Queries) CountPermissions(ctx context.Context) (int64, error) {
@@ -204,27 +205,51 @@ const updatePermission = `-- name: UpdatePermission :exec
 update diva_permissions set
     name = $1,
     description = $2,
-    action = $3,
-    role_level = $4,
     updated_at = now()
-where id = $5
+where id = $3
 `
 
 type UpdatePermissionParams struct {
 	Name        string
 	Description string
-	Action      string
-	RoleLevel   RoleType
 	ID          pgtype.UUID
 }
 
 func (q *Queries) UpdatePermission(ctx context.Context, arg UpdatePermissionParams) error {
-	_, err := q.db.Exec(ctx, updatePermission,
-		arg.Name,
-		arg.Description,
-		arg.Action,
-		arg.RoleLevel,
-		arg.ID,
-	)
+	_, err := q.db.Exec(ctx, updatePermission, arg.Name, arg.Description, arg.ID)
+	return err
+}
+
+const updatePermissionAction = `-- name: UpdatePermissionAction :exec
+update diva_permissions set
+    action = $1,
+    updated_at = now()
+where id = $2
+`
+
+type UpdatePermissionActionParams struct {
+	Action string
+	ID     pgtype.UUID
+}
+
+func (q *Queries) UpdatePermissionAction(ctx context.Context, arg UpdatePermissionActionParams) error {
+	_, err := q.db.Exec(ctx, updatePermissionAction, arg.Action, arg.ID)
+	return err
+}
+
+const updatePermissionRoleLevel = `-- name: UpdatePermissionRoleLevel :exec
+update diva_permissions set
+    role_level = $1,
+    updated_at = now()
+where id = $2
+`
+
+type UpdatePermissionRoleLevelParams struct {
+	RoleLevel RoleType
+	ID        pgtype.UUID
+}
+
+func (q *Queries) UpdatePermissionRoleLevel(ctx context.Context, arg UpdatePermissionRoleLevelParams) error {
+	_, err := q.db.Exec(ctx, updatePermissionRoleLevel, arg.RoleLevel, arg.ID)
 	return err
 }

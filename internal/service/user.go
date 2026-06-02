@@ -183,7 +183,10 @@ func (s *UserService) VerifyUser(ctx context.Context, actionID uuid.UUID) error 
 		return models.ErrActionNotVerified
 	}
 
-	if err := s.repo.UpdateVerified(ctx, true, dbAction.Action.UserID); err != nil {
+	if err := s.queries.UpdateVerified(ctx, db.UpdateVerifiedParams{
+		Verified: true,
+		ID:       models.UUIDPtrToDB(&dbAction.Action.UserID),
+	}); err != nil {
 		return err
 	}
 

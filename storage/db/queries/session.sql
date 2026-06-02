@@ -1,12 +1,12 @@
 -- name: GetSessionByID :one
 select
-    s.id as id,
+    s.id,
     s.user_id,
     s.access_token,
     s.refresh_token,
     s.device,
-    s.status,
     s.type,
+    s.status,
     s.ip_address,
     s.user_agent,
     s.expires_at,
@@ -18,13 +18,13 @@ where s.id = $1
 
 -- name: ListSessionsByUser :many
 select
-    s.id as id,
+    s.id,
     s.user_id,
     s.access_token,
     s.refresh_token,
     s.device,
-    s.status,
     s.type,
+    s.status,
     s.ip_address,
     s.user_agent,
     s.expires_at,

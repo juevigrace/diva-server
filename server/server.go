@@ -65,8 +65,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 func (s *Server) routes() {
 	queries := s.database.Queries()
 
-	repoModule := di.NewRepoModule(queries)
-	serviceModule := di.NewServiceModule(repoModule, s.mail)
+	serviceModule := di.NewServiceModule(queries, s.mail)
 	handlerModule := di.NewHandlerModule(serviceModule)
 
 	s.router.Chi.Route("/api", func(api chi.Router) {

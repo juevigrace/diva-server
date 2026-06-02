@@ -43,7 +43,9 @@ offset $2
 ;
 
 -- name: CountPermissions :one
-select count(*) from diva_permissions;
+select count(*)
+from diva_permissions
+;
 
 -- name: CreatePermission :exec
 insert into diva_permissions (
@@ -64,10 +66,20 @@ insert into diva_permissions (
 update diva_permissions set
     name = $1,
     description = $2,
-    action = $3,
-    role_level = $4,
     updated_at = now()
-where id = $5;
+where id = $3;
+
+-- name: UpdatePermissionAction :exec
+update diva_permissions set
+    action = $1,
+    updated_at = now()
+where id = $2;
+
+-- name: UpdatePermissionRoleLevel :exec
+update diva_permissions set
+    role_level = $1,
+    updated_at = now()
+where id = $2;
 
 -- name: DeletePermission :exec
 delete from diva_permissions

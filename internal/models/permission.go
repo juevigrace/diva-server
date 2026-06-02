@@ -42,6 +42,24 @@ func (p *Permission) Response() *responses.PermissionResponse {
 	}
 }
 
+func (p *Permission) DBCreate() *db.CreatePermissionParams {
+	return &db.CreatePermissionParams{
+		ID:          UUIDPtrToDB(&p.ID),
+		Name:        p.Name,
+		Description: p.Description,
+		Action:      p.Action.String(),
+		RoleLevel:   p.RoleLevel.ToDB(),
+	}
+}
+
+func (p *Permission) DBUpdate() *db.UpdatePermissionParams {
+	return &db.UpdatePermissionParams{
+		ID:          UUIDPtrToDB(&p.ID),
+		Name:        p.Name,
+		Description: p.Description,
+	}
+}
+
 func PermissionFromDB(row *db.DivaPermission) *Permission {
 	return &Permission{
 		ID:          DBUUIDToUUID(row.ID),
