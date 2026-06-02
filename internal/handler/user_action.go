@@ -38,7 +38,7 @@ func (h *UserActionsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actions, err := middlewares.RequiresOwnerOrPerms(
+	actions, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -78,7 +78,7 @@ func (h *UserActionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	action, err := middlewares.RequiresOwnerOrPerms(
+	action, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -111,7 +111,7 @@ func (h *UserActionsHandler) deleteAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER

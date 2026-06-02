@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
@@ -128,7 +129,13 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	session, err := h.authService.ForgotPasswordConfirm(r.Context(), &dto)
+	parsedID, err := uuid.Parse(dto.ActionID)
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	session, err := h.authService.ForgotPasswordConfirm(r.Context(), parsedID, &dto.SessionData)
 	if err != nil {
 		handleReqError(w, err)
 		return

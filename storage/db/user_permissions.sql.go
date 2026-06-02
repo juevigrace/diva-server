@@ -17,15 +17,13 @@ insert into diva_user_permissions (
     user_id,
     granted_by,
     granted,
-    granted_at,
     expires_at
 ) values (
     $1,
     $2,
     $3,
     $4,
-    $5,
-    $6
+    $5
 ) on conflict (permission_id, user_id) do nothing
 `
 
@@ -34,7 +32,6 @@ type CreateUserPermissionParams struct {
 	UserID       pgtype.UUID
 	GrantedBy    pgtype.UUID
 	Granted      bool
-	GrantedAt    pgtype.Timestamptz
 	ExpiresAt    pgtype.Timestamptz
 }
 
@@ -44,7 +41,6 @@ func (q *Queries) CreateUserPermission(ctx context.Context, arg CreateUserPermis
 		arg.UserID,
 		arg.GrantedBy,
 		arg.Granted,
-		arg.GrantedAt,
 		arg.ExpiresAt,
 	)
 	return err
@@ -153,15 +149,13 @@ const updateUserPermission = `-- name: UpdateUserPermission :exec
 update diva_user_permissions
 set
     granted = $1,
-    granted_at = $2,
-    expires_at = $3,
+    expires_at = $2,
     updated_at = now()
-where permission_id = $4 and user_id = $5
+where permission_id = $3 and user_id = $4
 `
 
 type UpdateUserPermissionParams struct {
 	Granted      bool
-	GrantedAt    pgtype.Timestamptz
 	ExpiresAt    pgtype.Timestamptz
 	PermissionID pgtype.UUID
 	UserID       pgtype.UUID
@@ -170,7 +164,6 @@ type UpdateUserPermissionParams struct {
 func (q *Queries) UpdateUserPermission(ctx context.Context, arg UpdateUserPermissionParams) error {
 	_, err := q.db.Exec(ctx, updateUserPermission,
 		arg.Granted,
-		arg.GrantedAt,
 		arg.ExpiresAt,
 		arg.PermissionID,
 		arg.UserID,

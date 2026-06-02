@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/util"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -47,7 +46,7 @@ func (s *UserVerificationService) GetOneById(ctx context.Context, actionID uuid.
 		Action:    *dbAction,
 		Token:     row.Token,
 		ExpiresAt: row.ExpiresAt.Time,
-		UsedAt:    row.UsedAt.Time,
+		UsedAt:    &row.UsedAt.Time,
 		Verified:  row.Verified,
 	}, nil
 }
@@ -55,14 +54,9 @@ func (s *UserVerificationService) GetOneById(ctx context.Context, actionID uuid.
 func (s *UserVerificationService) RequestVerification(
 	ctx context.Context,
 	user *models.User,
-	dto *dtos.RequestActionVerificationDto,
+	action models.Action,
 ) (*models.UserAction, error) {
-	parsedAction := models.ActionFromString(dto.Action)
-	if parsedAction == -1 {
-		return nil, models.ErrActionNotFound
-	}
-
-	dbAction, err := s.uaService.GetOneByName(ctx, user.ID, parsedAction)
+	dbAction, err := s.uaService.GetOneByName(ctx, user.ID, action)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +84,7 @@ func (s *UserVerificationService) Generate(
 ) (*models.UserActionVerification, error) {
 	exists, err := s.GetOneById(ctx, action.ID)
 	if err != nil {
-		if errors.Is(pgx.ErrNoRows, err) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			token, err := util.GenerateOTPCode()
 			if err != nil {
 				return nil, err
@@ -122,26 +116,17 @@ func (s *UserVerificationService) Generate(
 	return exists, nil
 }
 
-func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyActionDto) (*models.UserAction, error) {
-	actionID, err := uuid.Parse(dto.ActionID)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID, token string) (*models.UserActionVerification, error) {
 	record, err := s.GetOneById(ctx, actionID)
 	if err != nil {
-		if ok := errors.Is(pgx.ErrNoRows, err); ok {
-			return nil, models.ErrActionNotFound
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	if record.ExpiresAt.Before(time.Now().UTC()) {
 		return nil, models.ErrTokenExpired
 	}
 
-	if record.Token != dto.Token {
+	if record.Token != token {
 		return nil, models.ErrTokenInvalid
 	}
 
@@ -154,7 +139,7 @@ func (s *UserVerificationService) Verify(ctx context.Context, dto *dtos.VerifyAc
 		return nil, err
 	}
 
-	return &record.Action, nil
+	return s.GetOneById(ctx, actionID)
 }
 
 func (s *UserVerificationService) Delete(ctx context.Context, id uuid.UUID) error {

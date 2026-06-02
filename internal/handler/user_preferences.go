@@ -38,7 +38,7 @@ func (h *UserPreferencesHandler) getByUser(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	prefs, err := middlewares.RequiresOwnerOrPerms(
+	prefs, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -78,7 +78,7 @@ func (h *UserPreferencesHandler) getByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	pref, err := middlewares.RequiresOwnerOrPerms(
+	pref, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -107,7 +107,7 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -148,7 +148,7 @@ func (h *UserPreferencesHandler) updatePreferences(w http.ResponseWriter, r *htt
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -187,7 +187,7 @@ func (h *UserPreferencesHandler) deletePreferences(w http.ResponseWriter, r *htt
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid

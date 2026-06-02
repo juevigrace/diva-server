@@ -49,7 +49,7 @@ func (h *PermissionsHandler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	perms, err := middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+	perms, err := middlewares.RequiresOwner(r, func(requester *models.User) bool {
 		return requester.Role == models.ROLE_USER
 	}, func(session *models.Session) (*[]*models.Permission, error) {
 		dbPerms, err := h.service.List(r.Context(), pagination)
@@ -86,7 +86,7 @@ func (h *PermissionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm, err := middlewares.RequiresOwnerOrPerms(
+	perm, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -109,7 +109,7 @@ func (h *PermissionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PermissionsHandler) create(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwnerOrPerms(
+	_, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -142,7 +142,7 @@ func (h *PermissionsHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -175,7 +175,7 @@ func (h *PermissionsHandler) restore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -203,7 +203,7 @@ func (h *PermissionsHandler) softDelete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -231,7 +231,7 @@ func (h *PermissionsHandler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER

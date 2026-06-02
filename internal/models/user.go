@@ -48,7 +48,7 @@ type UserPermission struct {
 	Granted    bool
 	GrantedAt  *int64
 	// TODO: change expiration time for enum with fixed times
-	ExpiresAt *int64
+	ExpiresAt int64
 	UpdatedAt int64
 }
 
@@ -148,8 +148,7 @@ func (up *UserPermission) DBCreate(userID uuid.UUID) *db.CreateUserPermissionPar
 		UserID:       UUIDPtrToDB(&userID),
 		GrantedBy:    UUIDPtrToDB(up.GrantedBy),
 		Granted:      up.Granted,
-		GrantedAt:    IntPtrToDBTime(up.GrantedAt),
-		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
+		ExpiresAt:    IntPtrToDBTime(&up.ExpiresAt),
 	}
 }
 
@@ -158,8 +157,7 @@ func (up *UserPermission) DBUpdate(userID uuid.UUID) *db.UpdateUserPermissionPar
 		PermissionID: UUIDPtrToDB(&up.Permission.ID),
 		UserID:       UUIDPtrToDB(&userID),
 		Granted:      up.Granted,
-		GrantedAt:    IntPtrToDBTime(up.GrantedAt),
-		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
+		ExpiresAt:    IntPtrToDBTime(&up.ExpiresAt),
 	}
 }
 
@@ -225,7 +223,7 @@ func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPer
 		GrantedBy:  DBUUIDToUUIDPtr(row.GrantedBy),
 		Granted:    row.Granted,
 		GrantedAt:  DBTimeToIntPtr(row.GrantedAt),
-		ExpiresAt:  DBTimeToIntPtr(row.ExpiresAt),
+		ExpiresAt:  DBTimeToInt(row.ExpiresAt),
 		UpdatedAt:  DBTimeToInt(row.UpdatedAt),
 	}
 }

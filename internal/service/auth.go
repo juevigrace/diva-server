@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
@@ -11,23 +11,20 @@ import (
 )
 
 type AuthService struct {
-	sService  *SessionService
-	uService  *UserService
-	uaService *UserActionsService
-	uvService *UserVerificationService
+	pService *PermissionService
+	sService *SessionService
+	uService *UserService
 }
 
 func NewAuthService(
+	pService *PermissionService,
 	uService *UserService,
-	uaService *UserActionsService,
-	uvService *UserVerificationService,
 	sService *SessionService,
 ) *AuthService {
 	return &AuthService{
-		sService:  sService,
-		uService:  uService,
-		uaService: uaService,
-		uvService: uvService,
+		sService: sService,
+		uService: uService,
+		pService: pService,
 	}
 }
 
@@ -77,13 +74,8 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 	return updated, nil
 }
 
-func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, dto *dtos.ForgotPasswordConfirmDto) (*models.Session, error) {
-	parsedID, err := uuid.Parse(dto.ActionID)
-	if err != nil {
-		return nil, err
-	}
-
-	dbUV, err := s.uvService.GetOneById(ctx, parsedID)
+func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, actionID uuid.UUID, sd *dtos.SessionDataDto) (*models.Session, error) {
+	dbUV, err := s.uService.uvService.GetOneById(ctx, actionID)
 	if err != nil {
 		return nil, err
 	}
@@ -92,18 +84,31 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, dto *dtos.Forgo
 		return nil, models.ErrActionNotVerified
 	}
 
-	session, err := s.sService.CreateTemporal(ctx, dbUV.Action.UserID, &dto.SessionData)
+	session, err := s.sService.CreateTemporal(ctx, dbUV.Action.UserID, sd)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: create user permission to update the password
+	dbPerm, err := s.pService.GetByName(ctx, models.PERMISSION_PASSWORD_UPDATE)
+	if err != nil {
+		return nil, err
+	}
 
-	go func() {
-		if err := s.uaService.Delete(ctx, dbUV.Action.ID); err != nil {
-			log.Printf("action error: %v", err)
-		}
-	}()
+	exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
+	perm := &models.UserPermission{
+		Permission: *dbPerm,
+		GrantedBy:  nil,
+		Granted:    true,
+		ExpiresAt:  exp,
+	}
+
+	if err := s.uService.upService.Create(ctx, dbUV.Action.UserID, perm); err != nil {
+		return nil, err
+	}
+
+	if err := s.uService.uaService.Delete(ctx, dbUV.Action.ID); err != nil {
+		return nil, err
+	}
 
 	return session, nil
 }

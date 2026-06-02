@@ -34,7 +34,7 @@ func (h *SessionHandler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessions, err := middlewares.RequiresOwnerOrPerms(
+	sessions, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -74,7 +74,7 @@ func (h *SessionHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := middlewares.RequiresOwnerOrPerms(
+	session, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -113,7 +113,7 @@ func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -144,7 +144,7 @@ func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SessionHandler) deleteExpired(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+	_, err := middlewares.RequiresOwner(r, func(requester *models.User) bool {
 		return requester.Role == models.ROLE_USER
 	}, func(session *models.Session) (*any, error) {
 		if err := h.Service.DeleteExpired(r.Context()); err != nil {

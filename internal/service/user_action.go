@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -35,7 +37,11 @@ func (s *UserActionsService) GetAllByUser(ctx context.Context, userID uuid.UUID)
 func (s *UserActionsService) GetOneByID(ctx context.Context, id uuid.UUID) (*models.UserAction, error) {
 	row, err := s.queries.GetUserActionByID(ctx, models.UUIDPtrToDB(&id))
 	if err != nil {
-		return nil, err
+		if ok := errors.Is(err, pgx.ErrNoRows); ok {
+			return nil, models.ErrActionNotFound
+		} else {
+			return nil, err
+		}
 	}
 
 	return models.UserActionFromDB(&row), nil

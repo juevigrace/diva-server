@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -12,20 +13,23 @@ import (
 )
 
 type UserVerificationHandler struct {
-	sService *service.SessionService
-	uService *service.UserService
-	vService *service.UserVerificationService
+	sService  *service.SessionService
+	uService  *service.UserService
+	uaService *service.UserActionsService
+	vService  *service.UserVerificationService
 }
 
 func NewVerificationHandler(
 	sService *service.SessionService,
 	uService *service.UserService,
+	uaService *service.UserActionsService,
 	vService *service.UserVerificationService,
 ) *UserVerificationHandler {
 	return &UserVerificationHandler{
-		sService: sService,
-		uService: uService,
-		vService: vService,
+		sService:  sService,
+		uService:  uService,
+		vService:  vService,
+		uaService: uaService,
 	}
 }
 
@@ -43,15 +47,21 @@ func (h *UserVerificationHandler) requestVerification(w http.ResponseWriter, r *
 		return
 	}
 
-	dbUser, err := h.uService.GetByEmail(r.Context(), dto.Email)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+	parsedAction := models.ActionFromString(dto.Action)
+	if parsedAction == -1 {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, models.ErrActionNotFound.Error()))
 		return
 	}
 
-	res, err := h.vService.RequestVerification(r.Context(), dbUser, &dto)
+	dbUser, err := h.uService.GetByEmail(r.Context(), dto.Email)
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		handleReqError(w, err)
+		return
+	}
+
+	res, err := h.vService.RequestVerification(r.Context(), dbUser, parsedAction)
+	if err != nil {
+		handleReqError(w, err)
 		return
 	}
 
@@ -65,20 +75,35 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	action, err := h.vService.Verify(r.Context(), &dto)
+	actionID, err := uuid.Parse(dto.ActionID)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	switch action.Name {
+	va, err := h.vService.Verify(r.Context(), actionID, dto.Token)
+	if err != nil {
+		handleReqError(w, err)
+		return
+	}
+
+	switch va.Action.Name {
 	case models.ActionPasswordReset:
 	case models.ActionUserVerification:
-		go func() {
-			if err := h.uService.VerifyUser(r.Context(), action.ID); err != nil {
-				return
-			}
-		}()
+		if !va.Verified {
+			responses.WriteJSON(w, responses.RespondForbbiden(nil, models.ErrActionNotVerified.Error()))
+			return
+		}
+
+		if err := h.uService.UpdateVerified(r.Context(), true, va.Action.UserID); err != nil {
+			handleReqError(w, err)
+			return
+		}
+
+		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
+			handleReqError(w, err)
+			return
+		}
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(nil, "Success"))

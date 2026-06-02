@@ -39,7 +39,7 @@ func (h *UserProfileHandler) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, err := middlewares.RequiresOwnerOrPerms(
+	profile, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -68,7 +68,7 @@ func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -101,7 +101,7 @@ func (h *UserProfileHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -134,7 +134,7 @@ func (h *UserProfileHandler) updateAvatar(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid

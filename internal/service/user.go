@@ -101,7 +101,7 @@ func (s *UserService) GetByUsername(ctx context.Context, username string) (*mode
 func (s *UserService) CheckUsernameAvailable(ctx context.Context, username string) (bool, error) {
 	_, err := s.GetByUsername(ctx, username)
 	if err != nil {
-		if errors.Is(models.ErrUserNotFound, err) {
+		if errors.Is(err, models.ErrUserNotFound) {
 			return true, nil
 		} else {
 			return false, err
@@ -125,7 +125,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 func (s *UserService) CheckEmailAvailable(ctx context.Context, email string) (bool, error) {
 	_, err := s.GetByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(models.ErrUserNotFound, err) {
+		if errors.Is(err, models.ErrUserNotFound) {
 			return true, nil
 		} else {
 			return false, err
@@ -164,37 +164,11 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 		return uuid.Nil, err
 	}
 
-	// TODO: need to create any other user related data here
-
 	if _, err := s.uaService.Create(ctx, params.ID, models.ActionUserVerification); err != nil {
 		return uuid.Nil, err
 	}
 
 	return params.ID, nil
-}
-
-func (s *UserService) VerifyUser(ctx context.Context, actionID uuid.UUID) error {
-	dbAction, err := s.uvService.GetOneById(ctx, actionID)
-	if err != nil {
-		return err
-	}
-
-	if !dbAction.Verified {
-		return models.ErrActionNotVerified
-	}
-
-	if err := s.queries.UpdateVerified(ctx, db.UpdateVerifiedParams{
-		Verified: true,
-		ID:       models.UUIDPtrToDB(&dbAction.Action.UserID),
-	}); err != nil {
-		return err
-	}
-
-	if err := s.uaService.Delete(ctx, dbAction.Action.ID); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPassword string) error {

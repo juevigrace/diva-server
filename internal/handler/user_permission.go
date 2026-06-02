@@ -2,8 +2,10 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -41,7 +43,7 @@ func (h *UserPermissionHandler) getAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perms, err := middlewares.RequiresOwnerOrPerms(
+	perms, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -81,7 +83,7 @@ func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	perm, err := middlewares.RequiresOwnerOrPerms(
+	perm, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != uid
@@ -99,7 +101,7 @@ func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwnerOrPerms(
+	_, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -110,7 +112,30 @@ func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.
 				return nil, err
 			}
 
-			if err := h.service.Create(r.Context(), session, &dto); err != nil {
+			permissionID, err := uuid.Parse(dto.PermissionId)
+			if err != nil {
+				return nil, err
+			}
+
+			userID, err := uuid.Parse(dto.UserId)
+			if err != nil {
+				return nil, err
+			}
+
+			grantedAt := new(int64)
+			if dto.Granted {
+				*grantedAt = time.Now().UTC().UnixMilli()
+			}
+
+			perm := &models.UserPermission{
+				Permission: models.Permission{ID: permissionID},
+				GrantedBy:  &session.User.ID,
+				Granted:    dto.Granted,
+				GrantedAt:  grantedAt,
+				ExpiresAt:  dto.ExpiresAt,
+			}
+
+			if err := h.service.Create(r.Context(), userID, perm); err != nil {
 				return nil, err
 			}
 
@@ -126,7 +151,7 @@ func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.
 }
 
 func (h *UserPermissionHandler) updatePermission(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwnerOrPerms(
+	_, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -165,7 +190,7 @@ func (h *UserPermissionHandler) deletePermission(w http.ResponseWriter, r *http.
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -193,7 +218,7 @@ func (h *UserPermissionHandler) deleteByUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER

@@ -59,31 +59,8 @@ func (s *UserPermissionService) GetOneByUser(ctx context.Context, userID, permis
 }
 
 // TODO: expiration time might better be set here manually instead of being passed from the dto
-func (s *UserPermissionService) Create(ctx context.Context, session *models.Session, dto *dtos.UserPermissionDto) error {
-	permissionID, err := uuid.Parse(dto.PermissionId)
-	if err != nil {
-		return err
-	}
-
-	userID, err := uuid.Parse(dto.UserId)
-	if err != nil {
-		return err
-	}
-
-	grantedAt := new(int64)
-	if dto.Granted {
-		*grantedAt = time.Now().UTC().UnixMilli()
-	}
-
-	perm := &models.UserPermission{
-		Permission: models.Permission{ID: permissionID},
-		GrantedBy:  &session.User.ID,
-		Granted:    dto.Granted,
-		GrantedAt:  grantedAt,
-		ExpiresAt:  dto.ExpiresAt,
-	}
-
-	return s.queries.CreateUserPermission(ctx, *perm.DBCreate(userID))
+func (s *UserPermissionService) Create(ctx context.Context, grantedID uuid.UUID, up *models.UserPermission) error {
+	return s.queries.CreateUserPermission(ctx, *up.DBCreate(grantedID))
 }
 
 func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermissionDto) error {

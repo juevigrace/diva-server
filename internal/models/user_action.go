@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -27,7 +26,7 @@ type UserActionVerification struct {
 	Action    UserAction
 	Token     string
 	ExpiresAt time.Time
-	UsedAt    time.Time
+	UsedAt    *time.Time
 	Verified  bool
 }
 
@@ -76,17 +75,11 @@ func (ua *UserAction) DBCreate() *db.CreateUserActionParams {
 }
 
 func (uv *UserActionVerification) DBCreate() *db.CreateUserVerificationParams {
+	exp := uv.ExpiresAt.UnixMilli()
 	return &db.CreateUserVerificationParams{
-		ActionID: pgtype.UUID{
-			Bytes: uv.Action.ID,
-			Valid: true,
-		},
-		Token: uv.Token,
-		ExpiresAt: pgtype.Timestamptz{
-			Time:  uv.ExpiresAt,
-			Valid: true,
-		},
-	}
+		ActionID:  UUIDPtrToDB(&uv.Action.ID),
+		Token:     uv.Token,
+		ExpiresAt: IntPtrToDBTime(&exp)}
 }
 
 func UserActionFromDB(row *db.DivaAction) *UserAction {

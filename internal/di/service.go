@@ -27,7 +27,7 @@ func NewServiceModule(queries *db.Queries, mailClient *mail.Client) *ServiceModu
 	verification := service.NewVerificationService(mailClient, queries, uAction)
 	user := service.NewUserService(queries, uAction, userPermission, userProfile, verification)
 	session := service.NewSessionService(queries, user)
-	auth := service.NewAuthService(user, uAction, verification, session)
+	auth := service.NewAuthService(permission, user, session)
 
 	return &ServiceModule{
 		User:            user,

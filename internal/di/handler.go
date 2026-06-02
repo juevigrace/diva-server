@@ -18,8 +18,8 @@ func NewHandlerModule(services *ServiceModule) *HandlerModule {
 	userPreferences := handler.NewUserPreferencesHandler(services.UserPreferences)
 	userAction := handler.NewUserActionsHandler(services.UserActions, services.Session)
 	userProfile := handler.NewUserProfileHandler(services.UserProfile)
-	user := handler.NewUserHandler(services.Session, services.User, session, userAction, userPermission, userPreferences, userProfile)
-	verification := handler.NewVerificationHandler(services.Session, services.User, services.Verification)
+	user := handler.NewUserHandler(services.Session, services.User, services.UserPermission, session, userAction, userPermission, userPreferences, userProfile)
+	verification := handler.NewVerificationHandler(services.Session, services.User, services.UserActions, services.Verification)
 	permissions := handler.NewPermissionsHandler(services.Permission)
 
 	return &HandlerModule{

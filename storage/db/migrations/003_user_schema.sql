@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS diva_user_permissions (
     granted_by UUID DEFAULT NULL,
     granted BOOLEAN NOT NULL DEFAULT FALSE,
     granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMPTZ DEFAULT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (permission_id, user_id),
     FOREIGN KEY (permission_id) REFERENCES diva_permissions(id) ON DELETE CASCADE,

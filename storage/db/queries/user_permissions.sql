@@ -30,15 +30,13 @@ insert into diva_user_permissions (
     user_id,
     granted_by,
     granted,
-    granted_at,
     expires_at
 ) values (
     $1,
     $2,
     $3,
     $4,
-    $5,
-    $6
+    $5
 ) on conflict (permission_id, user_id) do nothing
 ;
 
@@ -46,10 +44,9 @@ insert into diva_user_permissions (
 update diva_user_permissions
 set
     granted = $1,
-    granted_at = $2,
-    expires_at = $3,
+    expires_at = $2,
     updated_at = now()
-where permission_id = $4 and user_id = $5;
+where permission_id = $3 and user_id = $4;
 
 -- name: DeleteUserPermission :exec
 delete from diva_user_permissions

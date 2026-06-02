@@ -9,7 +9,9 @@ import (
 )
 
 var (
-	ErrPermissionDenied = errors.New("permission denied")
+	ErrPermissionDenied     = errors.New("permission denied")
+	ErrPermissionExpired    = errors.New("permission expired")
+	ErrPermissionExpiration = errors.New("invalid permission expiration for this action")
 )
 
 type PermissionAction int

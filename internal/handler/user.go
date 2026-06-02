@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -15,6 +16,7 @@ import (
 type UserHandler struct {
 	sService    *service.SessionService
 	uService    *service.UserService
+	upService   *service.UserPermissionService
 	sHandler    *SessionHandler
 	uaHandler   *UserActionsHandler
 	upHandler   *UserPermissionHandler
@@ -25,6 +27,7 @@ type UserHandler struct {
 func NewUserHandler(
 	sService *service.SessionService,
 	uService *service.UserService,
+	upService *service.UserPermissionService,
 	sHandler *SessionHandler,
 	uaHandler *UserActionsHandler,
 	upHandler *UserPermissionHandler,
@@ -39,6 +42,7 @@ func NewUserHandler(
 		upHandler:   upHandler,
 		uprHandler:  uprHandler,
 		uproHandler: uproHandler,
+		upService:   upService,
 	}
 }
 
@@ -137,7 +141,7 @@ func (h *UserHandler) getAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	users, err := middlewares.RequiresOwnerOrPerms(
+	users, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -179,7 +183,7 @@ func (h *UserHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := middlewares.RequiresOwnerOrPerms(
+	res, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != id
@@ -197,7 +201,7 @@ func (h *UserHandler) getByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwnerOrPerms(
+	_, err := middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -230,7 +234,7 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != id
@@ -262,26 +266,41 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && (requester.ID != uid || !requester.Permissions[models.PERMISSION_PASSWORD_UPDATE].Granted)
+			return requester.Role == models.ROLE_USER && requester.ID != uid
 		},
-		func(session *models.Session) (*any, error) {
+		func(session *models.Session) (ret *any, err error) {
+			deleteCall := func() {
+				e := h.upService.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_PASSWORD_UPDATE].Permission.ID)
+				if e != nil && err == nil {
+					err = e
+				}
+			}
+
+			if err = middlewares.RequiresPermission(&session.User, models.PERMISSION_PASSWORD_UPDATE); err != nil {
+				if errors.Is(err, models.ErrPermissionExpired) {
+					deleteCall()
+				}
+				return
+			}
+			defer deleteCall()
+
 			var dto dtos.UpdatePasswordDto
-			if err := middlewares.ValidateBody(&dto, r); err != nil {
-				return nil, err
+			if err = middlewares.ValidateBody(&dto, r); err != nil {
+				return
 			}
 
-			if err := h.uService.UpdatePassword(r.Context(), uid, dto.NewPassword); err != nil {
-				return nil, err
+			if err = h.uService.UpdatePassword(r.Context(), uid, dto.NewPassword); err != nil {
+				return
 			}
 
-			if err := h.sService.CloseAllByUser(r.Context(), uid); err != nil {
-				return nil, err
+			if err = h.sService.CloseAllByUser(r.Context(), uid); err != nil {
+				return
 			}
 
-			return nil, nil
+			return
 		},
 	)
 	if err != nil {
@@ -299,7 +318,7 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+	_, err = middlewares.RequiresOwner(r, func(requester *models.User) bool {
 		return requester.Role == models.ROLE_USER && requester.ID != id
 	}, func(session *models.Session) (*any, error) {
 		var dto dtos.UpdateUsernameDto
@@ -328,7 +347,7 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(r, func(requester *models.User) bool {
+	_, err = middlewares.RequiresOwner(r, func(requester *models.User) bool {
 		return requester.Role == models.ROLE_USER && requester.ID != id
 	}, func(session *models.Session) (*any, error) {
 		var dto dtos.UpdatePhoneNumberDto
@@ -357,7 +376,7 @@ func (h *UserHandler) updateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -390,7 +409,7 @@ func (h *UserHandler) updateVerified(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER
@@ -423,7 +442,7 @@ func (h *UserHandler) softDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != id
@@ -451,7 +470,7 @@ func (h *UserHandler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwnerOrPerms(
+	_, err = middlewares.RequiresOwner(
 		r,
 		func(requester *models.User) bool {
 			return requester.Role == models.ROLE_USER && requester.ID != id
