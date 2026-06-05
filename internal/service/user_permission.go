@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
@@ -58,7 +57,28 @@ func (s *UserPermissionService) GetOneByUser(ctx context.Context, userID, permis
 	return models.UserPermissionFromDB(&row, dbPerm), nil
 }
 
-// TODO: expiration time might better be set here manually instead of being passed from the dto
+func (s *UserPermissionService) GrantByName(
+	ctx context.Context,
+	permAction models.PermissionAction,
+	granterID *uuid.UUID,
+	expiration *int64,
+	grantedID uuid.UUID,
+) error {
+	dbPerm, err := s.pService.GetByName(ctx, permAction)
+	if err != nil {
+		return err
+	}
+
+	perm := &models.UserPermission{
+		Permission: *dbPerm,
+		GrantedBy:  granterID,
+		Granted:    true,
+		ExpiresAt:  expiration,
+	}
+
+	return s.Create(ctx, grantedID, perm)
+}
+
 func (s *UserPermissionService) Create(ctx context.Context, grantedID uuid.UUID, up *models.UserPermission) error {
 	return s.queries.CreateUserPermission(ctx, *up.DBCreate(grantedID))
 }
@@ -74,15 +94,9 @@ func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermis
 		return err
 	}
 
-	grantedAt := new(int64)
-	if dto.Granted {
-		*grantedAt = time.Now().UTC().UnixMilli()
-	}
-
 	params := &models.UserPermission{
 		Permission: models.Permission{ID: permissionID},
 		Granted:    dto.Granted,
-		GrantedAt:  grantedAt,
 		ExpiresAt:  dto.ExpiresAt,
 	}
 

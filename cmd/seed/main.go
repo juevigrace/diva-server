@@ -51,8 +51,7 @@ func main() {
 
 	mailClient := mail.NewClient(serverConf.ResendAPIKey, serverConf.ResendFromEmail)
 
-	repoModule := di.NewRepoModule(queries)
-	serviceModule := di.NewServiceModule(repoModule, mailClient)
+	serviceModule := di.NewServiceModule(queries, mailClient)
 
 	user := dtos.CreateUserDto{
 		Email:    serverConf.RootEmail,

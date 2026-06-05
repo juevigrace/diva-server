@@ -5,13 +5,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 )
 
 func GetUUIDFromURL(r *http.Request, param string) (uuid.UUID, error) {
 	idParam := chi.URLParam(r, param)
 	if idParam == "" {
-		return uuid.Nil, models.ErrIDRequired
+		return uuid.Nil, errs.ErrIDRequired
 	}
 
 	id, err := uuid.Parse(idParam)

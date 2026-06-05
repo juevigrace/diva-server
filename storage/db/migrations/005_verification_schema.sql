@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS diva_action(
     id UUID NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     user_id UUID NOT NULL,
-    UNIQUE(user_id, name)
+    UNIQUE(user_id, name),
+    FOREIGN KEY(user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS diva_action_verification (

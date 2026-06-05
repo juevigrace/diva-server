@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -38,7 +39,7 @@ func (s *UserActionsService) GetOneByID(ctx context.Context, id uuid.UUID) (*mod
 	row, err := s.queries.GetUserActionByID(ctx, models.UUIDPtrToDB(&id))
 	if err != nil {
 		if ok := errors.Is(err, pgx.ErrNoRows); ok {
-			return nil, models.ErrActionNotFound
+			return nil, errs.ErrActionNotFound
 		} else {
 			return nil, err
 		}

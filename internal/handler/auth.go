@@ -30,7 +30,7 @@ func (h *AuthHandler) Routes(r chi.Router) {
 		auth.Post("/signUp", h.signUp)
 
 		auth.Group(func(protected chi.Router) {
-			protected.Use(middlewares.SessionMiddleware(h.sessionService.GetByID))
+			protected.Use(middlewares.RequiresSession(h.sessionService.GetByID))
 			protected.Post("/signOut", h.signOut)
 			protected.Post("/ping", h.ping)
 			protected.Post("/refresh", h.refresh)
@@ -50,7 +50,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.authService.SignIn(r.Context(), &dto)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.authService.SignUp(r.Context(), &dto)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authService.SignOut(r.Context(), session.ID); err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.authService.Refresh(r.Context(), session, &dto)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 
 	session, err := h.authService.ForgotPasswordConfirm(r.Context(), parsedID, &dto.SessionData)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 

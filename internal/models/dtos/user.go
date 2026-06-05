@@ -50,7 +50,7 @@ type UserPermissionDto struct {
 	UserId       string `json:"user_id" validate:"required,uuid"`
 	PermissionId string `json:"permission_id" validate:"required,uuid"`
 	Granted      bool   `json:"granted" validate:"required"`
-	ExpiresAt    int64  `json:"expires_at" validate:"required,omitempty,gt=0"`
+	ExpiresAt    *int64 `json:"expires_at"`
 }
 
 type CreateUserPreferencesDto struct {

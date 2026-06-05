@@ -13,26 +13,49 @@ import (
 )
 
 type PermissionsHandler struct {
-	service *service.PermissionService
+	service  *service.PermissionService
+	sService *service.SessionService
 }
 
-func NewPermissionsHandler(svc *service.PermissionService) *PermissionsHandler {
+func NewPermissionsHandler(
+	svc *service.PermissionService,
+	sService *service.SessionService,
+) *PermissionsHandler {
 	return &PermissionsHandler{
-		service: svc,
+		service:  svc,
+		sService: sService,
 	}
 }
 
 func (h *PermissionsHandler) Routes(r chi.Router) {
 	r.Route("/permissions", func(p chi.Router) {
-		p.Get("/", h.list)
+		p.Use(middlewares.RequiresSession(h.sService.GetByID))
+
+		p.With(
+			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+			middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
+		).Get("/", h.list)
+
 		p.Route("/{id}", func(pid chi.Router) {
-			p.Get("/", h.getByID)
-			p.Put("/", h.update)
-			p.Patch("/restore", h.restore)
-			p.Delete("/", h.softDelete)
-			p.Delete("/forever", h.delete)
+			pid.With(
+				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
+			).Get("/", h.getByID)
+
+			pid.With(
+				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
+			).Group(func(w chi.Router) {
+				w.Put("/", h.update)
+				w.Patch("/restore", h.restore)
+				w.Delete("/", h.softDelete)
+				w.Delete("/forever", h.delete)
+			})
 		})
-		p.Post("/", h.create)
+
+		p.With(
+			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+			middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
+		).Post("/", h.create)
 	})
 }
 
@@ -49,18 +72,9 @@ func (h *PermissionsHandler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	perms, err := middlewares.RequiresOwner(r, func(requester *models.User) bool {
-		return requester.Role == models.ROLE_USER
-	}, func(session *models.Session) (*[]*models.Permission, error) {
-		dbPerms, err := h.service.List(r.Context(), pagination)
-		if err != nil {
-			return nil, err
-		}
-
-		return &dbPerms, nil
-	})
+	perms, err := h.service.List(r.Context(), pagination)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -70,8 +84,8 @@ func (h *PermissionsHandler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := make([]*responses.PermissionResponse, len(*perms))
-	for i, p := range *perms {
+	res := make([]*responses.PermissionResponse, len(perms))
+	for i, p := range perms {
 		res[i] = p.Response()
 	}
 
@@ -86,22 +100,9 @@ func (h *PermissionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.Permission, error) {
-			perm, err := h.service.GetByID(r.Context(), pid)
-			if err != nil {
-				return nil, err
-			}
-
-			return perm, nil
-		},
-	)
+	perm, err := h.service.GetByID(r.Context(), pid)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -109,26 +110,14 @@ func (h *PermissionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PermissionsHandler) create(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.Permission, error) {
-			var dto dtos.CreatePermissionDto
-			if err := middlewares.ValidateBody(&dto, r); err != nil {
-				return nil, err
-			}
+	var dto dtos.CreatePermissionDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
 
-			if err := h.service.Create(r.Context(), &dto); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.service.Create(r.Context(), &dto); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -142,26 +131,14 @@ func (h *PermissionsHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.Permission, error) {
-			var dto dtos.UpdatePermissionDto
-			if err := middlewares.ValidateBody(&dto, r); err != nil {
-				return nil, err
-			}
+	var dto dtos.UpdatePermissionDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
 
-			if err := h.service.Update(r.Context(), pid, &dto); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.service.Update(r.Context(), pid, &dto); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -175,21 +152,8 @@ func (h *PermissionsHandler) restore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.Permission, error) {
-			if err := h.service.Restore(r.Context(), pid); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.service.Restore(r.Context(), pid); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -203,21 +167,8 @@ func (h *PermissionsHandler) softDelete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.Permission, error) {
-			if err := h.service.SoftDelete(r.Context(), pid); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.service.SoftDelete(r.Context(), pid); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -231,21 +182,8 @@ func (h *PermissionsHandler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.Permission, error) {
-			if err := h.service.Delete(r.Context(), pid); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.service.Delete(r.Context(), pid); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 

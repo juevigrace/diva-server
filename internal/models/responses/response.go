@@ -69,6 +69,10 @@ func RespondConflict(data any, message string) *APIResponse {
 	return Respond(http.StatusConflict, &data, message)
 }
 
+func RespondTooManyRequests(data any, message string) *APIResponse {
+	return Respond(http.StatusTooManyRequests, &data, message)
+}
+
 func RespondInternalServerError(data any, message string) *APIResponse {
 	return Respond(http.StatusInternalServerError, &data, message)
 }

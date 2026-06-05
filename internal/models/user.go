@@ -1,19 +1,9 @@
 package models
 
 import (
-	"errors"
-
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/storage/db"
-)
-
-var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrUsernameTaken      = errors.New("username already taken")
-	ErrEmailTaken         = errors.New("email already taken")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrSamePassword       = errors.New("passwords are the same")
 )
 
 type User struct {
@@ -46,9 +36,9 @@ type UserPermission struct {
 	Permission Permission
 	GrantedBy  *uuid.UUID
 	Granted    bool
-	GrantedAt  *int64
+	GrantedAt  int64
 	// TODO: change expiration time for enum with fixed times
-	ExpiresAt int64
+	ExpiresAt *int64
 	UpdatedAt int64
 }
 
@@ -148,7 +138,7 @@ func (up *UserPermission) DBCreate(userID uuid.UUID) *db.CreateUserPermissionPar
 		UserID:       UUIDPtrToDB(&userID),
 		GrantedBy:    UUIDPtrToDB(up.GrantedBy),
 		Granted:      up.Granted,
-		ExpiresAt:    IntPtrToDBTime(&up.ExpiresAt),
+		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
 	}
 }
 
@@ -157,7 +147,7 @@ func (up *UserPermission) DBUpdate(userID uuid.UUID) *db.UpdateUserPermissionPar
 		PermissionID: UUIDPtrToDB(&up.Permission.ID),
 		UserID:       UUIDPtrToDB(&userID),
 		Granted:      up.Granted,
-		ExpiresAt:    IntPtrToDBTime(&up.ExpiresAt),
+		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
 	}
 }
 
@@ -222,8 +212,8 @@ func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPer
 		Permission: *perm,
 		GrantedBy:  DBUUIDToUUIDPtr(row.GrantedBy),
 		Granted:    row.Granted,
-		GrantedAt:  DBTimeToIntPtr(row.GrantedAt),
-		ExpiresAt:  DBTimeToInt(row.ExpiresAt),
+		GrantedAt:  DBTimeToInt(row.GrantedAt),
+		ExpiresAt:  DBTimeToIntPtr(row.ExpiresAt),
 		UpdatedAt:  DBTimeToInt(row.UpdatedAt),
 	}
 }

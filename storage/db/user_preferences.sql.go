@@ -50,26 +50,6 @@ func (q *Queries) CreateUserPreferences(ctx context.Context, arg CreateUserPrefe
 	return err
 }
 
-const deletePreferences = `-- name: DeletePreferences :exec
-delete from diva_user_preferences
-where id = $1
-`
-
-func (q *Queries) DeletePreferences(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deletePreferences, id)
-	return err
-}
-
-const deletePreferencesByUser = `-- name: DeletePreferencesByUser :exec
-delete from diva_user_preferences
-where user_id = $1
-`
-
-func (q *Queries) DeletePreferencesByUser(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deletePreferencesByUser, userID)
-	return err
-}
-
 const getPreferencesByID = `-- name: GetPreferencesByID :one
 select
     up.id as id,

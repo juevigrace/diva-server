@@ -6,20 +6,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
 )
 
 type UserProfileHandler struct {
-	upService *service.UserProfileService
+	upService  *service.UserProfileService
+	uprService *service.UserPermissionService
 }
 
 func NewUserProfileHandler(
 	upService *service.UserProfileService,
+	uprHandler *service.UserPermissionService,
 ) *UserProfileHandler {
 	return &UserProfileHandler{
-		upService: upService,
+		upService:  upService,
+		uprService: uprHandler,
 	}
 }
 
@@ -39,26 +43,13 @@ func (h *UserProfileHandler) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*models.UserProfile, error) {
-			dbProfile, err := h.upService.GetByUserID(r.Context(), uid)
-			if err != nil {
-				return nil, err
-			}
-
-			return dbProfile, nil
-		},
-	)
+	dbProfile, err := h.upService.GetByUserID(r.Context(), uid)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(profile.Response(&uid), "profile retrieved"))
+	responses.WriteJSON(w, responses.RespondOk(dbProfile.Response(&uid), "profile retrieved"))
 }
 
 func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -68,27 +59,27 @@ func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*any, error) {
-			var dto dtos.CreateProfileDto
-			if err := middlewares.ValidateBody(&dto, r); err != nil {
-				return nil, err
-			}
-
-			if err := h.upService.Create(r.Context(), uid, &dto); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
 		return
+	}
+
+	var dto dtos.CreateProfileDto
+	if err = middlewares.ValidateBody(&dto, r); err != nil {
+		return
+	}
+
+	if err = h.upService.Create(r.Context(), uid, &dto); err != nil {
+		responses.HandleReqError(w, err)
+		return
+	}
+
+	if session.User.ID == uid {
+		if err := h.uprService.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_PROFILE_WRITE].Permission.ID); err != nil {
+			responses.HandleReqError(w, err)
+			return
+		}
 	}
 
 	responses.WriteJSON(w, responses.RespondCreated(nil, "profile created"))
@@ -101,26 +92,13 @@ func (h *UserProfileHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*any, error) {
-			var dto dtos.UpdateProfileDto
-			if err := middlewares.ValidateBody(&dto, r); err != nil {
-				return nil, err
-			}
+	var dto dtos.UpdateProfileDto
+	if err = middlewares.ValidateBody(&dto, r); err != nil {
+		return
+	}
 
-			if err := h.upService.Update(r.Context(), uid, &dto); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err = h.upService.Update(r.Context(), uid, &dto); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -134,21 +112,8 @@ func (h *UserProfileHandler) updateAvatar(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*any, error) {
-			if err := h.upService.UpdateAvatar(r.Context(), uid, ""); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err = h.upService.UpdateAvatar(r.Context(), uid, ""); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 

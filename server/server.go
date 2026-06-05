@@ -13,6 +13,7 @@ import (
 	"github.com/juevigrace/diva-server/concurrency"
 	"github.com/juevigrace/diva-server/internal/di"
 	"github.com/juevigrace/diva-server/internal/mail"
+	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/router"
@@ -68,9 +69,14 @@ func (s *Server) routes() {
 	serviceModule := di.NewServiceModule(queries, s.mail)
 	handlerModule := di.NewHandlerModule(serviceModule)
 
+	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
+
 	s.router.Chi.Route("/api", func(api chi.Router) {
+		api.Use(apiLimiter.Middleware)
+
 		handlerModule.Auth.Routes(api)
 		handlerModule.User.Routes(api)
+		handlerModule.Session.Routes(api)
 		handlerModule.Verification.Routes(api)
 		handlerModule.Permissions.Routes(api)
 	})

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/util"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -123,11 +124,11 @@ func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID
 	}
 
 	if record.ExpiresAt.Before(time.Now().UTC()) {
-		return nil, models.ErrTokenExpired
+		return nil, errs.ErrTokenExpired
 	}
 
 	if record.Token != token {
-		return nil, models.ErrTokenInvalid
+		return nil, errs.ErrTokenInvalid
 	}
 
 	params := db.UpdateUserVerificationParams{

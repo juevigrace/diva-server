@@ -52,13 +52,3 @@ update diva_user_preferences set
     last_sync_at = now(),
     updated_at = now()
 where id = $3;
-
--- name: DeletePreferences :exec
-delete from diva_user_preferences
-where id = $1
-;
-
--- name: DeletePreferencesByUser :exec
-delete from diva_user_preferences
-where user_id = $1
-;

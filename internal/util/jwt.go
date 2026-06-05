@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 )
 
 type JwtData struct {
@@ -79,15 +79,15 @@ func ValidateJWT(tokenString string) (*JWTClaims, error) {
 
 	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
-		return nil, models.ErrTokenNotValid
+		return nil, 	errs.ErrTokenNotValid
 	}
 
 	if len(claims.Audience) > 1 || claims.Audience[0] != "api" {
-		return nil, models.ErrBadAudience
+		return nil, errs.ErrBadAudience
 	}
 
 	if claims.Issuer != Issuer {
-		return nil, models.ErrBadIssuer
+		return nil, errs.ErrBadIssuer
 	}
 
 	return claims, nil

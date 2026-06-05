@@ -6,61 +6,58 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
 )
 
 type SessionHandler struct {
-	Service *service.SessionService
+	sService *service.SessionService
 }
 
-func NewSessionHandler(svc *service.SessionService) *SessionHandler {
-	return &SessionHandler{Service: svc}
+func NewSessionHandler(sService *service.SessionService) *SessionHandler {
+	return &SessionHandler{sService: sService}
+}
+
+func (h *SessionHandler) UserRoutes(r chi.Router) {
+	r.Route("/sessions", func(s chi.Router) {
+		s.Get("/", h.listByUser)
+		s.Route("/{sid}", func(sid chi.Router) {
+			sid.Get("/", h.getByID)
+			sid.Delete("/", h.close)
+		})
+	})
 }
 
 func (h *SessionHandler) Routes(r chi.Router) {
 	r.Route("/sessions", func(s chi.Router) {
-		s.Get("/", h.list)
-		s.Get("/{sid}", h.getByID)
-		s.Delete("/{sid}", h.close)
+		s.Use(middlewares.RequiresSession(h.sService.GetByID))
+		s.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
 		s.Delete("/expired", h.deleteExpired)
 	})
 }
 
-func (h *SessionHandler) list(w http.ResponseWriter, r *http.Request) {
+func (h *SessionHandler) listByUser(w http.ResponseWriter, r *http.Request) {
 	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	sessions, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*[]*models.Session, error) {
-			sessions, err := h.Service.GetByUser(r.Context(), session.User.ID)
-			if err != nil {
-				return nil, err
-			}
-			return &sessions, nil
-		},
-	)
+	sessions, err := h.sService.GetByUser(r.Context(), uid)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
-	res := make([]*responses.SessionResponse, len(*sessions))
-	for i, s := range *sessions {
+	res := make([]*responses.SessionResponse, len(sessions))
+	for i, s := range sessions {
 		res[i] = s.Response()
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(res, "sessions retrieved"))
 }
 
-// TODO: finished here
 func (h *SessionHandler) getByID(w http.ResponseWriter, r *http.Request) {
 	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
@@ -74,30 +71,18 @@ func (h *SessionHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*models.Session, error) {
-			dbSession, err := h.Service.GetByID(r.Context(), sid)
-			if err != nil {
-				return nil, err
-			}
-
-			if dbSession.User.ID != uid {
-				return nil, models.ErrForbidden
-			}
-
-			return dbSession, nil
-		},
-	)
+	dbSession, err := h.sService.GetByID(r.Context(), sid)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(session.Response(), "Session retrieved"))
+	if dbSession.User.ID != uid {
+		responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrForbidden.Error()))
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(dbSession.Response(), "session retrieved"))
 }
 
 func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
@@ -113,30 +98,25 @@ func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*models.Session, error) {
-			target, err := h.Service.GetByID(r.Context(), sid)
-			if err != nil {
-				return nil, err
-			}
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
+		return
+	}
 
-			if session.User.Role == models.ROLE_USER && target.User.ID != uid {
-				return nil, models.ErrForbidden
-			}
-
-			if err := h.Service.Close(r.Context(), sid); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
+	target, err := h.sService.GetByID(r.Context(), sid)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
+		return
+	}
+
+	if session.User.Role == models.ROLE_USER && target.User.ID != uid {
+		responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrForbidden.Error()))
+		return
+	}
+
+	if err := h.sService.Close(r.Context(), sid); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -144,17 +124,8 @@ func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SessionHandler) deleteExpired(w http.ResponseWriter, r *http.Request) {
-	_, err := middlewares.RequiresOwner(r, func(requester *models.User) bool {
-		return requester.Role == models.ROLE_USER
-	}, func(session *models.Session) (*any, error) {
-		if err := h.Service.DeleteExpired(r.Context()); err != nil {
-			return nil, err
-		}
-
-		return nil, nil
-	})
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.sService.DeleteExpired(r.Context()); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 

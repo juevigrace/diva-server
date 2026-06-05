@@ -63,11 +63,3 @@ func (s *UserPreferencesService) Update(ctx context.Context, id uuid.UUID, dto *
 
 	return s.queries.UpdateUserPreferences(ctx, *pref.DBUpdate())
 }
-
-func (s *UserPreferencesService) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.queries.DeletePreferences(ctx, models.UUIDPtrToDB(&id))
-}
-
-func (s *UserPreferencesService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.DeletePreferencesByUser(ctx, models.UUIDPtrToDB(&userID))
-}

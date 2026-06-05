@@ -19,14 +19,19 @@ func NewUserActionsHandler(svc *service.UserActionsService, sessionService *serv
 	return &UserActionsHandler{service: svc, sessionService: sessionService}
 }
 
-func (h *UserActionsHandler) Routes(r chi.Router) {
-	r.Route("/{uid}/actions", func(uid chi.Router) {
-		uid.Get("/", h.getAll)
-		uid.Get("/{aid}", h.getByID)
+func (h *UserActionsHandler) UserRoutes(r chi.Router) {
+	r.Route("/actions", func(a chi.Router) {
+		a.Get("/", h.getAll)
+		a.Get("/{aid}", h.getByID)
 	})
+}
+
+func (h *UserActionsHandler) Routes(r chi.Router) {
 	r.Route("/actions", func(ac chi.Router) {
 		ac.Route("/{aid}", func(aid chi.Router) {
-			aid.Delete("/", h.deleteAction)
+			aid.With(
+				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+			).Delete("/", h.deleteAction)
 		})
 	})
 }
@@ -38,27 +43,18 @@ func (h *UserActionsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actions, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*[]models.UserAction, error) {
-			dbActions, err := h.service.GetAllByUser(r.Context(), uid)
-			if err != nil {
-				return nil, err
-			}
-
-			return &dbActions, err
-		},
-	)
+	actions, err := h.service.GetAllByUser(r.Context(), uid)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
+		return
+	}
+	if err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 
-	res := make([]*responses.UserActionResponse, len(*actions))
-	for i, a := range *actions {
+	res := make([]*responses.UserActionResponse, len(actions))
+	for i, a := range actions {
 		res[i] = a.Response()
 	}
 
@@ -66,38 +62,15 @@ func (h *UserActionsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserActionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
 	actionID, err := middlewares.GetUUIDFromURL(r, "aid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	action, err := middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER && requester.ID != uid
-		},
-		func(session *models.Session) (*models.UserAction, error) {
-			dbAction, err := h.service.GetOneByID(r.Context(), actionID)
-			if err != nil {
-				return nil, err
-			}
-
-			if dbAction.UserID != uid {
-				return nil, models.ErrForbidden
-			}
-
-			return dbAction, nil
-		},
-	)
+	action, err := h.service.GetOneByID(r.Context(), actionID)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -111,21 +84,8 @@ func (h *UserActionsHandler) deleteAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err = middlewares.RequiresOwner(
-		r,
-		func(requester *models.User) bool {
-			return requester.Role == models.ROLE_USER
-		},
-		func(session *models.Session) (*models.UserAction, error) {
-			if err := h.service.Delete(r.Context(), actionID); err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		},
-	)
-	if err != nil {
-		handleReqError(w, err)
+	if err := h.service.Delete(r.Context(), actionID); err != nil {
+		responses.HandleReqError(w, err)
 		return
 	}
 

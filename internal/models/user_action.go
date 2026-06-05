@@ -1,19 +1,11 @@
 package models
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/storage/db"
-)
-
-var (
-	ErrTokenExpired      = errors.New("token expired")
-	ErrTokenInvalid      = errors.New("token invalid")
-	ErrActionNotFound    = errors.New("action not found")
-	ErrActionNotVerified = errors.New("action not verified")
 )
 
 type UserAction struct {

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/util"
 	"github.com/juevigrace/diva-server/storage/db"
@@ -61,7 +62,7 @@ func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.Us
 	row, err := s.queries.GetUserByID(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, models.ErrUserNotFound
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -91,7 +92,7 @@ func (s *UserService) GetByUsername(ctx context.Context, username string) (*mode
 	row, err := s.queries.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, models.ErrUserNotFound
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -101,7 +102,7 @@ func (s *UserService) GetByUsername(ctx context.Context, username string) (*mode
 func (s *UserService) CheckUsernameAvailable(ctx context.Context, username string) (bool, error) {
 	_, err := s.GetByUsername(ctx, username)
 	if err != nil {
-		if errors.Is(err, models.ErrUserNotFound) {
+		if errors.Is(err, errs.ErrUserNotFound) {
 			return true, nil
 		} else {
 			return false, err
@@ -114,7 +115,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 	row, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, models.ErrUserNotFound
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -125,7 +126,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 func (s *UserService) CheckEmailAvailable(ctx context.Context, email string) (bool, error) {
 	_, err := s.GetByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, models.ErrUserNotFound) {
+		if errors.Is(err, errs.ErrUserNotFound) {
 			return true, nil
 		} else {
 			return false, err
@@ -138,7 +139,7 @@ func (s *UserService) GetByUsernameOrEmail(ctx context.Context, value string) (*
 	row, err := s.queries.GetUserByUsernameOrEmail(ctx, value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, models.ErrUserNotFound
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -152,8 +153,9 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 		return uuid.Nil, err
 	}
 
+	uid := uuid.New()
 	params := &models.User{
-		ID:           uuid.New(),
+		ID:           uid,
 		Email:        dto.Email,
 		Username:     dto.Username,
 		PasswordHash: passwordHash,
@@ -168,7 +170,17 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 		return uuid.Nil, err
 	}
 
-	return params.ID, nil
+	perms := []models.PermissionAction{models.PERMISSION_USERS_PROFILE_WRITE, models.PERMISSION_USERS_PREFERENCES_WRITE}
+	for i := range perms {
+		if err := s.upService.GrantByName(ctx, perms[i], nil, nil, uid); err != nil {
+			if err := s.Delete(ctx, uid); err != nil {
+				return uuid.Nil, err
+			}
+			return uuid.Nil, err
+		}
+	}
+
+	return uid, nil
 }
 
 func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPassword string) error {
@@ -178,7 +190,7 @@ func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPass
 	}
 
 	if util.ValidatePassword(newPassword, dbUser.PasswordHash) {
-		return models.ErrSamePassword
+		return errs.ErrSamePassword
 	}
 
 	newHash, err := util.HashPassword(newPassword)
@@ -223,7 +235,6 @@ func (s *UserService) UpdateVerified(ctx context.Context, verified bool, userID 
 		Verified: verified,
 		ID:       models.UUIDPtrToDB(&userID),
 	})
-
 }
 
 func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {

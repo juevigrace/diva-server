@@ -1,19 +1,9 @@
 package models
 
 import (
-	"errors"
-
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/storage/db"
-)
-
-var (
-	ErrTokenNotValid   = errors.New("token is not valid")
-	ErrBadAudience     = errors.New("bad audience in token")
-	ErrBadIssuer       = errors.New("bad issuer in token")
-	ErrSessionNotFound = errors.New("session not found")
-	ErrSessionInvalid  = errors.New("invalid session")
 )
 
 type Session struct {

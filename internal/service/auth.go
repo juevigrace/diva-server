@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/util"
 )
@@ -45,11 +46,11 @@ func (s *AuthService) SignUp(ctx context.Context, dto *dtos.SignUpDto) (*models.
 func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*models.Session, error) {
 	user, err := s.uService.GetByUsernameOrEmail(ctx, dto.Username)
 	if err != nil {
-		return nil, models.ErrInvalidCredentials
+		return nil, errs.ErrInvalidCredentials
 	}
 
 	if !util.ValidatePassword(dto.Password, user.PasswordHash) {
-		return nil, models.ErrInvalidCredentials
+		return nil, errs.ErrInvalidCredentials
 	}
 
 	session, err := s.sService.Create(ctx, user.ID, models.SESSION_NORMAL, &dto.SessionData)
@@ -65,7 +66,7 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 		if err := s.sService.Close(ctx, session.ID); err != nil {
 			return nil, err
 		}
-		return nil, models.ErrSessionInvalid
+		return nil, errs.ErrSessionInvalid
 	}
 	updated, err := s.sService.Update(ctx, session)
 	if err != nil {
@@ -81,7 +82,7 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, actionID uuid.U
 	}
 
 	if !dbUV.Verified {
-		return nil, models.ErrActionNotVerified
+		return nil, errs.ErrActionNotVerified
 	}
 
 	session, err := s.sService.CreateTemporal(ctx, dbUV.Action.UserID, sd)
@@ -89,7 +90,7 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, actionID uuid.U
 		return nil, err
 	}
 
-	dbPerm, err := s.pService.GetByName(ctx, models.PERMISSION_PASSWORD_UPDATE)
+	dbPerm, err := s.pService.GetByName(ctx, models.PERMISSION_USERS_PASSWORD_WRITE)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, actionID uuid.U
 		Permission: *dbPerm,
 		GrantedBy:  nil,
 		Granted:    true,
-		ExpiresAt:  exp,
+		ExpiresAt:  &exp,
 	}
 
 	if err := s.uService.upService.Create(ctx, dbUV.Action.UserID, perm); err != nil {

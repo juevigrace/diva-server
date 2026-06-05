@@ -1,13 +1,7 @@
 package models
 
 import (
-	"errors"
-
 	"github.com/juevigrace/diva-server/storage/db"
-)
-
-var (
-	ErrAdminAccessRequired = errors.New("admin access required")
 )
 
 type Role int

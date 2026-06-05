@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
@@ -33,6 +34,7 @@ func NewVerificationHandler(
 	}
 }
 
+// TODO: create verification actions to user data updates
 func (h *UserVerificationHandler) Routes(r chi.Router) {
 	r.Route("/verification", func(v chi.Router) {
 		v.Post("/request", h.requestVerification)
@@ -49,19 +51,19 @@ func (h *UserVerificationHandler) requestVerification(w http.ResponseWriter, r *
 
 	parsedAction := models.ActionFromString(dto.Action)
 	if parsedAction == -1 {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, models.ErrActionNotFound.Error()))
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, errs.ErrActionNotFound.Error()))
 		return
 	}
 
 	dbUser, err := h.uService.GetByEmail(r.Context(), dto.Email)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
 	res, err := h.vService.RequestVerification(r.Context(), dbUser, parsedAction)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -83,7 +85,7 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 
 	va, err := h.vService.Verify(r.Context(), actionID, dto.Token)
 	if err != nil {
-		handleReqError(w, err)
+		responses.HandleReqError(w, err)
 		return
 	}
 
@@ -91,17 +93,17 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 	case models.ActionPasswordReset:
 	case models.ActionUserVerification:
 		if !va.Verified {
-			responses.WriteJSON(w, responses.RespondForbbiden(nil, models.ErrActionNotVerified.Error()))
+			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
 			return
 		}
 
 		if err := h.uService.UpdateVerified(r.Context(), true, va.Action.UserID); err != nil {
-			handleReqError(w, err)
+			responses.HandleReqError(w, err)
 			return
 		}
 
 		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
-			handleReqError(w, err)
+			responses.HandleReqError(w, err)
 			return
 		}
 	}
