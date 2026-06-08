@@ -44,6 +44,7 @@ type UserPermission struct {
 
 type UserPreferences struct {
 	ID                  uuid.UUID
+	UserID              uuid.UUID
 	Device              string
 	Theme               Theme
 	OnboardingCompleted bool
@@ -67,13 +68,8 @@ func (u *User) Response() *responses.UserResponse {
 	}
 }
 
-func (up *UserProfile) Response(id *uuid.UUID) *responses.UserProfileResponse {
-	var userID *string = new(string)
-	if id != nil {
-		*userID = id.String()
-	}
+func (up *UserProfile) Response() *responses.UserProfileResponse {
 	return &responses.UserProfileResponse{
-		UserID:    userID,
 		FirstName: up.FirstName,
 		LastName:  up.LastName,
 		BirthDate: up.BirthDate,
@@ -83,19 +79,13 @@ func (up *UserProfile) Response(id *uuid.UUID) *responses.UserProfileResponse {
 	}
 }
 
-func (up *UserPermission) Response(id *uuid.UUID) *responses.UserPermissionResponse {
-	var userID *string = new(string)
-	if id != nil {
-		*userID = id.String()
-	}
-
+func (up *UserPermission) Response() *responses.UserPermissionResponse {
 	var grantedBy *string = new(string)
 	if up.GrantedBy != nil {
 		*grantedBy = up.GrantedBy.String()
 	}
 
 	return &responses.UserPermissionResponse{
-		UserID:       userID,
 		PermissionID: up.Permission.ID.String(),
 		GrantedBy:    grantedBy,
 		Granted:      up.Granted,
@@ -105,13 +95,8 @@ func (up *UserPermission) Response(id *uuid.UUID) *responses.UserPermissionRespo
 	}
 }
 
-func (up *UserPreferences) Response(id *uuid.UUID) *responses.UserPreferencesResponse {
-	var userID *string = new(string)
-	if id != nil {
-		*userID = id.String()
-	}
+func (up *UserPreferences) Response() *responses.UserPreferencesResponse {
 	return &responses.UserPreferencesResponse{
-		UserID:              userID,
 		Id:                  up.ID.String(),
 		Theme:               up.Theme.String(),
 		OnboardingCompleted: up.OnboardingCompleted,
@@ -221,6 +206,7 @@ func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPer
 func UserPrefsFromDB(row *db.DivaUserPreference) *UserPreferences {
 	return &UserPreferences{
 		ID:                  row.ID.Bytes,
+		UserID:              DBUUIDToUUID(row.UserID),
 		Device:              row.Device,
 		Theme:               ThemeFromDB(row.Theme),
 		OnboardingCompleted: row.OnboardingCompleted,

@@ -12,18 +12,14 @@ type contextKey string
 const requestContextKey contextKey = "request_context"
 
 type RequestContext struct {
-	Session     *models.Session
-	Roles       []*RoleRequirement
-	Ownerships  []*OwnershipRequirement
-	Permissions []*PermissionRequirement
+	Session *models.Session
+	Cache   map[string]any
 }
 
 func NewRequestContext(session *models.Session) *RequestContext {
 	return &RequestContext{
-		Session:     session,
-		Roles:       make([]*RoleRequirement, 0),
-		Ownerships:  make([]*OwnershipRequirement, 0),
-		Permissions: make([]*PermissionRequirement, 0),
+		Session: session,
+		Cache:   make(map[string]any, 0),
 	}
 }
 

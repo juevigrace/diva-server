@@ -1,13 +1,15 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
 )
@@ -27,12 +29,30 @@ func NewUserProfileHandler(
 	}
 }
 
-func (h *UserProfileHandler) Routes(r chi.Router) {
+func (h *UserProfileHandler) UserRoutes(r chi.Router) {
 	r.Route("/profile", func(pr chi.Router) {
 		pr.Get("/", h.getOne)
-		pr.Post("/", h.create)
-		pr.Put("/", h.update)
-		pr.Patch("/avatar", h.updateAvatar)
+		pr.With(
+			middlewares.RequirePermission(models.PERMISSION_USERS_PROFILE_WRITE),
+			middlewares.RequireResourceOwner(
+				"uid",
+				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
+					return nil, reqid == resid
+				},
+				models.PERMISSION_USERS_PROFILE_WRITE,
+			),
+		).Post("/", h.create)
+		pr.Group(func(rg chi.Router) {
+			rg.Use(middlewares.RequireResourceOwner(
+				"uid",
+				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
+					return nil, reqid == resid
+				},
+				models.PERMISSION_USERS_PROFILE_WRITE,
+			))
+			rg.Put("/", h.update)
+			rg.Patch("/avatar", h.updateAvatar)
+		})
 	})
 }
 
@@ -49,7 +69,7 @@ func (h *UserProfileHandler) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(dbProfile.Response(&uid), "profile retrieved"))
+	responses.WriteJSON(w, responses.RespondOk(dbProfile.Response(), "profile retrieved"))
 }
 
 func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {

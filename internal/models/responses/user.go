@@ -13,18 +13,16 @@ type UserResponse struct {
 }
 
 type UserProfileResponse struct {
-	UserID      *string `json:"user_id,omitempty"`
-	FirstName   string  `json:"first_name"`
-	LastName    string  `json:"last_name"`
-	BirthDate   int64   `json:"birth_date"`
-	PhoneNumber string  `json:"phone_number"`
-	Alias       string  `json:"alias"`
-	Avatar      string  `json:"avatar"`
-	Bio         string  `json:"bio"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	BirthDate   int64  `json:"birth_date"`
+	PhoneNumber string `json:"phone_number"`
+	Alias       string `json:"alias"`
+	Avatar      string `json:"avatar"`
+	Bio         string `json:"bio"`
 }
 
 type UserPermissionResponse struct {
-	UserID       *string `json:"user_id,omitempty"`
 	PermissionID string  `json:"permission_id"`
 	GrantedBy    *string `json:"granted_by"`
 	Granted      bool    `json:"granted"`
@@ -34,14 +32,13 @@ type UserPermissionResponse struct {
 }
 
 type UserPreferencesResponse struct {
-	UserID              *string `json:"user_id,omitempty"`
-	Id                  string  `json:"id"`
-	Theme               string  `json:"theme"`
-	OnboardingCompleted bool    `json:"onboarding_completed"`
-	Language            string  `json:"language"`
-	LastSyncAt          int64   `json:"last_sync_at"`
-	CreatedAt           int64   `json:"created_at"`
-	UpdatedAt           int64   `json:"updated_at"`
+	Id                  string `json:"id"`
+	Theme               string `json:"theme"`
+	OnboardingCompleted bool   `json:"onboarding_completed"`
+	Language            string `json:"language"`
+	LastSyncAt          int64  `json:"last_sync_at"`
+	CreatedAt           int64  `json:"created_at"`
+	UpdatedAt           int64  `json:"updated_at"`
 }
 
 type UserActionResponse struct {

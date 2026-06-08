@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -22,34 +23,45 @@ func NewUserPermissionHandler(svc *service.UserPermissionService) *UserPermissio
 	return &UserPermissionHandler{service: svc}
 }
 
+// TODO: implement better internal logic to a better management of permissions
 func (h *UserPermissionHandler) UserRoutes(r chi.Router) {
-	r.Route("/permissions", func(uid chi.Router) {
-		uid.Get("/", h.getAll)
-		uid.Route("/{pid}", func(pid chi.Router) {
-			pid.Get("/", h.getOneByUser)
-			pid.With(
+	r.Route("/permissions", func(perms chi.Router) {
+		perms.Group(func(rg chi.Router) {
+			rg.Use(middlewares.RequireResourceOwner(
+				"uid",
+				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
+					return nil, reqid == resid
+				},
+				models.PERMISSION_USER_PERMISSIONS_READ,
+			))
+			rg.Get("/", h.getByUser)
+			rg.Get("/{pid}", h.getOneByUser)
+		})
+
+		perms.Group(func(admin chi.Router) {
+			admin.Use(
 				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
 				middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE),
-			).Delete("/", h.deletePermission)
+			)
+			admin.Delete("/{pid}", h.deletePermission)
+			admin.Delete("/", h.deleteByUser)
 		})
-		uid.With(
-			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-			middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE),
-		).Delete("/", h.deleteByUser)
 	})
 
 }
 
 func (h *UserPermissionHandler) Routes(r chi.Router) {
 	r.Route("/permissions", func(perms chi.Router) {
-		perms.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
-		perms.Use(middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE))
+		perms.Use(
+			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+			middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE),
+		)
 		perms.Post("/", h.createPermission)
 		perms.Put("/", h.updatePermission)
 	})
 }
 
-func (h *UserPermissionHandler) getAll(w http.ResponseWriter, r *http.Request) {
+func (h *UserPermissionHandler) getByUser(w http.ResponseWriter, r *http.Request) {
 	uid, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
@@ -64,7 +76,7 @@ func (h *UserPermissionHandler) getAll(w http.ResponseWriter, r *http.Request) {
 
 	res := make([]*responses.UserPermissionResponse, len(perms))
 	for i, p := range perms {
-		res[i] = p.Response(&uid)
+		res[i] = p.Response()
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(res, "permission retrieved"))
@@ -89,7 +101,7 @@ func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(perm.Response(&uid), "permission retrieved"))
+	responses.WriteJSON(w, responses.RespondOk(perm.Response(), "permission retrieved"))
 }
 
 func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.Request) {

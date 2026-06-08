@@ -36,19 +36,21 @@ func (h *PermissionsHandler) Routes(r chi.Router) {
 			middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
 		).Get("/", h.list)
 
-		p.Route("/{id}", func(pid chi.Router) {
+		p.Route("/{pid}", func(pid chi.Router) {
 			pid.With(
+				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
 				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
 			).Get("/", h.getByID)
 
-			pid.With(
-				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
-			).Group(func(w chi.Router) {
-				w.Put("/", h.update)
-				w.Patch("/restore", h.restore)
-				w.Delete("/", h.softDelete)
-				w.Delete("/forever", h.delete)
+			pid.Group(func(wg chi.Router) {
+				wg.Use(
+					middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+					middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
+				)
+				wg.Put("/", h.update)
+				wg.Patch("/restore", h.restore)
+				wg.Delete("/", h.softDelete)
+				wg.Delete("/forever", h.delete)
 			})
 		})
 
