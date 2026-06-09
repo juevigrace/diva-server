@@ -26,15 +26,24 @@ type Action int
 
 const (
 	ActionUserVerification Action = iota
-	ActionPasswordReset
+	ActionPasswordUpdate
+	ActionEmailUpdate
+	ActionUsernameUpdate
+	ActionPhoneUpdate
 )
 
 func (a Action) String() string {
 	switch a {
 	case ActionUserVerification:
 		return "USER_VERIFICATION"
-	case ActionPasswordReset:
+	case ActionPasswordUpdate:
 		return "PASSWORD_RESET"
+	case ActionEmailUpdate:
+		return "EMAIL_UPDATE"
+	case ActionUsernameUpdate:
+		return "USERNAME_UPDATE"
+	case ActionPhoneUpdate:
+		return "PHONE_UPDATE"
 	default:
 		return ""
 	}
@@ -45,7 +54,13 @@ func ActionFromString(s string) Action {
 	case "USER_VERIFICATION":
 		return ActionUserVerification
 	case "PASSWORD_RESET":
-		return ActionPasswordReset
+		return ActionPasswordUpdate
+	case "EMAIL_UPDATE":
+		return ActionEmailUpdate
+	case "USERNAME_UPDATE":
+		return ActionUsernameUpdate
+	case "PHONE_UPDATE":
+		return ActionPhoneUpdate
 	default:
 		return -1
 	}

@@ -44,7 +44,6 @@ func NewUserHandler(
 
 func (h *UserHandler) Routes(r chi.Router) {
 	r.Route("/user", func(u chi.Router) {
-		// TODO: protect this with a key or something
 		u.Route("/check", func(check chi.Router) {
 			check.Get("/username/{username}", h.checkUsername)
 			check.Get("/email/{email}", h.checkEmail)

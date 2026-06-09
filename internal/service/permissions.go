@@ -74,8 +74,6 @@ func (s *PermissionService) Update(ctx context.Context, pid uuid.UUID, dto *dtos
 		ID:          pid,
 		Name:        dto.Name,
 		Description: dto.Description,
-		Action:      models.PermissionActionFromString(dto.Action),
-		RoleLevel:   models.RoleFromString(dto.RoleLevel),
 	}
 	return s.queries.UpdatePermission(ctx, *perm.DBUpdate())
 }

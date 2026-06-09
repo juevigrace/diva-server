@@ -2,13 +2,14 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
 )
@@ -18,6 +19,7 @@ type UserVerificationHandler struct {
 	uService  *service.UserService
 	uaService *service.UserActionsService
 	vService  *service.UserVerificationService
+	upService *service.UserPermissionService
 }
 
 func NewVerificationHandler(
@@ -25,12 +27,14 @@ func NewVerificationHandler(
 	uService *service.UserService,
 	uaService *service.UserActionsService,
 	vService *service.UserVerificationService,
+	upService *service.UserPermissionService,
 ) *UserVerificationHandler {
 	return &UserVerificationHandler{
 		sService:  sService,
 		uService:  uService,
-		vService:  vService,
 		uaService: uaService,
+		vService:  vService,
+		upService: upService,
 	}
 }
 
@@ -90,7 +94,7 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 	}
 
 	switch va.Action.Name {
-	case models.ActionPasswordReset:
+	case models.ActionPasswordUpdate:
 	case models.ActionUserVerification:
 		if !va.Verified {
 			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
@@ -98,6 +102,32 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 		}
 
 		if err := h.uService.UpdateVerified(r.Context(), true, va.Action.UserID); err != nil {
+			responses.HandleReqError(w, err)
+			return
+		}
+
+		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
+			responses.HandleReqError(w, err)
+			return
+		}
+	case models.ActionEmailUpdate, models.ActionUsernameUpdate, models.ActionPhoneUpdate:
+		if !va.Verified {
+			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
+			return
+		}
+
+		var permAction models.PermissionAction
+		switch va.Action.Name {
+		case models.ActionEmailUpdate:
+			permAction = models.PERMISSION_USERS_EMAIL_WRITE
+		case models.ActionUsernameUpdate:
+			permAction = models.PERMISSION_USERS_USERNAME_WRITE
+		case models.ActionPhoneUpdate:
+			permAction = models.PERMISSION_USERS_PHONE_WRITE
+		}
+
+		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
+		if err := h.upService.GrantByName(r.Context(), permAction, nil, &exp, va.Action.UserID); err != nil {
 			responses.HandleReqError(w, err)
 			return
 		}

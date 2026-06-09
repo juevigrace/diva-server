@@ -8,6 +8,7 @@ import (
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/service"
 )
@@ -49,6 +50,9 @@ func (h *PermissionsHandler) Routes(r chi.Router) {
 				)
 				wg.Put("/", h.update)
 				wg.Patch("/restore", h.restore)
+			})
+			pid.Group(func(wg chi.Router) {
+				wg.Use(middlewares.RequireRole(models.ROLE_ADMIN))
 				wg.Delete("/", h.softDelete)
 				wg.Delete("/forever", h.delete)
 			})
@@ -115,6 +119,18 @@ func (h *PermissionsHandler) create(w http.ResponseWriter, r *http.Request) {
 	var dto dtos.CreatePermissionDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
+		return
+	}
+
+	requestedLevel := models.RoleFromString(dto.RoleLevel)
+	if session.User.Role < requestedLevel {
+		responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrForbidden.Error()))
 		return
 	}
 

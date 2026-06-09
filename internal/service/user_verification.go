@@ -78,7 +78,6 @@ func (s *UserVerificationService) RequestVerification(
 	return &verification.Action, nil
 }
 
-// TODO: this could be improved
 func (s *UserVerificationService) Generate(
 	ctx context.Context,
 	action *models.UserAction,
