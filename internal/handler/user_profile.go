@@ -108,9 +108,11 @@ func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.User.ID == uid {
-		if err := h.uprService.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_PROFILE_WRITE].Permission.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PROFILE_WRITE]; ok {
+			if err := h.uprService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 	}
 

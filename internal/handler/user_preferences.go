@@ -207,9 +207,11 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 	}
 
 	if session.User.ID == uid {
-		if err := h.uprService.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_PREFERENCES_WRITE].Permission.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PREFERENCES_WRITE]; ok {
+			if err := h.uprService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 	}
 

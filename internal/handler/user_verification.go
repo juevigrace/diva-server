@@ -95,6 +95,7 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 
 	switch va.Action.Name {
 	case models.ActionPasswordUpdate:
+		// TODO: ?
 	case models.ActionUserVerification:
 		if !va.Verified {
 			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
@@ -126,6 +127,7 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 			permAction = models.PERMISSION_USERS_PHONE_WRITE
 		}
 
+		// TODO: make check to see if permission is created and if it is update expiration
 		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
 		if err := h.upService.CreateByName(r.Context(), permAction, nil, true, &exp, va.Action.UserID); err != nil {
 			responses.HandleReqError(w, err)

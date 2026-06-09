@@ -309,9 +309,11 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.User.ID == uid {
-		if err := h.upHandler.service.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE].Permission.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
+			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 	}
 
@@ -348,9 +350,11 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.User.ID == uid {
-		if err := h.upHandler.service.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE].Permission.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
+			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 	}
 
@@ -382,9 +386,11 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.User.ID == uid {
-		if err := h.upHandler.service.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE].Permission.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
+			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 	}
 
@@ -416,9 +422,11 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.User.ID == uid {
-		if err := h.upHandler.service.Delete(r.Context(), session.User.ID, session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE].Permission.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
+			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 	}
 

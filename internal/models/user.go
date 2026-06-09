@@ -82,8 +82,9 @@ func (up *UserProfile) Response() *responses.UserProfileResponse {
 }
 
 func (up *UserPermission) Response() *responses.UserPermissionResponse {
-	var grantedBy *string = new(string)
+	var grantedBy *string
 	if up.GrantedBy != nil {
+		grantedBy = new(string)
 		*grantedBy = up.GrantedBy.String()
 	}
 
