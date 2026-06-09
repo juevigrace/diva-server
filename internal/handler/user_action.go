@@ -25,11 +25,20 @@ func (h *UserActionsHandler) UserRoutes(r chi.Router) {
 	r.Route("/actions", func(act chi.Router) {
 		act.Group(func(rg chi.Router) {
 			rg.Use(middlewares.RequireResourceOwner(
-				"uid",
-				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-					return nil, reqid == resid
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"uid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_ACTIONS_READ},
 				},
-				models.PERMISSION_ACTIONS_READ,
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
+					if reqid != resid {
+						return nil, false
+					}
+					return map[string]any{"uid": resid}, true
+				},
 			))
 			rg.Get("/", h.getAll)
 		})
@@ -40,8 +49,15 @@ func (h *UserActionsHandler) Routes(r chi.Router) {
 	r.Route("/actions", func(ac chi.Router) {
 		ac.Route("/{aid}", func(aid chi.Router) {
 			aid.With(middlewares.RequireResourceOwner(
-				"aid",
-				func(ctx context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"aid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_ACTIONS_READ},
+				},
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					action, err := h.service.GetOneByID(ctx, resid)
 					if err != nil {
 						return nil, false
@@ -49,9 +65,8 @@ func (h *UserActionsHandler) Routes(r chi.Router) {
 					if action.UserID != reqid {
 						return nil, false
 					}
-					return action, true
+					return map[string]any{"aid": action}, true
 				},
-				models.PERMISSION_ACTIONS_READ,
 			)).Get("/", h.getByID)
 			aid.With(
 				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
@@ -62,10 +77,19 @@ func (h *UserActionsHandler) Routes(r chi.Router) {
 }
 
 func (h *UserActionsHandler) getAll(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	actions, err := h.service.GetAllByUser(r.Context(), uid)

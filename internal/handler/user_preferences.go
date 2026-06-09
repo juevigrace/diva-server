@@ -32,21 +32,39 @@ func NewUserPreferencesHandler(
 func (h *UserPreferencesHandler) UserRoutes(r chi.Router) {
 	r.Route("/preferences", func(pref chi.Router) {
 		pref.With(middlewares.RequireResourceOwner(
-			"uid",
-			func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-				return nil, reqid == resid
+			&middlewares.RequireOwnerParams{
+				UrlParams: []string{"uid"},
+				Perms:     []models.PermissionAction{models.PERMISSION_USER_PERMISSIONS_READ},
 			},
-			models.PERMISSION_USER_PERMISSIONS_READ,
+			func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+				resid, err := uuid.Parse(resParams[0])
+				if err != nil {
+					return nil, false
+				}
+				if reqid != resid {
+					return nil, false
+				}
+				return map[string]any{"uid": resid}, true
+			},
 		)).Get("/", h.getByUser)
 
 		pref.With(
 			middlewares.RequirePermission(models.PERMISSION_USERS_PREFERENCES_WRITE),
 			middlewares.RequireResourceOwner(
-				"uid",
-				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-					return nil, reqid == resid
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"uid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_USERS_PREFERENCES_WRITE},
 				},
-				models.PERMISSION_USERS_PREFERENCES_WRITE,
+				func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
+					if reqid != resid {
+						return nil, false
+					}
+					return nil, true
+				},
 			),
 		).Post("/", h.createPreferences)
 	})
@@ -56,8 +74,15 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 	r.Route("/preferences", func(p chi.Router) {
 		p.Route("/{pid}", func(pid chi.Router) {
 			pid.With(middlewares.RequireResourceOwner(
-				"pid",
-				func(ctx context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"pid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_USERS_PREFERENCES_READ},
+				},
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					pref, err := h.upService.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
@@ -65,14 +90,20 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 					if pref.UserID != reqid {
 						return nil, false
 					}
-					return pref, true
+					return map[string]any{"pid": pref}, true
 				},
-				models.PERMISSION_USERS_PREFERENCES_READ,
 			)).Get("/", h.getByID)
 
 			pid.With(middlewares.RequireResourceOwner(
-				"pid",
-				func(ctx context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"pid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_USERS_PREFERENCES_WRITE},
+				},
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					pref, err := h.upService.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
@@ -80,19 +111,27 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 					if pref.UserID != reqid {
 						return nil, false
 					}
-					return pref, true
+					return map[string]any{"pid": pref}, true
 				},
-				models.PERMISSION_USERS_PREFERENCES_WRITE,
 			)).Put("/", h.updatePreferences)
 		})
 	})
 }
 
 func (h *UserPreferencesHandler) getByUser(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	prefs, err := h.upService.GetByUser(r.Context(), uid)
@@ -134,10 +173,19 @@ func (h *UserPreferencesHandler) getByID(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	session, ok := middlewares.GetSessionFromContext(r.Context())

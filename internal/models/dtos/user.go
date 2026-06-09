@@ -46,11 +46,15 @@ type UpdateVerified struct {
 	Verified bool `json:"verified" validate:"required"`
 }
 
-type UserPermissionDto struct {
-	UserId       string `json:"user_id" validate:"required,uuid"`
-	PermissionId string `json:"permission_id" validate:"required,uuid"`
-	Granted      bool   `json:"granted" validate:"required"`
-	ExpiresAt    *int64 `json:"expires_at"`
+type CreateUserPermissionDto struct {
+	PermissionAction string `json:"permission_action" validate:"required,max=255"`
+	Granted          bool   `json:"granted" validate:"required"`
+	ExpiresAt        *int64 `json:"expires_at"`
+}
+
+type UpdateUserPermissionDto struct {
+	Granted   bool   `json:"granted" validate:"required"`
+	ExpiresAt *int64 `json:"expires_at"`
 }
 
 type CreateUserPreferencesDto struct {

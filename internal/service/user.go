@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/internal/util"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -172,7 +172,7 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 
 	perms := []models.PermissionAction{models.PERMISSION_USERS_PROFILE_WRITE, models.PERMISSION_USERS_PREFERENCES_WRITE}
 	for i := range perms {
-		if err := s.upService.GrantByName(ctx, perms[i], nil, nil, uid); err != nil {
+		if err := s.upService.CreateByName(ctx, perms[i], nil, true, nil, uid); err != nil {
 			if err := s.Delete(ctx, uid); err != nil {
 				return uuid.Nil, err
 			}

@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -23,49 +22,101 @@ func NewUserPermissionHandler(svc *service.UserPermissionService) *UserPermissio
 	return &UserPermissionHandler{service: svc}
 }
 
-// TODO: implement better internal logic to a better management of permissions
 func (h *UserPermissionHandler) UserRoutes(r chi.Router) {
 	r.Route("/permissions", func(perms chi.Router) {
-		perms.Group(func(rg chi.Router) {
-			rg.Use(middlewares.RequireResourceOwner(
-				"uid",
-				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-					return nil, reqid == resid
+		perms.With(middlewares.RequireResourceOwner(
+			&middlewares.RequireOwnerParams{
+				UrlParams: []string{"uid"},
+				Perms:     []models.PermissionAction{models.PERMISSION_USER_PERMISSIONS_READ},
+			},
+			func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+				resid, err := uuid.Parse(resParams[0])
+				if err != nil {
+					return nil, false
+				}
+				if reqid != resid {
+					return nil, false
+				}
+				return map[string]any{"uid": resid}, true
+			},
+		)).Get("/", h.getByUser)
+
+		perms.Route("/{pid}", func(pid chi.Router) {
+			pid.With(middlewares.RequireResourceOwner(
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"uid", "pid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_USER_PERMISSIONS_READ},
 				},
-				models.PERMISSION_USER_PERMISSIONS_READ,
-			))
-			rg.Get("/", h.getByUser)
-			rg.Get("/{pid}", h.getOneByUser)
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					uid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
+					if reqid != uid {
+						return nil, false
+					}
+					pid, err := uuid.Parse(resParams[1])
+					if err != nil {
+						return nil, false
+					}
+					return map[string]any{"uid": uid, "pid": pid}, true
+				},
+			)).Get("/", h.getOneByUser)
+
+			pid.Group(func(admin chi.Router) {
+				admin.Use(
+					middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+					middlewares.RequireResourceOwner(
+						&middlewares.RequireOwnerParams{
+							UrlParams: []string{"uid", "pid"},
+						},
+						func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+							uid, err := uuid.Parse(resParams[0])
+							if err != nil {
+								return nil, false
+							}
+							pid, err := uuid.Parse(resParams[1])
+							if err != nil {
+								return nil, false
+							}
+							dbPerm, err := h.service.GetOneByUser(ctx, uid, pid)
+							if err != nil {
+								return nil, false
+							}
+							if dbPerm.GrantedBy != nil && reqid != *dbPerm.GrantedBy {
+								return nil, false
+							}
+							return map[string]any{"pid": pid, "uid": uid}, true
+						},
+					),
+					middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE),
+				)
+				admin.Put("/", h.updatePermission)
+				admin.Delete("/", h.deletePermission)
+			})
 		})
 
-		perms.Group(func(admin chi.Router) {
-			admin.Use(
-				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-				middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE),
-			)
-			admin.Delete("/{pid}", h.deletePermission)
-			admin.Delete("/", h.deleteByUser)
-		})
-	})
-
-}
-
-func (h *UserPermissionHandler) Routes(r chi.Router) {
-	r.Route("/permissions", func(perms chi.Router) {
-		perms.Use(
+		perms.With(
 			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
 			middlewares.RequirePermission(models.PERMISSION_USER_PERMISSIONS_WRITE),
-		)
-		perms.Post("/", h.createPermission)
-		perms.Put("/", h.updatePermission)
+		).Post("/", h.createPermission)
 	})
 }
 
 func (h *UserPermissionHandler) getByUser(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	perms, err := h.service.GetByUser(r.Context(), uid)
@@ -83,16 +134,28 @@ func (h *UserPermissionHandler) getByUser(w http.ResponseWriter, r *http.Request
 }
 
 func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
 	}
 
-	pid, err := middlewares.GetUUIDFromURL(r, "pid")
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
+	}
+
+	pid, ok := rc.Cache["pid"].(uuid.UUID)
+	if !ok {
+		pid, err = middlewares.GetUUIDFromURL(r, "pid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	perm, err := h.service.GetOneByUser(r.Context(), uid, pid)
@@ -105,39 +168,31 @@ func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.UserPermissionDto
+	rc, err := middlewares.GetRequestContext(r.Context())
+	if err != nil {
+		responses.HandleReqError(w, err)
+		return
+	}
+
+	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	var dto dtos.CreateUserPermissionDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	permissionID, err := uuid.Parse(dto.PermissionId)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+	permission := models.PermissionActionFromString(dto.PermissionAction)
+	if permission == models.PERMISSION_NONE {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, errs.ErrPermissionNotFound.Error()))
 		return
 	}
 
-	userID, err := uuid.Parse(dto.UserId)
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
-		return
-	}
-
-	perm := &models.UserPermission{
-		Permission: models.Permission{ID: permissionID},
-		GrantedBy:  &session.User.ID,
-		Granted:    dto.Granted,
-		GrantedAt:  time.Now().UTC().UnixMilli(),
-		ExpiresAt:  dto.ExpiresAt,
-	}
-
-	if err := h.service.Create(r.Context(), userID, perm); err != nil {
+	if err := h.service.CreateByName(r.Context(), permission, &rc.Session.User, dto.Granted, dto.ExpiresAt, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -146,13 +201,37 @@ func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.
 }
 
 func (h *UserPermissionHandler) updatePermission(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.UserPermissionDto
+	rc, err := middlewares.GetRequestContext(r.Context())
+	if err != nil {
+		responses.HandleReqError(w, err)
+		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
+	}
+
+	pid, ok := rc.Cache["pid"].(uuid.UUID)
+	if !ok {
+		pid, err = middlewares.GetUUIDFromURL(r, "pid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
+	}
+
+	var dto dtos.UpdateUserPermissionDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.service.Update(r.Context(), &dto); err != nil {
+	if err := h.service.Update(r.Context(), uid, pid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -161,16 +240,28 @@ func (h *UserPermissionHandler) updatePermission(w http.ResponseWriter, r *http.
 }
 
 func (h *UserPermissionHandler) deletePermission(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
 	}
 
-	pid, err := middlewares.GetUUIDFromURL(r, "pid")
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
+	}
+
+	pid, ok := rc.Cache["pid"].(uuid.UUID)
+	if !ok {
+		pid, err = middlewares.GetUUIDFromURL(r, "pid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	if err := h.service.Delete(r.Context(), uid, pid); err != nil {
@@ -179,19 +270,4 @@ func (h *UserPermissionHandler) deletePermission(w http.ResponseWriter, r *http.
 	}
 
 	responses.WriteJSON(w, responses.RespondNoContent(nil, "permission deleted"))
-}
-
-func (h *UserPermissionHandler) deleteByUser(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
-	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.service.DeleteByUser(r.Context(), uid); err != nil {
-		responses.HandleReqError(w, err)
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondNoContent(nil, "permissions deleted"))
 }

@@ -24,6 +24,7 @@ type User struct {
 }
 
 type UserProfile struct {
+	UserID    uuid.UUID
 	FirstName string
 	LastName  string
 	BirthDate int64
@@ -34,6 +35,7 @@ type UserProfile struct {
 
 type UserPermission struct {
 	Permission Permission
+	UserID     uuid.UUID
 	GrantedBy  *uuid.UUID
 	Granted    bool
 	GrantedAt  int64
@@ -195,6 +197,7 @@ func UserFromDB(row *db.DivaUser) *User {
 func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPermission {
 	return &UserPermission{
 		Permission: *perm,
+		UserID:     DBUUIDToUUID(row.UserID),
 		GrantedBy:  DBUUIDToUUIDPtr(row.GrantedBy),
 		Granted:    row.Granted,
 		GrantedAt:  DBTimeToInt(row.GrantedAt),
@@ -219,6 +222,7 @@ func UserPrefsFromDB(row *db.DivaUserPreference) *UserPreferences {
 
 func UserProfileFromDB(row *db.DivaUserProfile) *UserProfile {
 	return &UserProfile{
+		UserID:    DBUUIDToUUID(row.UserID),
 		FirstName: row.FirstName,
 		LastName:  row.LastName,
 		BirthDate: DBTimeToInt(row.BirthDate),

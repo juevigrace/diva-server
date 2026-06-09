@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
+	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -57,10 +58,11 @@ func (s *UserPermissionService) GetOneByUser(ctx context.Context, userID, permis
 	return models.UserPermissionFromDB(&row, dbPerm), nil
 }
 
-func (s *UserPermissionService) GrantByName(
+func (s *UserPermissionService) CreateByName(
 	ctx context.Context,
 	permAction models.PermissionAction,
-	granterID *uuid.UUID,
+	granter *models.User,
+	granted bool,
 	expiration *int64,
 	grantedID uuid.UUID,
 ) error {
@@ -69,10 +71,20 @@ func (s *UserPermissionService) GrantByName(
 		return err
 	}
 
+	if granter != nil && granter.Role < dbPerm.RoleLevel {
+		return errs.ErrPermissionDenied
+	}
+
+	var grantedBy *uuid.UUID
+	if granter != nil {
+		grantedBy = &granter.ID
+
+	}
+
 	perm := &models.UserPermission{
 		Permission: *dbPerm,
-		GrantedBy:  granterID,
-		Granted:    true,
+		GrantedBy:  grantedBy,
+		Granted:    granted,
 		ExpiresAt:  expiration,
 	}
 
@@ -83,24 +95,14 @@ func (s *UserPermissionService) Create(ctx context.Context, grantedID uuid.UUID,
 	return s.queries.CreateUserPermission(ctx, *up.DBCreate(grantedID))
 }
 
-func (s *UserPermissionService) Update(ctx context.Context, dto *dtos.UserPermissionDto) error {
-	permissionID, err := uuid.Parse(dto.PermissionId)
-	if err != nil {
-		return err
-	}
-
-	userID, err := uuid.Parse(dto.UserId)
-	if err != nil {
-		return err
-	}
-
+func (s *UserPermissionService) Update(ctx context.Context, uid, pid uuid.UUID, dto *dtos.UpdateUserPermissionDto) error {
 	params := &models.UserPermission{
-		Permission: models.Permission{ID: permissionID},
+		Permission: models.Permission{ID: pid},
 		Granted:    dto.Granted,
 		ExpiresAt:  dto.ExpiresAt,
 	}
 
-	return s.queries.UpdateUserPermission(ctx, *params.DBUpdate(userID))
+	return s.queries.UpdateUserPermission(ctx, *params.DBUpdate(uid))
 }
 
 func (s *UserPermissionService) Delete(ctx context.Context, uid, pid uuid.UUID) error {
@@ -108,8 +110,4 @@ func (s *UserPermissionService) Delete(ctx context.Context, uid, pid uuid.UUID) 
 		PermissionID: models.UUIDPtrToDB(&pid),
 		UserID:       models.UUIDPtrToDB(&uid),
 	})
-}
-
-func (s *UserPermissionService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.DeleteAllUserPermissions(ctx, models.UUIDPtrToDB(&userID))
 }

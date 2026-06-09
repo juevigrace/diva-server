@@ -61,46 +61,70 @@ func (h *UserHandler) Routes(r chi.Router) {
 			auth.Route("/{uid}", func(uid chi.Router) {
 				uid.Get("/", h.getByID)
 
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_EMAIL_WRITE),
-					middlewares.RequireResourceOwner(
-						"uid",
-						func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-							return nil, reqid == resid
-						},
-						models.PERMISSION_USERS_EMAIL_WRITE,
-					),
-				).Patch("/email", h.updateEmail)
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_PHONE_WRITE),
-					middlewares.RequireResourceOwner(
-						"uid",
-						func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-							return nil, reqid == resid
-						},
-						models.PERMISSION_USERS_PHONE_WRITE,
-					),
-				).Patch("/phone", h.updatePhone)
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_USERNAME_WRITE),
-					middlewares.RequireResourceOwner(
-						"uid",
-						func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-							return nil, reqid == resid
-						},
-						models.PERMISSION_USERS_USERNAME_WRITE,
-					),
-				).Patch("/username", h.updateUsername)
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_PASSWORD_WRITE),
-					middlewares.RequireResourceOwner(
-						"uid",
-						func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-							return nil, reqid == resid
-						},
-						models.PERMISSION_USERS_PASSWORD_WRITE,
-					),
-				).Patch("/password", h.updatePassword)
+			uid.With(
+				middlewares.RequirePermission(models.PERMISSION_USERS_EMAIL_WRITE),
+				middlewares.RequireResourceOwner(
+					&middlewares.RequireOwnerParams{
+						UrlParams: []string{"uid"},
+						Perms:     []models.PermissionAction{models.PERMISSION_USERS_EMAIL_WRITE},
+					},
+					func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+						resid, err := uuid.Parse(resParams[0])
+						if err != nil {
+							return nil, false
+						}
+						return nil, reqid == resid
+					},
+				),
+			).Patch("/email", h.updateEmail)
+			uid.With(
+				middlewares.RequirePermission(models.PERMISSION_USERS_PHONE_WRITE),
+				middlewares.RequireResourceOwner(
+					&middlewares.RequireOwnerParams{
+						UrlParams: []string{"uid"},
+						Perms:     []models.PermissionAction{models.PERMISSION_USERS_PHONE_WRITE},
+					},
+					func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+						resid, err := uuid.Parse(resParams[0])
+						if err != nil {
+							return nil, false
+						}
+						return nil, reqid == resid
+					},
+				),
+			).Patch("/phone", h.updatePhone)
+			uid.With(
+				middlewares.RequirePermission(models.PERMISSION_USERS_USERNAME_WRITE),
+				middlewares.RequireResourceOwner(
+					&middlewares.RequireOwnerParams{
+						UrlParams: []string{"uid"},
+						Perms:     []models.PermissionAction{models.PERMISSION_USERS_USERNAME_WRITE},
+					},
+					func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+						resid, err := uuid.Parse(resParams[0])
+						if err != nil {
+							return nil, false
+						}
+						return nil, reqid == resid
+					},
+				),
+			).Patch("/username", h.updateUsername)
+			uid.With(
+				middlewares.RequirePermission(models.PERMISSION_USERS_PASSWORD_WRITE),
+				middlewares.RequireResourceOwner(
+					&middlewares.RequireOwnerParams{
+						UrlParams: []string{"uid"},
+						Perms:     []models.PermissionAction{models.PERMISSION_USERS_PASSWORD_WRITE},
+					},
+					func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+						resid, err := uuid.Parse(resParams[0])
+						if err != nil {
+							return nil, false
+						}
+						return nil, reqid == resid
+					},
+				),
+			).Patch("/password", h.updatePassword)
 
 				uid.Group(func(admin chi.Router) {
 					admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
@@ -108,17 +132,23 @@ func (h *UserHandler) Routes(r chi.Router) {
 					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_VERIFIED_WRITE)).Patch("/verified", h.updateVerified)
 				})
 
-				uid.Group(func(wg chi.Router) {
-					wg.Use(middlewares.RequireResourceOwner(
-						"uid",
-						func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
-							return nil, reqid == resid
-						},
-						models.PERMISSION_USERS_WRITE,
-					))
-					wg.Delete("/", h.softDelete)
-					wg.Delete("/forever", h.delete)
-				})
+			uid.Group(func(wg chi.Router) {
+				wg.Use(middlewares.RequireResourceOwner(
+					&middlewares.RequireOwnerParams{
+						UrlParams: []string{"uid"},
+						Perms:     []models.PermissionAction{models.PERMISSION_USERS_WRITE},
+					},
+					func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+						resid, err := uuid.Parse(resParams[0])
+						if err != nil {
+							return nil, false
+						}
+						return nil, reqid == resid
+					},
+				))
+				wg.Delete("/", h.softDelete)
+				wg.Delete("/forever", h.delete)
+			})
 
 				h.uaHandler.UserRoutes(uid)
 				h.upHandler.UserRoutes(uid)
@@ -128,7 +158,6 @@ func (h *UserHandler) Routes(r chi.Router) {
 			})
 
 			h.uaHandler.Routes(auth)
-			h.upHandler.Routes(auth)
 			h.uprHandler.Routes(auth)
 		})
 	})

@@ -46,16 +46,6 @@ func (q *Queries) CreateUserPermission(ctx context.Context, arg CreateUserPermis
 	return err
 }
 
-const deleteAllUserPermissions = `-- name: DeleteAllUserPermissions :exec
-delete from diva_user_permissions
-where user_id = $1
-`
-
-func (q *Queries) DeleteAllUserPermissions(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteAllUserPermissions, userID)
-	return err
-}
-
 const deleteUserPermission = `-- name: DeleteUserPermission :exec
 delete from diva_user_permissions
 where permission_id = $1 and user_id = $2

@@ -8,12 +8,14 @@ var (
 	ErrNotAuthorized    error = errors.New("you're not authorized to access this endpoint")
 	ErrForbidden        error = errors.New("forbidden resource")
 	ErrIDRequired       error = errors.New("id param is required")
+	ErrParamRequired    error = errors.New("this url param is required")
 )
 
 var (
-	ErrPermissionDenied     = errors.New("permission denied")
-	ErrPermissionExpired    = errors.New("permission expired")
-	ErrPermissionExpiration = errors.New("invalid permission expiration for this action")
+	ErrPermissionDenied           = errors.New("permission denied")
+	ErrPermissionExpired          = errors.New("permission expired")
+	ErrPermissionExpiration       = errors.New("invalid permission expiration for this action")
+	ErrPermissionNotFound   error = errors.New("permission not found")
 )
 
 var (

@@ -127,7 +127,7 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 		}
 
 		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
-		if err := h.upService.GrantByName(r.Context(), permAction, nil, &exp, va.Action.UserID); err != nil {
+		if err := h.upService.CreateByName(r.Context(), permAction, nil, true, &exp, va.Action.UserID); err != nil {
 			responses.HandleReqError(w, err)
 			return
 		}

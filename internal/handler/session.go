@@ -23,11 +23,20 @@ func NewSessionHandler(sService *service.SessionService) *SessionHandler {
 func (h *SessionHandler) UserRoutes(r chi.Router) {
 	r.Route("/sessions", func(s chi.Router) {
 		s.With(middlewares.RequireResourceOwner(
-			"uid",
-			func(ctx context.Context, reqid, resid uuid.UUID) (any, bool) {
-				return nil, reqid == resid
+			&middlewares.RequireOwnerParams{
+				UrlParams: []string{"uid"},
+				Perms:     []models.PermissionAction{models.PERMISSION_SESSIONS_READ},
 			},
-			models.PERMISSION_SESSIONS_READ,
+			func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+				resid, err := uuid.Parse(resParams[0])
+				if err != nil {
+					return nil, false
+				}
+				if reqid != resid {
+					return nil, false
+				}
+				return map[string]any{"uid": resid}, true
+			},
 		)).Get("/", h.listByUser)
 	})
 }
@@ -38,8 +47,15 @@ func (h *SessionHandler) Routes(r chi.Router) {
 
 		s.Route("/{sid}", func(sid chi.Router) {
 			sid.With(middlewares.RequireResourceOwner(
-				"sid",
-				func(ctx context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"sid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_SESSIONS_READ},
+				},
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					dbSession, err := h.sService.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
@@ -47,13 +63,19 @@ func (h *SessionHandler) Routes(r chi.Router) {
 					if dbSession.User.ID != reqid {
 						return nil, false
 					}
-					return dbSession, true
+					return map[string]any{"sid": dbSession}, true
 				},
-				models.PERMISSION_SESSIONS_READ,
 			)).Get("/", h.getByID)
 			sid.With(middlewares.RequireResourceOwner(
-				"sid",
-				func(ctx context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"sid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_SESSIONS_WRITE},
+				},
+				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					dbSession, err := h.sService.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
@@ -61,9 +83,8 @@ func (h *SessionHandler) Routes(r chi.Router) {
 					if dbSession.User.ID != reqid {
 						return nil, false
 					}
-					return dbSession, true
+					return map[string]any{"sid": dbSession}, true
 				},
-				models.PERMISSION_SESSIONS_WRITE,
 			)).Delete("/", h.close)
 		})
 
@@ -75,10 +96,19 @@ func (h *SessionHandler) Routes(r chi.Router) {
 }
 
 func (h *SessionHandler) listByUser(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.HandleReqError(w, err)
 		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	sessions, err := h.sService.GetByUser(r.Context(), uid)

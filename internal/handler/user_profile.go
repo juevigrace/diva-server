@@ -35,20 +35,32 @@ func (h *UserProfileHandler) UserRoutes(r chi.Router) {
 		pr.With(
 			middlewares.RequirePermission(models.PERMISSION_USERS_PROFILE_WRITE),
 			middlewares.RequireResourceOwner(
-				"uid",
-				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"uid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_USERS_PROFILE_WRITE},
+				},
+				func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					return nil, reqid == resid
 				},
-				models.PERMISSION_USERS_PROFILE_WRITE,
 			),
 		).Post("/", h.create)
 		pr.Group(func(rg chi.Router) {
 			rg.Use(middlewares.RequireResourceOwner(
-				"uid",
-				func(_ context.Context, reqid, resid uuid.UUID) (any, bool) {
+				&middlewares.RequireOwnerParams{
+					UrlParams: []string{"uid"},
+					Perms:     []models.PermissionAction{models.PERMISSION_USERS_PROFILE_WRITE},
+				},
+				func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+					resid, err := uuid.Parse(resParams[0])
+					if err != nil {
+						return nil, false
+					}
 					return nil, reqid == resid
 				},
-				models.PERMISSION_USERS_PROFILE_WRITE,
 			))
 			rg.Put("/", h.update)
 			rg.Patch("/avatar", h.updateAvatar)
