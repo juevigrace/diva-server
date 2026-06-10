@@ -245,11 +245,11 @@ func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID u
 }
 
 func (s *UserService) SoftDelete(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.DeleteUser(ctx, models.UUIDPtrToDB(&userID))
+	return s.queries.SoftDeleteUser(ctx, models.UUIDPtrToDB(&userID))
 }
 
 func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.SoftDeleteUser(ctx, models.UUIDPtrToDB(&userID))
+	return s.queries.DeleteUser(ctx, models.UUIDPtrToDB(&userID))
 }
 
 func (r *UserService) Restore(ctx context.Context, userID uuid.UUID) error {

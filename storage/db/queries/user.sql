@@ -7,6 +7,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -23,6 +24,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -39,6 +41,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -55,6 +58,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -71,6 +75,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -148,5 +153,7 @@ where id = $1;
 
 -- name: RestoreUser :exec
 update diva_user set
-    deleted_at = null
+    deleted_at = null,
+    status = 'ACTIVE',
+    updated_at = now()
 where id = $1;

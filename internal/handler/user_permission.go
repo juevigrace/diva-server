@@ -231,7 +231,7 @@ func (h *UserPermissionHandler) updatePermission(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := h.service.Update(r.Context(), uid, pid, &dto); err != nil {
+	if err := h.service.Update(r.Context(), uid, pid, dto.Granted, dto.ExpiresAt); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

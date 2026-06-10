@@ -14,6 +14,7 @@ type User struct {
 	PasswordHash string
 	Verified     bool
 	Role         Role
+	Status       UserStatus
 	CreatedAt    int64
 	UpdatedAt    int64
 	DeletedAt    *int64
@@ -64,6 +65,7 @@ func (u *User) Response() *responses.UserResponse {
 		PhoneNumber: u.PhoneNumber,
 		Verified:    u.Verified,
 		Role:        u.Role.String(),
+		Status:      u.Status.String(),
 		CreatedAt:   u.CreatedAt,
 		UpdatedAt:   u.UpdatedAt,
 		DeletedAt:   u.DeletedAt,
@@ -189,6 +191,7 @@ func UserFromDB(row *db.DivaUser) *User {
 		PasswordHash: row.PasswordHash,
 		Verified:     row.Verified,
 		Role:         RoleFromDB(row.Role),
+		Status:       UserStatusFromDB(row.Status),
 		CreatedAt:    DBTimeToInt(row.CreatedAt),
 		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
 		DeletedAt:    DBTimeToIntPtr(row.DeletedAt),

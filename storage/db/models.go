@@ -226,6 +226,49 @@ func (ns NullThemeType) Value() (driver.Value, error) {
 	return string(ns.ThemeType), nil
 }
 
+type UserStatusType string
+
+const (
+	UserStatusTypeACTIVE    UserStatusType = "ACTIVE"
+	UserStatusTypeSUSPENDED UserStatusType = "SUSPENDED"
+	UserStatusTypeINACTIVE  UserStatusType = "INACTIVE"
+)
+
+func (e *UserStatusType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserStatusType(s)
+	case string:
+		*e = UserStatusType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserStatusType: %T", src)
+	}
+	return nil
+}
+
+type NullUserStatusType struct {
+	UserStatusType UserStatusType
+	Valid          bool // Valid is true if UserStatusType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserStatusType) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserStatusType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserStatusType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserStatusType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserStatusType), nil
+}
+
 type DivaAction struct {
 	ID     pgtype.UUID
 	Name   string
@@ -274,6 +317,7 @@ type DivaUser struct {
 	PasswordHash string
 	Verified     bool
 	Role         RoleType
+	Status       UserStatusType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz

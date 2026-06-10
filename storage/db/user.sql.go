@@ -77,6 +77,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -95,6 +96,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (DivaUser, e
 		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -111,6 +113,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -129,6 +132,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (DivaUser, er
 		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -145,6 +149,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -163,6 +168,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (DivaU
 		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -179,6 +185,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -197,6 +204,7 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, email string) (D
 		&i.PasswordHash,
 		&i.Verified,
 		&i.Role,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -213,6 +221,7 @@ select
     u.password_hash,
     u.verified,
     u.role,
+    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -244,6 +253,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUse
 			&i.PasswordHash,
 			&i.Verified,
 			&i.Role,
+			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -260,7 +270,9 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUse
 
 const restoreUser = `-- name: RestoreUser :exec
 update diva_user set
-    deleted_at = null
+    deleted_at = null,
+    status = 'ACTIVE',
+    updated_at = now()
 where id = $1
 `
 

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS diva_user (
     password_hash TEXT NOT NULL,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     role role_type NOT NULL DEFAULT 'USER',
+    status user_status_type NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL
