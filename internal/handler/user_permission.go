@@ -180,6 +180,11 @@ func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if rc.Session.User.Role != models.ROLE_ADMIN && rc.Session.User.ID == uid {
+		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrPermissionDenied.Error()))
+		return
+	}
+
 	var dto dtos.CreateUserPermissionDto
 	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
@@ -214,6 +219,11 @@ func (h *UserPermissionHandler) updatePermission(w http.ResponseWriter, r *http.
 			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			return
 		}
+	}
+
+	if rc.Session.User.Role != models.ROLE_ADMIN && rc.Session.User.ID == uid {
+		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrPermissionDenied.Error()))
+		return
 	}
 
 	pid, ok := rc.Cache["pid"].(uuid.UUID)
@@ -253,6 +263,11 @@ func (h *UserPermissionHandler) deletePermission(w http.ResponseWriter, r *http.
 			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			return
 		}
+	}
+
+	if rc.Session.User.Role != models.ROLE_ADMIN && rc.Session.User.ID == uid {
+		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrPermissionDenied.Error()))
+		return
 	}
 
 	pid, ok := rc.Cache["pid"].(uuid.UUID)

@@ -30,6 +30,7 @@ const (
 	ActionEmailUpdate
 	ActionUsernameUpdate
 	ActionPhoneUpdate
+	ActionUserRestore
 )
 
 func (a Action) String() string {
@@ -44,6 +45,8 @@ func (a Action) String() string {
 		return "USERNAME_UPDATE"
 	case ActionPhoneUpdate:
 		return "PHONE_UPDATE"
+	case ActionUserRestore:
+		return "USER_RESTORE"
 	default:
 		return ""
 	}
@@ -61,6 +64,8 @@ func ActionFromString(s string) Action {
 		return ActionUsernameUpdate
 	case "PHONE_UPDATE":
 		return ActionPhoneUpdate
+	case "USER_RESTORE":
+		return ActionUserRestore
 	default:
 		return -1
 	}

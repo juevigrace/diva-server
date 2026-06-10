@@ -21,6 +21,7 @@ type UserVerificationHandler struct {
 	uService  *service.UserService
 	uaService *service.UserActionsService
 	upService *service.UserPermissionService
+	usService *service.UserStateService
 	vService  *service.UserVerificationService
 }
 
@@ -29,6 +30,7 @@ func NewVerificationHandler(
 	uService *service.UserService,
 	uaService *service.UserActionsService,
 	upService *service.UserPermissionService,
+	usService *service.UserStateService,
 	vService *service.UserVerificationService,
 ) *UserVerificationHandler {
 	return &UserVerificationHandler{
@@ -36,6 +38,7 @@ func NewVerificationHandler(
 		uService:  uService,
 		uaService: uaService,
 		upService: upService,
+		usService: usService,
 		vService:  vService,
 	}
 }
@@ -94,15 +97,24 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if !va.Verified {
+		responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
+		return
+	}
+
 	switch va.Action.Name {
 	case models.ActionPasswordUpdate:
-	case models.ActionUserVerification:
-		if !va.Verified {
-			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
+	case models.ActionUserRestore:
+		if err := h.uService.Restore(r.Context(), va.Action.UserID); err != nil {
+			responses.HandleReqError(w, err)
 			return
 		}
-
-		if err := h.uService.UpdateVerified(r.Context(), true, va.Action.UserID); err != nil {
+		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
+			responses.HandleReqError(w, err)
+			return
+		}
+	case models.ActionUserVerification:
+		if err := h.usService.UpdateVerified(r.Context(), true, va.Action.UserID); err != nil {
 			responses.HandleReqError(w, err)
 			return
 		}
@@ -112,11 +124,6 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	case models.ActionEmailUpdate, models.ActionUsernameUpdate, models.ActionPhoneUpdate:
-		if !va.Verified {
-			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
-			return
-		}
-
 		var permAction models.PermissionAction
 		switch va.Action.Name {
 		case models.ActionEmailUpdate:

@@ -17,6 +17,7 @@ import (
 
 type UserHandler struct {
 	uService    *service.UserService
+	usService   *service.UserStateService
 	sHandler    *SessionHandler
 	uaHandler   *UserActionsHandler
 	upHandler   *UserPermissionHandler
@@ -26,6 +27,7 @@ type UserHandler struct {
 
 func NewUserHandler(
 	uService *service.UserService,
+	usService *service.UserStateService,
 	sHandler *SessionHandler,
 	uaHandler *UserActionsHandler,
 	upHandler *UserPermissionHandler,
@@ -34,6 +36,7 @@ func NewUserHandler(
 ) *UserHandler {
 	return &UserHandler{
 		uService:    uService,
+		usService:   usService,
 		sHandler:    sHandler,
 		uaHandler:   uaHandler,
 		upHandler:   upHandler,
@@ -73,7 +76,7 @@ func (h *UserHandler) Routes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							return nil, reqid == resid
+							return map[string]any{"uid": resid}, reqid == resid
 						},
 					),
 				).Patch("/email", h.updateEmail)
@@ -89,7 +92,7 @@ func (h *UserHandler) Routes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							return nil, reqid == resid
+							return map[string]any{"uid": resid}, reqid == resid
 						},
 					),
 				).Patch("/phone", h.updatePhone)
@@ -105,7 +108,7 @@ func (h *UserHandler) Routes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							return nil, reqid == resid
+							return map[string]any{"uid": resid}, reqid == resid
 						},
 					),
 				).Patch("/username", h.updateUsername)
@@ -121,7 +124,7 @@ func (h *UserHandler) Routes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							return nil, reqid == resid
+							return map[string]any{"uid": resid}, reqid == resid
 						},
 					),
 				).Patch("/password", h.updatePassword)
@@ -129,8 +132,7 @@ func (h *UserHandler) Routes(r chi.Router) {
 				uid.Group(func(admin chi.Router) {
 					admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
 					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_ROLE_WRITE)).Patch("/role", h.updateRole)
-					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_VERIFIED_WRITE)).Patch("/verified", h.updateVerified)
-					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_WRITE)).Patch("/restore", h.restore)
+					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_RESTORE_WRITE)).Patch("/restore", h.restore)
 				})
 
 				uid.Group(func(wg chi.Router) {
@@ -144,11 +146,32 @@ func (h *UserHandler) Routes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							return nil, reqid == resid
+							return map[string]any{"uid": resid}, reqid == resid
 						},
 					))
 					wg.Delete("/", h.softDelete)
 					wg.Delete("/forever", h.delete)
+				})
+
+				uid.Route("/status", func(sr chi.Router) {
+					sr.With(middlewares.RequireResourceOwner(
+						&middlewares.RequireOwnerParams{
+							UrlParams: []string{"uid"},
+						},
+						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
+							resid, err := uuid.Parse(resParams[0])
+							if err != nil {
+								return nil, false
+							}
+							return map[string]any{"uid": resid}, reqid == resid
+						},
+					)).Post("/ping", h.pingStatus)
+
+					sr.Group(func(admin chi.Router) {
+						admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
+						admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_VERIFIED_WRITE)).Patch("/verified", h.updateVerified)
+						admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_WRITE)).Put("/", h.updateStatus)
+					})
 				})
 
 				h.uaHandler.UserRoutes(uid)
@@ -261,7 +284,6 @@ func (h *UserHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: create a permission for this?
 	if session.User.Role == models.ROLE_USER {
 		dbUser.Email = ""
 		dbUser.PhoneNumber = ""
@@ -286,16 +308,19 @@ func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
 		return
 	}
 
-	session, ok := middlewares.GetSessionFromContext(r.Context())
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
 	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
-		return
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	var dto dtos.UpdateEmailDto
@@ -309,9 +334,9 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.User.ID == uid {
-		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+	if rc.Session.User.ID == uid {
+		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
+			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -322,16 +347,19 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
 		return
 	}
 
-	session, ok := middlewares.GetSessionFromContext(r.Context())
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
 	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
-		return
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	var dto dtos.UpdatePasswordDto
@@ -350,9 +378,9 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.User.ID == uid {
-		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+	if rc.Session.User.ID == uid {
+		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
+			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -363,16 +391,19 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
 		return
 	}
 
-	session, ok := middlewares.GetSessionFromContext(r.Context())
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
 	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
-		return
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	var dto dtos.UpdateUsernameDto
@@ -386,9 +417,9 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.User.ID == uid {
-		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+	if rc.Session.User.ID == uid {
+		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
+			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -399,16 +430,19 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
-	uid, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
 		return
 	}
 
-	session, ok := middlewares.GetSessionFromContext(r.Context())
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
 	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
-		return
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	var dto dtos.UpdatePhoneNumberDto
@@ -422,9 +456,9 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.User.ID == uid {
-		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+	if rc.Session.User.ID == uid {
+		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
+			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -468,7 +502,7 @@ func (h *UserHandler) updateVerified(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdateVerified(r.Context(), dto.Verified, id); err != nil {
+	if err = h.usService.UpdateVerified(r.Context(), dto.Verified, id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -476,11 +510,65 @@ func (h *UserHandler) updateVerified(w http.ResponseWriter, r *http.Request) {
 	responses.WriteJSON(w, responses.RespondAccepted(nil, "verified updated"))
 }
 
-func (h *UserHandler) softDelete(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) updateStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
+	}
+
+	var dto dtos.UpdateUserStatus
+	if err = middlewares.ValidateBody(&dto, r); err != nil {
+		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		return
+	}
+
+	if err = h.usService.UpdateStatus(r.Context(), models.UserStatusFromString(dto.Status), id); err != nil {
+		responses.HandleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondAccepted(nil, "status updated"))
+}
+
+func (h *UserHandler) pingStatus(w http.ResponseWriter, r *http.Request) {
+	rc, err := middlewares.GetRequestContext(r.Context())
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
+		return
+	}
+
+	uid, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		uid, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
+	}
+
+	if err := h.usService.UpdateLastActiveAt(r.Context(), uid); err != nil {
+		responses.HandleReqError(w, err)
+		return
+	}
+
+	responses.WriteJSON(w, responses.RespondOk(nil, "status pinged"))
+}
+
+func (h *UserHandler) softDelete(w http.ResponseWriter, r *http.Request) {
+	rc, err := middlewares.GetRequestContext(r.Context())
+	if err != nil {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
+		return
+	}
+
+	id, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		id, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	if err := h.uService.SoftDelete(r.Context(), id); err != nil {
@@ -492,10 +580,19 @@ func (h *UserHandler) softDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) delete(w http.ResponseWriter, r *http.Request) {
-	id, err := middlewares.GetUUIDFromURL(r, "uid")
+	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
 		return
+	}
+
+	id, ok := rc.Cache["uid"].(uuid.UUID)
+	if !ok {
+		id, err = middlewares.GetUUIDFromURL(r, "uid")
+		if err != nil {
+			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
+			return
+		}
 	}
 
 	if err := h.uService.Delete(r.Context(), id); err != nil {

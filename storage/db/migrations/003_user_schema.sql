@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS diva_user_state (
     user_id UUID NOT NULL PRIMARY KEY,
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     status user_status_type NOT NULL DEFAULT 'ACTIVE',
-    last_active_at TIMESTAMPTZ DEFAULT NULL,
+    last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );

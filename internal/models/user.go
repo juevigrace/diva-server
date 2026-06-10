@@ -26,7 +26,7 @@ type User struct {
 type UserState struct {
 	Verified     bool
 	Status       UserStatus
-	LastActiveAt *int64
+	LastActiveAt int64
 	UpdatedAt    int64
 }
 
@@ -254,7 +254,7 @@ func UserStateFromDB(row *db.DivaUserState) *UserState {
 	return &UserState{
 		Verified:     row.Verified,
 		Status:       UserStatusFromDB(row.Status),
-		LastActiveAt: DBTimeToIntPtr(row.LastActiveAt),
+		LastActiveAt: DBTimeToInt(row.LastActiveAt),
 		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
 	}
 }

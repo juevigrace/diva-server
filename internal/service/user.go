@@ -18,6 +18,7 @@ type UserService struct {
 	uaService  *UserActionsService
 	upService  *UserPermissionService
 	uprService *UserProfileService
+	usService  *UserStateService
 	uvService  *UserVerificationService
 }
 
@@ -26,13 +27,15 @@ func NewUserService(
 	uaService *UserActionsService,
 	upService *UserPermissionService,
 	uprService *UserProfileService,
+	usService *UserStateService,
 	uvService *UserVerificationService,
 ) *UserService {
 	return &UserService{
 		uaService:  uaService,
-		uvService:  uvService,
 		upService:  upService,
 		uprService: uprService,
+		usService:  usService,
+		uvService:  uvService,
 		queries:    queries,
 	}
 }
@@ -84,6 +87,12 @@ func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.Us
 	for _, perm := range dbPerms {
 		dbUser.Permissions[perm.Permission.Action] = perm
 	}
+
+	dbState, err := s.usService.GetByUserID(ctx, dbUser.ID)
+	if err != nil {
+		return nil, err
+	}
+	dbUser.State = dbState
 
 	return dbUser, nil
 }
@@ -166,6 +175,13 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 		return uuid.Nil, err
 	}
 
+	if err := s.usService.Create(ctx, params.ID, &models.UserState{}); err != nil {
+		if err := s.Delete(ctx, params.ID); err != nil {
+			return uuid.Nil, err
+		}
+		return uuid.Nil, err
+	}
+
 	if _, err := s.uaService.Create(ctx, params.ID, models.ActionUserVerification); err != nil {
 		return uuid.Nil, err
 	}
@@ -230,13 +246,6 @@ func (s *UserService) UpdateEmail(ctx context.Context, email string, userID uuid
 	})
 }
 
-func (s *UserService) UpdateVerified(ctx context.Context, verified bool, userID uuid.UUID) error {
-	return s.queries.UpdateUserVerified(ctx, db.UpdateUserVerifiedParams{
-		Verified: verified,
-		UserID:   models.UUIDPtrToDB(&userID),
-	})
-}
-
 func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {
 	return s.queries.UpdateRole(ctx, db.UpdateRoleParams{
 		Role: role.ToDB(),
@@ -245,7 +254,11 @@ func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID u
 }
 
 func (s *UserService) SoftDelete(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.SoftDeleteUser(ctx, models.UUIDPtrToDB(&userID))
+	if err := s.queries.SoftDeleteUser(ctx, models.UUIDPtrToDB(&userID)); err != nil {
+		return err
+	}
+
+	return s.usService.UpdateStatus(ctx, models.USER_STATUS_INACTIVE, userID)
 }
 
 func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
@@ -253,5 +266,9 @@ func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
 }
 
 func (r *UserService) Restore(ctx context.Context, userID uuid.UUID) error {
-	return r.queries.RestoreUser(ctx, models.UUIDPtrToDB(&userID))
+	if err := r.queries.RestoreUser(ctx, models.UUIDPtrToDB(&userID)); err != nil {
+		return err
+	}
+
+	return r.usService.UpdateStatus(ctx, models.USER_STATUS_ACTIVE, userID)
 }
