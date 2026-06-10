@@ -24,7 +24,7 @@ insert into diva_user_permissions (
     $3,
     $4,
     $5
-) on conflict (permission_id, user_id) do nothing
+)
 `
 
 type CreateUserPermissionParams struct {
@@ -81,6 +81,40 @@ type GetUserPermissionParams struct {
 
 func (q *Queries) GetUserPermission(ctx context.Context, arg GetUserPermissionParams) (DivaUserPermission, error) {
 	row := q.db.QueryRow(ctx, getUserPermission, arg.PermissionID, arg.UserID)
+	var i DivaUserPermission
+	err := row.Scan(
+		&i.PermissionID,
+		&i.UserID,
+		&i.GrantedBy,
+		&i.Granted,
+		&i.GrantedAt,
+		&i.ExpiresAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserPermissionByName = `-- name: GetUserPermissionByName :one
+select
+    up.permission_id,
+    up.user_id,
+    up.granted_by,
+    up.granted,
+    up.granted_at,
+    up.expires_at,
+    up.updated_at
+from diva_user_permissions up
+left join diva_permissions dp on up.permission_id = dp.id
+where up.user_id = $1 and dp.name = $2
+`
+
+type GetUserPermissionByNameParams struct {
+	UserID pgtype.UUID
+	Name   string
+}
+
+func (q *Queries) GetUserPermissionByName(ctx context.Context, arg GetUserPermissionByNameParams) (DivaUserPermission, error) {
+	row := q.db.QueryRow(ctx, getUserPermissionByName, arg.UserID, arg.Name)
 	var i DivaUserPermission
 	err := row.Scan(
 		&i.PermissionID,

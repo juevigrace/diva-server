@@ -79,7 +79,7 @@ func (h *UserPermissionHandler) UserRoutes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							dbPerm, err := h.service.GetOneByUser(ctx, uid, pid)
+							dbPerm, err := h.service.GetOneByPermID(ctx, uid, pid)
 							if err != nil {
 								return nil, false
 							}
@@ -158,7 +158,7 @@ func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	perm, err := h.service.GetOneByUser(r.Context(), uid, pid)
+	perm, err := h.service.GetOneByPermID(r.Context(), uid, pid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return

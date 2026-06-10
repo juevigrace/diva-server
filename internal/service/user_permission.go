@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/errs"
 	"github.com/juevigrace/diva-server/storage/db"
 )
@@ -41,10 +40,27 @@ func (s *UserPermissionService) GetByUser(ctx context.Context, userID uuid.UUID)
 	return perms, nil
 }
 
-func (s *UserPermissionService) GetOneByUser(ctx context.Context, userID, permissionID uuid.UUID) (*models.UserPermission, error) {
+func (s *UserPermissionService) GetOneByPermID(ctx context.Context, userID, permissionID uuid.UUID) (*models.UserPermission, error) {
 	row, err := s.queries.GetUserPermission(ctx, db.GetUserPermissionParams{
 		PermissionID: models.UUIDPtrToDB(&permissionID),
 		UserID:       models.UUIDPtrToDB(&userID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	dbPerm, err := s.pService.GetByID(ctx, models.DBUUIDToUUID(row.PermissionID))
+	if err != nil {
+		return nil, err
+	}
+
+	return models.UserPermissionFromDB(&row, dbPerm), nil
+}
+
+func (s *UserPermissionService) GetOneByName(ctx context.Context, userID uuid.UUID, action models.PermissionAction) (*models.UserPermission, error) {
+	row, err := s.queries.GetUserPermissionByName(ctx, db.GetUserPermissionByNameParams{
+		UserID: models.UUIDPtrToDB(&userID),
+		Name:   action.String(),
 	})
 	if err != nil {
 		return nil, err
@@ -95,11 +111,11 @@ func (s *UserPermissionService) Create(ctx context.Context, grantedID uuid.UUID,
 	return s.queries.CreateUserPermission(ctx, *up.DBCreate(grantedID))
 }
 
-func (s *UserPermissionService) Update(ctx context.Context, uid, pid uuid.UUID, dto *dtos.UpdateUserPermissionDto) error {
+func (s *UserPermissionService) Update(ctx context.Context, uid, pid uuid.UUID, granted bool, expiresAt *int64) error {
 	params := &models.UserPermission{
 		Permission: models.Permission{ID: pid},
-		Granted:    dto.Granted,
-		ExpiresAt:  dto.ExpiresAt,
+		Granted:    granted,
+		ExpiresAt:  expiresAt,
 	}
 
 	return s.queries.UpdateUserPermission(ctx, *params.DBUpdate(uid))

@@ -25,7 +25,7 @@ insert into diva_action (
     $1,
     $2,
     $3
-) on conflict (user_id, name) do nothing;
+);
 
 -- name: DeleteUserAction :exec
 delete from diva_action

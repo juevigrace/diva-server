@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -38,7 +40,6 @@ func NewVerificationHandler(
 	}
 }
 
-// TODO: create verification actions to user data updates
 func (h *UserVerificationHandler) Routes(r chi.Router) {
 	r.Route("/verification", func(v chi.Router) {
 		v.Post("/request", h.requestVerification)
@@ -95,7 +96,6 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 
 	switch va.Action.Name {
 	case models.ActionPasswordUpdate:
-		// TODO: ?
 	case models.ActionUserVerification:
 		if !va.Verified {
 			responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
@@ -127,11 +127,23 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 			permAction = models.PERMISSION_USERS_PHONE_WRITE
 		}
 
-		// TODO: make check to see if permission is created and if it is update expiration
-		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
-		if err := h.upService.CreateByName(r.Context(), permAction, nil, true, &exp, va.Action.UserID); err != nil {
+		dbPerm, err := h.upService.GetOneByName(r.Context(), va.Action.UserID, permAction)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			responses.HandleReqError(w, err)
 			return
+		}
+
+		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
+		if dbPerm == nil {
+			if err := h.upService.CreateByName(r.Context(), permAction, nil, true, &exp, va.Action.UserID); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
+		} else if dbPerm.ExpiresAt != nil && time.UnixMilli(*dbPerm.ExpiresAt).Before(time.Now().UTC()) {
+			if err := h.upService.Update(r.Context(), va.Action.UserID, dbPerm.Permission.ID, true, &exp); err != nil {
+				responses.HandleReqError(w, err)
+				return
+			}
 		}
 
 		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
