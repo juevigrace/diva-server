@@ -6,9 +6,7 @@ CREATE TABLE IF NOT EXISTS diva_user (
     email VARCHAR(100) NOT NULL UNIQUE,
     phone_number VARCHAR(30) NOT NULL DEFAULT '',
     password_hash TEXT NOT NULL,
-    verified BOOLEAN NOT NULL DEFAULT FALSE,
     role role_type NOT NULL DEFAULT 'USER',
-    status user_status_type NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ DEFAULT NULL
@@ -22,6 +20,16 @@ CREATE TABLE IF NOT EXISTS diva_user_profile(
     alias VARCHAR(255) NOT NULL DEFAULT '',
     bio VARCHAR(255) NOT NULL DEFAULT '',
     avatar TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS diva_user_state (
+    user_id UUID NOT NULL PRIMARY KEY,
+    verified BOOLEAN NOT NULL DEFAULT FALSE,
+    status user_status_type NOT NULL DEFAULT 'ACTIVE',
+    last_active_at TIMESTAMPTZ DEFAULT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE
 );
 
@@ -54,6 +62,7 @@ CREATE TABLE IF NOT EXISTS diva_user_preferences (
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS diva_user_state;
 DROP TABLE IF EXISTS diva_user;
 DROP TABLE IF EXISTS diva_user_profile;
 DROP TABLE IF EXISTS diva_user_permissions;

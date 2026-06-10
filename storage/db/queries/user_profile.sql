@@ -1,6 +1,13 @@
 -- name: GetUserProfileByUserID :one
 select
-    up.user_id, up.first_name, up.last_name, up.birth_date, up.alias, up.bio, up.avatar
+    up.user_id,
+    up.first_name,
+    up.last_name,
+    up.birth_date,
+    up.alias,
+    up.bio,
+    up.avatar,
+    up.updated_at
 from diva_user_profile up
 where up.user_id = $1
 ;
@@ -28,10 +35,12 @@ update diva_user_profile set
     last_name = $2,
     birth_date = $3,
     alias = $4,
-    bio = $5
+    bio = $5,
+    updated_at = now()
 where user_id = $6;
 
 -- name: UpdateUserProfileAvatar :exec
 update diva_user_profile set
-    avatar = $1
+    avatar = $1,
+    updated_at = now()
 where user_id = $2;

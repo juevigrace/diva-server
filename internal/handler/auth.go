@@ -13,14 +13,17 @@ import (
 )
 
 type AuthHandler struct {
-	authService    *service.AuthService
-	sessionService *service.SessionService
+	aService *service.AuthService
+	sService *service.SessionService
 }
 
-func NewAuthHandler(authService *service.AuthService, sessionService *service.SessionService) *AuthHandler {
+func NewAuthHandler(
+	aService *service.AuthService,
+	sService *service.SessionService,
+) *AuthHandler {
 	return &AuthHandler{
-		authService:    authService,
-		sessionService: sessionService,
+		aService: aService,
+		sService: sService,
 	}
 }
 
@@ -30,7 +33,7 @@ func (h *AuthHandler) Routes(r chi.Router) {
 		auth.Post("/signUp", h.signUp)
 
 		auth.Group(func(protected chi.Router) {
-			protected.Use(middlewares.RequiresSession(h.sessionService.GetByID))
+			protected.Use(middlewares.RequiresSession(h.sService.GetByID))
 			protected.Post("/signOut", h.signOut)
 			protected.Post("/ping", h.ping)
 			protected.Post("/refresh", h.refresh)
@@ -48,7 +51,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	session, err := h.authService.SignIn(r.Context(), &dto)
+	session, err := h.aService.SignIn(r.Context(), &dto)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -65,7 +68,7 @@ func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	session, err := h.authService.SignUp(r.Context(), &dto)
+	session, err := h.aService.SignUp(r.Context(), &dto)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -87,7 +90,7 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.authService.SignOut(r.Context(), session.ID); err != nil {
+	if err := h.aService.SignOut(r.Context(), session.ID); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -112,7 +115,7 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.authService.Refresh(r.Context(), session, &dto)
+	res, err := h.aService.Refresh(r.Context(), session, &dto)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -135,7 +138,7 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	session, err := h.authService.ForgotPasswordConfirm(r.Context(), parsedID, &dto.SessionData)
+	session, err := h.aService.ForgotPasswordConfirm(r.Context(), parsedID, &dto.SessionData)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return

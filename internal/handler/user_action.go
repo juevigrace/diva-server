@@ -13,12 +13,18 @@ import (
 )
 
 type UserActionsHandler struct {
-	service        *service.UserActionsService
-	sessionService *service.SessionService
+	uaService *service.UserActionsService
+	sService  *service.SessionService
 }
 
-func NewUserActionsHandler(svc *service.UserActionsService, sessionService *service.SessionService) *UserActionsHandler {
-	return &UserActionsHandler{service: svc, sessionService: sessionService}
+func NewUserActionsHandler(
+	uaService *service.UserActionsService,
+	sService *service.SessionService,
+) *UserActionsHandler {
+	return &UserActionsHandler{
+		uaService: uaService,
+		sService:  sService,
+	}
 }
 
 func (h *UserActionsHandler) UserRoutes(r chi.Router) {
@@ -58,7 +64,7 @@ func (h *UserActionsHandler) Routes(r chi.Router) {
 					if err != nil {
 						return nil, false
 					}
-					action, err := h.service.GetOneByID(ctx, resid)
+					action, err := h.uaService.GetOneByID(ctx, resid)
 					if err != nil {
 						return nil, false
 					}
@@ -92,7 +98,7 @@ func (h *UserActionsHandler) getAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	actions, err := h.service.GetAllByUser(r.Context(), uid)
+	actions, err := h.uaService.GetAllByUser(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -120,7 +126,7 @@ func (h *UserActionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			return
 		}
-		action, err = h.service.GetOneByID(r.Context(), actionID)
+		action, err = h.uaService.GetOneByID(r.Context(), actionID)
 		if err != nil {
 			responses.HandleReqError(w, err)
 			return
@@ -137,7 +143,7 @@ func (h *UserActionsHandler) deleteAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), actionID); err != nil {
+	if err := h.uaService.Delete(r.Context(), actionID); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

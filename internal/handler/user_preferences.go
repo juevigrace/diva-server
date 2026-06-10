@@ -15,13 +15,13 @@ import (
 )
 
 type UserPreferencesHandler struct {
-	upService  *service.UserPreferencesService
-	uprService *service.UserPermissionService
+	upService  *service.UserPermissionService
+	uprService *service.UserPreferencesService
 }
 
 func NewUserPreferencesHandler(
-	upService *service.UserPreferencesService,
-	uprService *service.UserPermissionService,
+	upService *service.UserPermissionService,
+	uprService *service.UserPreferencesService,
 ) *UserPreferencesHandler {
 	return &UserPreferencesHandler{
 		upService:  upService,
@@ -83,7 +83,7 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 					if err != nil {
 						return nil, false
 					}
-					pref, err := h.upService.GetByID(ctx, resid)
+					pref, err := h.uprService.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
 					}
@@ -104,7 +104,7 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 					if err != nil {
 						return nil, false
 					}
-					pref, err := h.upService.GetByID(ctx, resid)
+					pref, err := h.uprService.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
 					}
@@ -134,7 +134,7 @@ func (h *UserPreferencesHandler) getByUser(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	prefs, err := h.upService.GetByUser(r.Context(), uid)
+	prefs, err := h.uprService.GetByUser(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -162,7 +162,7 @@ func (h *UserPreferencesHandler) getByID(w http.ResponseWriter, r *http.Request)
 			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			return
 		}
-		pref, err = h.upService.GetByID(r.Context(), pid)
+		pref, err = h.uprService.GetByID(r.Context(), pid)
 		if err != nil {
 			responses.HandleReqError(w, err)
 			return
@@ -201,14 +201,14 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 
 	dto.Device = session.Device
 
-	if err = h.upService.Create(r.Context(), uid, &dto); err != nil {
+	if err = h.uprService.Create(r.Context(), uid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PREFERENCES_WRITE]; ok {
-			if err := h.uprService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+			if err := h.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -242,7 +242,7 @@ func (h *UserPreferencesHandler) updatePreferences(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if err = h.upService.Update(r.Context(), pid, &dto); err != nil {
+	if err = h.uprService.Update(r.Context(), pid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

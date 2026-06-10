@@ -52,7 +52,14 @@ func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfilePa
 
 const getUserProfileByUserID = `-- name: GetUserProfileByUserID :one
 select
-    up.user_id, up.first_name, up.last_name, up.birth_date, up.alias, up.bio, up.avatar
+    up.user_id,
+    up.first_name,
+    up.last_name,
+    up.birth_date,
+    up.alias,
+    up.bio,
+    up.avatar,
+    up.updated_at
 from diva_user_profile up
 where up.user_id = $1
 `
@@ -68,6 +75,7 @@ func (q *Queries) GetUserProfileByUserID(ctx context.Context, userID pgtype.UUID
 		&i.Alias,
 		&i.Bio,
 		&i.Avatar,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -78,7 +86,8 @@ update diva_user_profile set
     last_name = $2,
     birth_date = $3,
     alias = $4,
-    bio = $5
+    bio = $5,
+    updated_at = now()
 where user_id = $6
 `
 
@@ -105,7 +114,8 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 
 const updateUserProfileAvatar = `-- name: UpdateUserProfileAvatar :exec
 update diva_user_profile set
-    avatar = $1
+    avatar = $1,
+    updated_at = now()
 where user_id = $2
 `
 

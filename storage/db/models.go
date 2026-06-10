@@ -315,9 +315,7 @@ type DivaUser struct {
 	Email        string
 	PhoneNumber  string
 	PasswordHash string
-	Verified     bool
 	Role         RoleType
-	Status       UserStatusType
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
@@ -353,4 +351,13 @@ type DivaUserProfile struct {
 	Alias     string
 	Bio       string
 	Avatar    string
+	UpdatedAt pgtype.Timestamptz
+}
+
+type DivaUserState struct {
+	UserID       pgtype.UUID
+	Verified     bool
+	Status       UserStatusType
+	LastActiveAt pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
 }

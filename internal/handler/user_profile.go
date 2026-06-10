@@ -15,17 +15,17 @@ import (
 )
 
 type UserProfileHandler struct {
-	upService  *service.UserProfileService
-	uprService *service.UserPermissionService
+	upService   *service.UserPermissionService
+	uproService *service.UserProfileService
 }
 
 func NewUserProfileHandler(
-	upService *service.UserProfileService,
-	uprHandler *service.UserPermissionService,
+	upService *service.UserPermissionService,
+	uproService *service.UserProfileService,
 ) *UserProfileHandler {
 	return &UserProfileHandler{
-		upService:  upService,
-		uprService: uprHandler,
+		upService:   upService,
+		uproService: uproService,
 	}
 }
 
@@ -75,7 +75,7 @@ func (h *UserProfileHandler) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbProfile, err := h.upService.GetByUserID(r.Context(), uid)
+	dbProfile, err := h.uproService.GetByUserID(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -102,14 +102,14 @@ func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.upService.Create(r.Context(), uid, &dto); err != nil {
+	if err = h.uproService.Create(r.Context(), uid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PROFILE_WRITE]; ok {
-			if err := h.uprService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+			if err := h.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -131,7 +131,7 @@ func (h *UserProfileHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.upService.Update(r.Context(), uid, &dto); err != nil {
+	if err = h.uproService.Update(r.Context(), uid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -146,7 +146,7 @@ func (h *UserProfileHandler) updateAvatar(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err = h.upService.UpdateAvatar(r.Context(), uid, ""); err != nil {
+	if err = h.uproService.UpdateAvatar(r.Context(), uid, ""); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

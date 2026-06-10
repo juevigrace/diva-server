@@ -20,23 +20,23 @@ type UserVerificationHandler struct {
 	sService  *service.SessionService
 	uService  *service.UserService
 	uaService *service.UserActionsService
-	vService  *service.UserVerificationService
 	upService *service.UserPermissionService
+	vService  *service.UserVerificationService
 }
 
 func NewVerificationHandler(
 	sService *service.SessionService,
 	uService *service.UserService,
 	uaService *service.UserActionsService,
-	vService *service.UserVerificationService,
 	upService *service.UserPermissionService,
+	vService *service.UserVerificationService,
 ) *UserVerificationHandler {
 	return &UserVerificationHandler{
 		sService:  sService,
 		uService:  uService,
 		uaService: uaService,
-		vService:  vService,
 		upService: upService,
+		vService:  vService,
 	}
 }
 

@@ -1,16 +1,21 @@
 package responses
 
+type UserStateResponse struct {
+	Verified     bool    `json:"verified"`
+	Status       string  `json:"status"`
+	LastActiveAt *int64  `json:"last_active_at"`
+}
+
 type UserResponse struct {
-	ID          string  `json:"id"`
-	Username    string  `json:"username"`
-	Email       string  `json:"email"`
-	PhoneNumber string  `json:"phone_number"`
-	Verified    bool    `json:"verified"`
-	Role        string  `json:"role"`
-	Status      string  `json:"status"`
-	CreatedAt   int64   `json:"created_at"`
-	UpdatedAt   int64   `json:"updated_at"`
-	DeletedAt   *int64  `json:"deleted_at"`
+	ID          string              `json:"id"`
+	Username    string              `json:"username"`
+	Email       string              `json:"email"`
+	PhoneNumber string              `json:"phone_number"`
+	Role        string              `json:"role"`
+	State       *UserStateResponse  `json:"state"`
+	CreatedAt   int64               `json:"created_at"`
+	UpdatedAt   int64               `json:"updated_at"`
+	DeletedAt   *int64              `json:"deleted_at"`
 }
 
 type UserProfileResponse struct {

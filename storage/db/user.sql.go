@@ -75,9 +75,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -94,9 +92,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (DivaUser, e
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.Verified,
 		&i.Role,
-		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -111,9 +107,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -130,9 +124,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (DivaUser, er
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.Verified,
 		&i.Role,
-		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -147,9 +139,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -166,9 +156,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (DivaU
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.Verified,
 		&i.Role,
-		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -183,9 +171,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -202,9 +188,7 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, email string) (D
 		&i.Email,
 		&i.PhoneNumber,
 		&i.PasswordHash,
-		&i.Verified,
 		&i.Role,
-		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -219,9 +203,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -251,9 +233,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUse
 			&i.Email,
 			&i.PhoneNumber,
 			&i.PasswordHash,
-			&i.Verified,
 			&i.Role,
-			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
@@ -271,7 +251,6 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUse
 const restoreUser = `-- name: RestoreUser :exec
 update diva_user set
     deleted_at = null,
-    status = 'ACTIVE',
     updated_at = now()
 where id = $1
 `
@@ -374,22 +353,5 @@ type UpdateUsernameParams struct {
 
 func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
 	_, err := q.db.Exec(ctx, updateUsername, arg.Username, arg.ID)
-	return err
-}
-
-const updateVerified = `-- name: UpdateVerified :exec
-update diva_user set
-    verified = $1,
-    updated_at = now()
-where id = $2
-`
-
-type UpdateVerifiedParams struct {
-	Verified bool
-	ID       pgtype.UUID
-}
-
-func (q *Queries) UpdateVerified(ctx context.Context, arg UpdateVerifiedParams) error {
-	_, err := q.db.Exec(ctx, updateVerified, arg.Verified, arg.ID)
 	return err
 }

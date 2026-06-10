@@ -12,9 +12,8 @@ type User struct {
 	Email        string
 	PhoneNumber  string
 	PasswordHash string
-	Verified     bool
 	Role         Role
-	Status       UserStatus
+	State        *UserState
 	CreatedAt    int64
 	UpdatedAt    int64
 	DeletedAt    *int64
@@ -22,6 +21,13 @@ type User struct {
 	Actions      []UserAction
 	Permissions  map[PermissionAction]UserPermission
 	Preferences  UserPreferences
+}
+
+type UserState struct {
+	Verified     bool
+	Status       UserStatus
+	LastActiveAt *int64
+	UpdatedAt    int64
 }
 
 type UserProfile struct {
@@ -32,6 +38,7 @@ type UserProfile struct {
 	Alias     string
 	Avatar    string
 	Bio       string
+	UpdatedAt int64
 }
 
 type UserPermission struct {
@@ -58,14 +65,22 @@ type UserPreferences struct {
 }
 
 func (u *User) Response() *responses.UserResponse {
+	var state *responses.UserStateResponse
+	if u.State != nil {
+		state = &responses.UserStateResponse{
+			Verified:     u.State.Verified,
+			Status:       u.State.Status.String(),
+			LastActiveAt: u.State.LastActiveAt,
+		}
+	}
+
 	return &responses.UserResponse{
 		ID:          u.ID.String(),
 		Username:    u.Username,
 		Email:       u.Email,
 		PhoneNumber: u.PhoneNumber,
-		Verified:    u.Verified,
 		Role:        u.Role.String(),
-		Status:      u.Status.String(),
+		State:       state,
 		CreatedAt:   u.CreatedAt,
 		UpdatedAt:   u.UpdatedAt,
 		DeletedAt:   u.DeletedAt,
@@ -189,9 +204,7 @@ func UserFromDB(row *db.DivaUser) *User {
 		Email:        row.Email,
 		PhoneNumber:  row.PhoneNumber,
 		PasswordHash: row.PasswordHash,
-		Verified:     row.Verified,
 		Role:         RoleFromDB(row.Role),
-		Status:       UserStatusFromDB(row.Status),
 		CreatedAt:    DBTimeToInt(row.CreatedAt),
 		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
 		DeletedAt:    DBTimeToIntPtr(row.DeletedAt),
@@ -233,5 +246,23 @@ func UserProfileFromDB(row *db.DivaUserProfile) *UserProfile {
 		Alias:     row.Alias,
 		Bio:       row.Bio,
 		Avatar:    row.Avatar,
+		UpdatedAt: DBTimeToInt(row.UpdatedAt),
+	}
+}
+
+func UserStateFromDB(row *db.DivaUserState) *UserState {
+	return &UserState{
+		Verified:     row.Verified,
+		Status:       UserStatusFromDB(row.Status),
+		LastActiveAt: DBTimeToIntPtr(row.LastActiveAt),
+		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
+	}
+}
+
+func (us *UserState) DBCreate(userID uuid.UUID) *db.CreateUserStateParams {
+	return &db.CreateUserStateParams{
+		UserID:   UUIDPtrToDB(&userID),
+		Verified: us.Verified,
+		Status:   us.Status.ToDB(),
 	}
 }

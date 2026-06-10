@@ -15,11 +15,11 @@ import (
 )
 
 type UserPermissionHandler struct {
-	service *service.UserPermissionService
+	upService *service.UserPermissionService
 }
 
-func NewUserPermissionHandler(svc *service.UserPermissionService) *UserPermissionHandler {
-	return &UserPermissionHandler{service: svc}
+func NewUserPermissionHandler(upService *service.UserPermissionService) *UserPermissionHandler {
+	return &UserPermissionHandler{upService: upService}
 }
 
 func (h *UserPermissionHandler) UserRoutes(r chi.Router) {
@@ -79,7 +79,7 @@ func (h *UserPermissionHandler) UserRoutes(r chi.Router) {
 							if err != nil {
 								return nil, false
 							}
-							dbPerm, err := h.service.GetOneByPermID(ctx, uid, pid)
+							dbPerm, err := h.upService.GetOneByPermID(ctx, uid, pid)
 							if err != nil {
 								return nil, false
 							}
@@ -119,7 +119,7 @@ func (h *UserPermissionHandler) getByUser(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	perms, err := h.service.GetByUser(r.Context(), uid)
+	perms, err := h.upService.GetByUser(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -158,7 +158,7 @@ func (h *UserPermissionHandler) getOneByUser(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	perm, err := h.service.GetOneByPermID(r.Context(), uid, pid)
+	perm, err := h.upService.GetOneByPermID(r.Context(), uid, pid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -192,7 +192,7 @@ func (h *UserPermissionHandler) createPermission(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := h.service.CreateByName(r.Context(), permission, &rc.Session.User, dto.Granted, dto.ExpiresAt, uid); err != nil {
+	if err := h.upService.CreateByName(r.Context(), permission, &rc.Session.User, dto.Granted, dto.ExpiresAt, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -231,7 +231,7 @@ func (h *UserPermissionHandler) updatePermission(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := h.service.Update(r.Context(), uid, pid, dto.Granted, dto.ExpiresAt); err != nil {
+	if err := h.upService.Update(r.Context(), uid, pid, dto.Granted, dto.ExpiresAt); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -264,7 +264,7 @@ func (h *UserPermissionHandler) deletePermission(w http.ResponseWriter, r *http.
 		}
 	}
 
-	if err := h.service.Delete(r.Context(), uid, pid); err != nil {
+	if err := h.upService.Delete(r.Context(), uid, pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

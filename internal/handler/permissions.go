@@ -14,16 +14,16 @@ import (
 )
 
 type PermissionsHandler struct {
-	service  *service.PermissionService
+	pService *service.PermissionService
 	sService *service.SessionService
 }
 
 func NewPermissionsHandler(
-	svc *service.PermissionService,
+	pService *service.PermissionService,
 	sService *service.SessionService,
 ) *PermissionsHandler {
 	return &PermissionsHandler{
-		service:  svc,
+		pService: pService,
 		sService: sService,
 	}
 }
@@ -78,13 +78,13 @@ func (h *PermissionsHandler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	perms, err := h.service.List(r.Context(), pagination)
+	perms, err := h.pService.List(r.Context(), pagination)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
-	total, err := h.service.Count(r.Context())
+	total, err := h.pService.Count(r.Context())
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -106,7 +106,7 @@ func (h *PermissionsHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm, err := h.service.GetByID(r.Context(), pid)
+	perm, err := h.pService.GetByID(r.Context(), pid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -134,7 +134,7 @@ func (h *PermissionsHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Create(r.Context(), &dto); err != nil {
+	if err := h.pService.Create(r.Context(), &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -155,7 +155,7 @@ func (h *PermissionsHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Update(r.Context(), pid, &dto); err != nil {
+	if err := h.pService.Update(r.Context(), pid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -170,7 +170,7 @@ func (h *PermissionsHandler) restore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Restore(r.Context(), pid); err != nil {
+	if err := h.pService.Restore(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -185,7 +185,7 @@ func (h *PermissionsHandler) softDelete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.service.SoftDelete(r.Context(), pid); err != nil {
+	if err := h.pService.SoftDelete(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -200,7 +200,7 @@ func (h *PermissionsHandler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), pid); err != nil {
+	if err := h.pService.Delete(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

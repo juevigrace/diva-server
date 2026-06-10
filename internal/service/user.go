@@ -231,9 +231,9 @@ func (s *UserService) UpdateEmail(ctx context.Context, email string, userID uuid
 }
 
 func (s *UserService) UpdateVerified(ctx context.Context, verified bool, userID uuid.UUID) error {
-	return s.queries.UpdateVerified(ctx, db.UpdateVerifiedParams{
+	return s.queries.UpdateUserVerified(ctx, db.UpdateUserVerifiedParams{
 		Verified: verified,
-		ID:       models.UUIDPtrToDB(&userID),
+		UserID:   models.UUIDPtrToDB(&userID),
 	})
 }
 

@@ -5,9 +5,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -22,9 +20,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -39,9 +35,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -56,9 +50,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -73,9 +65,7 @@ select
     u.email,
     u.phone_number,
     u.password_hash,
-    u.verified,
     u.role,
-    u.status,
     u.created_at,
     u.updated_at,
     u.deleted_at
@@ -118,21 +108,15 @@ update diva_user set
     updated_at = now()
 where id = $2;
 
--- name: UpdateVerified :exec
+-- name: UpdatePhoneNumber :exec
 update diva_user set
-    verified = $1,
+    phone_number = $1,
     updated_at = now()
 where id = $2;
 
 -- name: UpdateRole :exec
 update diva_user set
     role = $1,
-    updated_at = now()
-where id = $2;
-
--- name: UpdatePhoneNumber :exec
-update diva_user set
-    phone_number = $1,
     updated_at = now()
 where id = $2;
 
@@ -154,6 +138,5 @@ where id = $1;
 -- name: RestoreUser :exec
 update diva_user set
     deleted_at = null,
-    status = 'ACTIVE',
     updated_at = now()
 where id = $1;

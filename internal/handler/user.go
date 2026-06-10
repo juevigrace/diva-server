@@ -34,11 +34,11 @@ func NewUserHandler(
 ) *UserHandler {
 	return &UserHandler{
 		uService:    uService,
+		sHandler:    sHandler,
 		uaHandler:   uaHandler,
 		upHandler:   upHandler,
 		uprHandler:  uprHandler,
 		uproHandler: uproHandler,
-		sHandler:    sHandler,
 	}
 }
 
@@ -311,7 +311,7 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
-			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -352,7 +352,7 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
-			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -388,7 +388,7 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
-			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
@@ -424,7 +424,7 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
-			if err := h.upHandler.service.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
+			if err := h.upHandler.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
 				responses.HandleReqError(w, err)
 				return
 			}
