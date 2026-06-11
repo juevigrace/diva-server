@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/models/errs"
+	"github.com/juevigrace/diva-server/pkg/errs"
 )
 
 func GetUUIDFromURL(r *http.Request, param string) (uuid.UUID, error) {

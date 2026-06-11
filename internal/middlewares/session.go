@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
+	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/internal/util"
+	"github.com/juevigrace/diva-server/pkg/jwt"
 )
 
 type SessionCall func(ctx context.Context, sessionId uuid.UUID) (*models.Session, error)
@@ -45,7 +45,7 @@ func extractSession(sessionCall SessionCall, r *http.Request) (*models.Session, 
 	return session, nil
 }
 
-func extractJWTFromHeader(r *http.Request) (*util.JWTClaims, error) {
+func extractJWTFromHeader(r *http.Request) (*jwt.JWTClaims, error) {
 	authHeader := r.Header.Get("Authorization")
 
 	if !strings.HasPrefix(authHeader, "Bearer") {
@@ -57,7 +57,7 @@ func extractJWTFromHeader(r *http.Request) (*util.JWTClaims, error) {
 		return nil, errs.ErrHeaderNotValid
 	}
 	tokenString := parts[1]
-	claims, err := util.ValidateJWT(tokenString)
+	claims, err := jwt.ValidateJWT(tokenString)
 	if err != nil {
 		slog.Warn("jwt validation failed", "error", err)
 		return nil, errs.ErrNotAuthorized

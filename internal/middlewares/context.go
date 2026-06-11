@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
+	"github.com/juevigrace/diva-server/pkg/errs"
 )
 
 type contextKey string

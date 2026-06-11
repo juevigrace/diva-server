@@ -6,9 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
+	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/util"
+	"github.com/juevigrace/diva-server/pkg/bcrypt"
 )
 
 type AuthService struct {
@@ -49,7 +49,7 @@ func (s *AuthService) SignIn(ctx context.Context, dto *dtos.SignInDto) (*models.
 		return nil, errs.ErrInvalidCredentials
 	}
 
-	if !util.ValidatePassword(dto.Password, user.PasswordHash) {
+	if !bcrypt.ValidatePassword(dto.Password, user.PasswordHash) {
 		return nil, errs.ErrInvalidCredentials
 	}
 

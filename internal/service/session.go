@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/util"
+	"github.com/juevigrace/diva-server/pkg/jwt"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -57,17 +57,17 @@ func (s *SessionService) GetByID(ctx context.Context, sessionID uuid.UUID) (*mod
 
 func (s *SessionService) Create(ctx context.Context, userID uuid.UUID, sType models.SessionType, dto *dtos.SessionDataDto) (*models.Session, error) {
 	sessionID := uuid.New()
-	accessToken, err := util.CreateAccessToken(sessionID)
+	accessToken, err := jwt.CreateAccessToken(sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := util.CreateRefreshToken(sessionID)
+	refreshToken, err := jwt.CreateRefreshToken(sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	expiration, err := util.GetTokenExpiration(refreshToken)
+	expiration, err := jwt.GetTokenExpiration(refreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -97,17 +97,17 @@ func (s *SessionService) CreateTemporal(ctx context.Context, userID uuid.UUID, d
 }
 
 func (s *SessionService) Update(ctx context.Context, session *models.Session) (*models.Session, error) {
-	accessToken, err := util.CreateAccessToken(session.ID)
+	accessToken, err := jwt.CreateAccessToken(session.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := util.CreateRefreshToken(session.ID)
+	refreshToken, err := jwt.CreateRefreshToken(session.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	expiration, err := util.GetTokenExpiration(refreshToken)
+	expiration, err := jwt.GetTokenExpiration(refreshToken)
 	if err != nil {
 		return nil, err
 	}

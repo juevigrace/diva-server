@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/internal/models/errs"
-	"github.com/juevigrace/diva-server/internal/util"
+	"github.com/juevigrace/diva-server/pkg/errs"
+	"github.com/juevigrace/diva-server/pkg/bcrypt"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -157,7 +157,7 @@ func (s *UserService) GetByUsernameOrEmail(ctx context.Context, value string) (*
 }
 
 func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UUID, error) {
-	passwordHash, err := util.HashPassword(dto.Password)
+	passwordHash, err := bcrypt.HashPassword(dto.Password)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -205,11 +205,11 @@ func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPass
 		return err
 	}
 
-	if util.ValidatePassword(newPassword, dbUser.PasswordHash) {
+	if bcrypt.ValidatePassword(newPassword, dbUser.PasswordHash) {
 		return errs.ErrSamePassword
 	}
 
-	newHash, err := util.HashPassword(newPassword)
+	newHash, err := bcrypt.HashPassword(newPassword)
 	if err != nil {
 		return err
 	}

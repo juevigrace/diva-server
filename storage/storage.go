@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/juevigrace/diva-server/concurrency"
+	"github.com/juevigrace/diva-server/pkg/concurrency"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage/db"
 	"github.com/juevigrace/diva-server/storage/db/migrations"

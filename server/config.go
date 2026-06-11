@@ -18,6 +18,7 @@ type ServerConfig struct {
 	RootUsername    string           `json:"root_username"`
 	RootPassword    string           `json:"root_password"`
 	RootEmail       string           `json:"root_email"`
+	UploadsDir      string           `json:"uploads_dir"`
 }
 
 func NewServerConfig() models.Config {
@@ -51,6 +52,7 @@ func (c *ServerConfig) Configure(config models.Config) error {
 	c.RootUsername = sc.RootUsername
 	c.RootPassword = sc.RootPassword
 	c.RootEmail = sc.RootEmail
+	c.UploadsDir = sc.UploadsDir
 
 	return nil
 }
@@ -70,6 +72,7 @@ func (c *ServerConfig) LoadDefault() {
 	c.RootUsername = models.GetEnvOrDefault(ROOT_USERNAME_KEY, ROOT_USERNAME)
 	c.RootPassword = models.GetEnvOrDefault(ROOT_PASSWORD_KEY, ROOT_PASSWORD)
 	c.RootEmail = models.GetEnvOrDefault(ROOT_EMAIL_KEY, ROOT_EMAIL)
+	c.UploadsDir = models.GetEnvOrDefault(UPLOADS_DIR_KEY, UPLOADS_DIR)
 }
 
 func (c *ServerConfig) Validate() error {
@@ -90,6 +93,18 @@ func (c *ServerConfig) Validate() error {
 	}
 	if c.RootEmail == "" {
 		return errors.New("server: root email is required")
+	}
+	if c.Env != models.DEVELOPMENT && c.Env != models.PRODUCTION {
+		return errors.New("server: invalid environment")
+	}
+	if c.ResendAPIKey == "" {
+		return errors.New("server: resend api key is required")
+	}
+	if c.ResendFromEmail == "" {
+		return errors.New("server: resend from email is required")
+	}
+	if c.UploadsDir == "" {
+		return errors.New("server: uploads directory is required")
 	}
 	return nil
 }

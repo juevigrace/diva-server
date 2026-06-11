@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/juevigrace/diva-server/concurrency"
+	"github.com/juevigrace/diva-server/pkg/concurrency"
 	"github.com/juevigrace/diva-server/internal/di"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/internal/router"
+	"github.com/juevigrace/diva-server/pkg/filehelper"
 	"github.com/juevigrace/diva-server/storage"
 )
 
@@ -27,6 +28,7 @@ type Server struct {
 	database storage.Storage
 	router   *router.ServerRouter
 	mail     *mail.Client
+	files    *filehelper.FileHelper
 }
 
 func NewServer(config models.Config) (*Server, error) {
@@ -67,7 +69,7 @@ func (s *Server) routes() {
 	queries := s.database.Queries()
 
 	serviceModule := di.NewServiceModule(queries, s.mail)
-	handlerModule := di.NewHandlerModule(serviceModule)
+	handlerModule := di.NewHandlerModule(serviceModule, s.files)
 
 	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
 
@@ -88,6 +90,9 @@ func (s *Server) routes() {
 		})
 	})
 
+	fileServer := http.FileServer(http.Dir(s.config.UploadsDir))
+	s.router.Chi.Handle("/", fileServer)
+
 	s.router.Chi.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		res := responses.RespondNotFound(nil, "Route not found")
 		responses.WriteJSON(w, res)
@@ -100,6 +105,8 @@ func (s *Server) setup() error {
 	if err := s.createStorage(); err != nil {
 		return err
 	}
+
+	s.files = filehelper.NewFileHelper(s.config.UploadsDir, make(map[string]string), 0)
 
 	s.router = router.NewServerRouter()
 

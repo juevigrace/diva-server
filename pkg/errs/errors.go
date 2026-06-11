@@ -44,3 +44,9 @@ var (
 var (
 	ErrAdminAccessRequired = errors.New("admin access required")
 )
+
+var (
+	ErrFileRequired     = errors.New("file is required")
+	ErrUnsupportedImage = errors.New("unsupported image type")
+	ErrFileTooLarge     = errors.New("file too large")
+)

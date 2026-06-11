@@ -9,8 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/internal/models/errs"
-	"github.com/juevigrace/diva-server/internal/util"
+	"github.com/juevigrace/diva-server/pkg/errs"
+	"github.com/juevigrace/diva-server/pkg/otp"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -85,7 +85,7 @@ func (s *UserVerificationService) Generate(
 	exists, err := s.GetOneById(ctx, action.ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			token, err := util.GenerateOTPCode()
+			token, err := otp.GenerateOTPCode()
 			if err != nil {
 				return nil, err
 			}

@@ -50,7 +50,6 @@ func (s *UserProfileService) Update(ctx context.Context, userID uuid.UUID, dto *
 }
 
 func (s *UserProfileService) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatar string) error {
-	// TODO: handle here file of the image
 	return s.queries.UpdateUserProfileAvatar(ctx, db.UpdateUserProfileAvatarParams{
 		Avatar: avatar,
 		UserID: models.UUIDPtrToDB(&userID),

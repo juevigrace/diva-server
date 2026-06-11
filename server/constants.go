@@ -17,6 +17,7 @@ const (
 	ROOT_USERNAME          string           = "user"
 	ROOT_PASSWORD          string           = "1234"
 	ROOT_EMAIL             string           = "user@gmail.com"
+	UPLOADS_DIR            string           = "./uploads"
 )
 
 const (
@@ -30,4 +31,5 @@ const (
 	ROOT_USERNAME_KEY string = "ROOT_USERNAME"
 	ROOT_PASSWORD_KEY string = "ROOT_PASSWORD"
 	ROOT_EMAIL_KEY    string = "ROOT_EMAIL"
+	UPLOADS_DIR_KEY   string = "UPLOADS_DIR"
 )

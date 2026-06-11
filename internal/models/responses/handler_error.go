@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/juevigrace/diva-server/internal/models/errs"
+	"github.com/juevigrace/diva-server/pkg/errs"
 )
 
 func HandleReqError(w http.ResponseWriter, err error) {
