@@ -1,6 +1,11 @@
 package auth
 
-import "github.com/juevigrace/diva-server/internal/core"
+import (
+	"github.com/juevigrace/diva-server/internal/core"
+	"github.com/juevigrace/diva-server/internal/core/permission"
+	"github.com/juevigrace/diva-server/internal/core/session"
+	"github.com/juevigrace/diva-server/internal/core/user"
+)
 
 type AuthModule struct {
 	handler *AuthHandler
@@ -11,7 +16,7 @@ func NewAuthModule(
 	pService *permission.PermissionService,
 	sService *session.SessionService,
 	uService *user.UserService,
-) core.Module {
+) *AuthModule {
 	service := NewAuthService(pService, sService, uService)
 	return &AuthModule{
 		handler: NewAuthHandler(service, sService),

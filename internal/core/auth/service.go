@@ -5,6 +5,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/core/permission"
+	"github.com/juevigrace/diva-server/internal/core/session"
+	"github.com/juevigrace/diva-server/internal/core/user"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/pkg/bcrypt"

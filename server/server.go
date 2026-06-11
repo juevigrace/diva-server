@@ -10,13 +10,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/juevigrace/diva-server/pkg/concurrency"
-	"github.com/juevigrace/diva-server/internal/di"
+	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/internal/router"
+	"github.com/juevigrace/diva-server/pkg/concurrency"
 	"github.com/juevigrace/diva-server/pkg/filehelper"
 	"github.com/juevigrace/diva-server/storage"
 )
@@ -26,7 +25,7 @@ type Server struct {
 	config *ServerConfig
 
 	database storage.Storage
-	router   *router.ServerRouter
+	router   *chi.Mux
 	mail     *mail.Client
 	files    *filehelper.FileHelper
 }
@@ -65,15 +64,15 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
+// TODO: create channels that pass in information from other modules
 func (s *Server) routes() {
 	queries := s.database.Queries()
 
-	serviceModule := di.NewServiceModule(queries, s.mail)
-	handlerModule := di.NewHandlerModule(serviceModule, s.files)
+	session := session.NewSessionModule(queries)
 
 	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
 
-	s.router.Chi.Route("/api", func(api chi.Router) {
+	s.router.Route("/api", func(api chi.Router) {
 		api.Use(apiLimiter.Middleware)
 
 		handlerModule.Auth.Routes(api)
@@ -83,7 +82,7 @@ func (s *Server) routes() {
 		handlerModule.Permissions.Routes(api)
 	})
 
-	s.router.Chi.Route("/health", func(rc chi.Router) {
+	s.router.Route("/health", func(rc chi.Router) {
 		rc.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			res := responses.RespondOk(s.database.Health(context.Background()), "Success")
 			responses.WriteJSON(w, res)
@@ -91,41 +90,35 @@ func (s *Server) routes() {
 	})
 
 	fileServer := http.FileServer(http.Dir(s.config.UploadsDir))
-	s.router.Chi.Handle("/", fileServer)
+	s.router.Handle("/", fileServer)
 
-	s.router.Chi.NotFound(func(w http.ResponseWriter, r *http.Request) {
+	s.router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		res := responses.RespondNotFound(nil, "Route not found")
 		responses.WriteJSON(w, res)
 	})
 }
 
 func (s *Server) setup() error {
-	s.mail = mail.NewClient(s.config.ResendAPIKey, s.config.ResendFromEmail)
+	s.setupRouter()
 
-	if err := s.createStorage(); err != nil {
+	conf := storage.NewDatabaseConf()
+	database, err := storage.New(conf)
+	if err != nil {
 		return err
 	}
 
+	s.database = database
+	s.mail = mail.NewClient(s.config.ResendAPIKey, s.config.ResendFromEmail)
 	s.files = filehelper.NewFileHelper(s.config.UploadsDir, make(map[string]string), 0)
-
-	s.router = router.NewServerRouter()
-
 	s.srv = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.config.Port),
-		Handler: s.router.Chi,
+		Handler: s.router,
 	}
 
 	return nil
 }
 
 func (s *Server) createStorage() error {
-	conf := storage.NewDatabaseConf()
-	database, err := storage.New(conf)
-	if err != nil {
-		return fmt.Errorf("failed to create storage: %w", err)
-	}
-
-	s.database = database
 
 	return nil
 }
