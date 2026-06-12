@@ -2,7 +2,6 @@ package user
 
 import (
 	"github.com/juevigrace/diva-server/internal/core"
-	"github.com/juevigrace/diva-server/storage/db"
 )
 
 type UserModule struct {
@@ -10,10 +9,7 @@ type UserModule struct {
 	service *UserService
 }
 
-func NewUserModule(
-	queries *db.Queries,
-) core.Module {
-	service := NewUserService(queries)
+func NewUserModule(service *UserService) core.Module {
 	return &UserModule{
 		handler: NewUserHandler(service),
 		service: service,

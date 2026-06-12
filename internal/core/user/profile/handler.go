@@ -15,7 +15,6 @@ import (
 )
 
 type UserProfileHandler struct {
-	upService   *permissions.UserPermissionService
 	uproService *UserProfileService
 	files       *filehelper.FileHelper
 }
@@ -120,15 +119,6 @@ func (h *UserProfileHandler) create(w http.ResponseWriter, r *http.Request) {
 	if err = h.uproService.Create(r.Context(), uid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if rc.Session.User.ID == uid {
-		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_PROFILE_WRITE]; ok {
-			if err := h.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondCreated(nil, "profile created"))

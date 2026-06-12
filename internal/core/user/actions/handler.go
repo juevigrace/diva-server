@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/core/session"
+	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
@@ -14,16 +14,14 @@ import (
 
 type UserActionsHandler struct {
 	uaService *UserActionsService
-	sService  *session.SessionService
 }
 
 func NewUserActionsHandler(
 	uaService *UserActionsService,
-	sService *session.SessionService,
+	sProvider core.Provider[*models.Session],
 ) *UserActionsHandler {
 	return &UserActionsHandler{
 		uaService: uaService,
-		sService:  sService,
 	}
 }
 

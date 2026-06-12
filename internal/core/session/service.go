@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/pkg/jwt"
@@ -13,12 +14,14 @@ import (
 )
 
 type SessionService struct {
-	queries *db.Queries
+	queries  *db.Queries
+	provider core.Provider[*models.User]
 }
 
-func NewSessionService(queries *db.Queries) *SessionService {
+func NewSessionService(queries *db.Queries, provider core.Provider[*models.User]) *SessionService {
 	return &SessionService{
-		queries: queries,
+		queries:  queries,
+		provider: provider,
 	}
 }
 
@@ -42,6 +45,13 @@ func (s *SessionService) GetByID(ctx context.Context, sessionID uuid.UUID) (*mod
 	}
 
 	dbSession := models.SessionFromDB(&row)
+
+	user, err := s.provider.GetByID(ctx, dbSession.User.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dbSession.User = *user
 
 	return dbSession, nil
 }

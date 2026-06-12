@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/core/permission"
 	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/core/user"
@@ -15,9 +16,10 @@ import (
 )
 
 type AuthService struct {
-	pService *permission.PermissionService
-	sService *session.SessionService
-	uService *user.UserService
+	pService   *permission.PermissionService
+	uvProvider core.Provider[*models.UserActionVerification]
+	sService   *session.SessionService
+	uService   *user.UserService
 }
 
 func NewAuthService(
@@ -79,7 +81,7 @@ func (s *AuthService) Refresh(ctx context.Context, session *models.Session, dto 
 }
 
 func (s *AuthService) ForgotPasswordConfirm(ctx context.Context, actionID uuid.UUID, sd *dtos.SessionDataDto) (*models.Session, error) {
-	dbUV, err := s.uService.uvService.GetOneById(ctx, actionID)
+	dbUV, err := s.uvProvider.GetByID(ctx, actionID)
 	if err != nil {
 		return nil, err
 	}

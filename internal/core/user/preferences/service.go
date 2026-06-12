@@ -10,10 +10,14 @@ import (
 )
 
 type UserPreferencesService struct {
-	queries *db.Queries
+	queries      *db.Queries
+	onPermDelete func(ctx context.Context, uid, pid uuid.UUID) error
 }
 
-func NewUserPreferencesService(queries *db.Queries) *UserPreferencesService {
+func NewUserPreferencesService(
+	queries *db.Queries,
+	onPermDelete func(ctx context.Context, uid, pid uuid.UUID) error,
+) *UserPreferencesService {
 	return &UserPreferencesService{
 		queries: queries,
 	}
@@ -42,7 +46,7 @@ func (s *UserPreferencesService) GetByID(ctx context.Context, id uuid.UUID) (*mo
 	return models.UserPrefsFromDB(&row), nil
 }
 
-func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
+func (s *UserPreferencesService) Create(ctx context.Context, session *models.Session, uid uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
 		ID:                  uuid.New(),
 		Device:              dto.Device,
@@ -50,8 +54,17 @@ func (s *UserPreferencesService) Create(ctx context.Context, userID uuid.UUID, d
 		OnboardingCompleted: dto.OnboardingCompleted,
 		Language:            dto.Language,
 	}
-
-	return s.queries.CreateUserPreferences(ctx, *pref.DBCreate(userID))
+	if err := s.queries.CreateUserPreferences(ctx, *pref.DBCreate(uid)); err != nil {
+		return err
+	}
+	if session.User.ID == uid {
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PREFERENCES_WRITE]; ok {
+			if err := s.onPermDelete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (s *UserPreferencesService) Update(ctx context.Context, id uuid.UUID, dto *dtos.UpdateUserPreferencesDto) error {

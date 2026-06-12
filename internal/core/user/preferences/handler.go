@@ -201,18 +201,9 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 
 	dto.Device = session.Device
 
-	if err = h.uprService.Create(r.Context(), uid, &dto); err != nil {
+	if err = h.uprService.Create(r.Context(), rc.Session, uid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if session.User.ID == uid {
-		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PREFERENCES_WRITE]; ok {
-			if err := h.upService.Delete(r.Context(), session.User.ID, perm.Permission.ID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondCreated(nil, "preferences created"))

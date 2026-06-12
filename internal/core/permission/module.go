@@ -2,6 +2,7 @@ package permission
 
 import (
 	"github.com/juevigrace/diva-server/internal/core"
+	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -10,10 +11,13 @@ type PermissionModule struct {
 	service *PermissionService
 }
 
-func NewPermissionModule(queries *db.Queries, sService *sesison.SessionService) core.Module {
+func NewPermissionModule(
+	queries *db.Queries,
+	provider core.Provider[*models.Session],
+) core.Module {
 	service := NewPermissionService(queries)
 	return &PermissionModule{
-		handler: NewPermissionHandler(service, sService),
+		handler: NewPermissionHandler(service, provider),
 		service: service,
 	}
 }

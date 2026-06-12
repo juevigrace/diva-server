@@ -1,48 +1,24 @@
 package verification
 
 import (
-	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/juevigrace/diva-server/internal/core/session"
-	"github.com/juevigrace/diva-server/internal/core/user"
-	"github.com/juevigrace/diva-server/internal/core/user/actions"
-	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/middlewares"
-	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/pkg/errs"
 )
 
 type UserVerificationHandler struct {
-	sService  *session.SessionService
-	uService  *user.UserService
-	uaService *actions.UserActionsService
-	upService *permissions.UserPermissionService
-	usService *user.UserStateService
-	vService  *UserVerificationService
+	vService *UserVerificationService
 }
 
 func NewVerificationHandler(
-	sService *session.SessionService,
-	uService *user.UserService,
-	uaService *actions.UserActionsService,
-	upService *permissions.UserPermissionService,
-	usService *user.UserStateService,
 	vService *UserVerificationService,
 ) *UserVerificationHandler {
 	return &UserVerificationHandler{
-		sService:  sService,
-		uService:  uService,
-		uaService: uaService,
-		upService: upService,
-		usService: usService,
-		vService:  vService,
+		vService: vService,
 	}
 }
 
@@ -60,19 +36,7 @@ func (h *UserVerificationHandler) requestVerification(w http.ResponseWriter, r *
 		return
 	}
 
-	parsedAction := models.ActionFromString(dto.Action)
-	if parsedAction == -1 {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, errs.ErrActionNotFound.Error()))
-		return
-	}
-
-	dbUser, err := h.uService.GetByEmail(r.Context(), dto.Email)
-	if err != nil {
-		responses.HandleReqError(w, err)
-		return
-	}
-
-	res, err := h.vService.RequestVerification(r.Context(), dbUser, parsedAction)
+	res, err := h.vService.RequestVerification(r.Context(), dto.Email, dto.Action)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -94,72 +58,9 @@ func (h *UserVerificationHandler) verify(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	va, err := h.vService.Verify(r.Context(), actionID, dto.Token)
-	if err != nil {
+	if err := h.vService.Verify(r.Context(), actionID, dto.Token); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if !va.Verified {
-		responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrActionNotVerified.Error()))
-		return
-	}
-
-	switch va.Action.Name {
-	case models.ActionPasswordUpdate:
-	case models.ActionUserRestore:
-		if err := h.uService.Restore(r.Context(), va.Action.UserID); err != nil {
-			responses.HandleReqError(w, err)
-			return
-		}
-		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
-		}
-	case models.ActionUserVerification:
-		if err := h.usService.UpdateVerified(r.Context(), true, va.Action.UserID); err != nil {
-			responses.HandleReqError(w, err)
-			return
-		}
-
-		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
-		}
-	case models.ActionEmailUpdate, models.ActionUsernameUpdate, models.ActionPhoneUpdate:
-		var permAction models.PermissionAction
-		switch va.Action.Name {
-		case models.ActionEmailUpdate:
-			permAction = models.PERMISSION_USERS_EMAIL_WRITE
-		case models.ActionUsernameUpdate:
-			permAction = models.PERMISSION_USERS_USERNAME_WRITE
-		case models.ActionPhoneUpdate:
-			permAction = models.PERMISSION_USERS_PHONE_WRITE
-		}
-
-		dbPerm, err := h.upService.GetOneByName(r.Context(), va.Action.UserID, permAction)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			responses.HandleReqError(w, err)
-			return
-		}
-
-		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
-		if dbPerm == nil {
-			if err := h.upService.CreateByName(r.Context(), permAction, nil, true, &exp, va.Action.UserID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		} else if dbPerm.ExpiresAt != nil && time.UnixMilli(*dbPerm.ExpiresAt).Before(time.Now().UTC()) {
-			if err := h.upService.Update(r.Context(), va.Action.UserID, dbPerm.Permission.ID, true, &exp); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
-
-		if err := h.uaService.Delete(r.Context(), va.Action.ID); err != nil {
-			responses.HandleReqError(w, err)
-			return
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondOk(nil, "Success"))

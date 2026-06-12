@@ -1,6 +1,8 @@
 package session
 
 import (
+	"github.com/juevigrace/diva-server/internal/core"
+	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
@@ -11,8 +13,9 @@ type SessionModule struct {
 
 func NewSessionModule(
 	queries *db.Queries,
+	provider core.Provider[*models.User],
 ) *SessionModule {
-	service := NewSessionService(queries)
+	service := NewSessionService(queries, provider)
 	return &SessionModule{
 		handler: NewSessionHandler(service),
 		service: service,

@@ -9,7 +9,6 @@ import (
 	"github.com/juevigrace/diva-server/internal/core/user/actions"
 	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/core/user/profile"
-	"github.com/juevigrace/diva-server/internal/core/user/verification"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/pkg/bcrypt"
@@ -23,7 +22,7 @@ type UserService struct {
 	upService  *permissions.UserPermissionService
 	uprService *profile.UserProfileService
 	usService  *UserStateService
-	uvService  *verification.UserVerificationService
+	onClose    func(ctx context.Context, uid uuid.UUID) error
 }
 
 func NewUserService(
@@ -32,15 +31,15 @@ func NewUserService(
 	upService *permissions.UserPermissionService,
 	uprService *profile.UserProfileService,
 	usService *UserStateService,
-	uvService *verification.UserVerificationService,
+	onClose func(ctx context.Context, uid uuid.UUID) error,
 ) *UserService {
 	return &UserService{
 		uaService:  uaService,
 		upService:  upService,
 		uprService: uprService,
 		usService:  usService,
-		uvService:  uvService,
 		queries:    queries,
+		onClose:    onClose,
 	}
 }
 
@@ -203,7 +202,7 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 	return uid, nil
 }
 
-func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPassword string) error {
+func (s *UserService) UpdatePassword(ctx context.Context, session *models.Session, uid uuid.UUID, newPassword string) error {
 	dbUser, err := s.GetByID(ctx, uid)
 	if err != nil {
 		return err
@@ -225,29 +224,76 @@ func (s *UserService) UpdatePassword(ctx context.Context, uid uuid.UUID, newPass
 		return err
 	}
 
+	if err = s.onClose(ctx, uid); err != nil {
+		return err
+	}
+
+	if session.User.ID == uid {
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
+			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
-func (s *UserService) UpdatePhoneNumber(ctx context.Context, phone string, userID uuid.UUID) error {
-	return s.queries.UpdatePhoneNumber(ctx, db.UpdatePhoneNumberParams{
+func (s *UserService) UpdatePhoneNumber(ctx context.Context, session *models.Session, phone string, uid uuid.UUID) error {
+	if err := s.queries.UpdatePhoneNumber(ctx, db.UpdatePhoneNumberParams{
 		PhoneNumber: phone,
-		ID:          models.UUIDPtrToDB(&userID),
-	})
+		ID:          models.UUIDPtrToDB(&uid),
+	}); err != nil {
+		return err
+	}
+
+	if session.User.ID == uid {
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
+			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
-func (s *UserService) UpdateUsername(ctx context.Context, username string, userID uuid.UUID) error {
-	return s.queries.UpdateUsername(ctx, db.UpdateUsernameParams{
+func (s *UserService) UpdateUsername(ctx context.Context, session *models.Session, username string, uid uuid.UUID) error {
+	if err := s.queries.UpdateUsername(ctx, db.UpdateUsernameParams{
 		Username: username,
-		ID:       models.UUIDPtrToDB(&userID),
-	})
+		ID:       models.UUIDPtrToDB(&uid),
+	}); err != nil {
+		return err
+	}
 
+	if session.User.ID == uid {
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
+			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
-func (s *UserService) UpdateEmail(ctx context.Context, email string, userID uuid.UUID) error {
-	return s.queries.UpdateEmail(ctx, db.UpdateEmailParams{
+func (s *UserService) UpdateEmail(ctx context.Context, session *models.Session, email string, uid uuid.UUID) error {
+	if err := s.queries.UpdateEmail(ctx, db.UpdateEmailParams{
 		Email: email,
-		ID:    models.UUIDPtrToDB(&userID),
-	})
+		ID:    models.UUIDPtrToDB(&uid),
+	}); err != nil {
+		return err
+	}
+
+	if session.User.ID == uid {
+		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
+			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -14,22 +15,22 @@ import (
 
 type PermissionHandler struct {
 	pService *PermissionService
-	sService *session.SessionService
+	provider core.Provider[*models.Session]
 }
 
 func NewPermissionHandler(
 	pService *PermissionService,
-	sService *session.SessionService,
+	provider core.Provider[*models.Session],
 ) *PermissionHandler {
 	return &PermissionHandler{
 		pService: pService,
-		sService: sService,
+		provider: provider,
 	}
 }
 
 func (h *PermissionHandler) Routes(r chi.Router) {
 	r.Route("/permissions", func(p chi.Router) {
-		p.Use(middlewares.RequiresSession(h.sService.GetByID))
+		p.Use(middlewares.RequiresSession(h.provider.GetByID))
 
 		p.With(
 			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),

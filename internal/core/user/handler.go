@@ -7,11 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/core/session"
-	"github.com/juevigrace/diva-server/internal/core/user/actions"
-	"github.com/juevigrace/diva-server/internal/core/user/permissions"
-	"github.com/juevigrace/diva-server/internal/core/user/preferences"
-	"github.com/juevigrace/diva-server/internal/core/user/profile"
+	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -20,32 +16,30 @@ import (
 )
 
 type UserHandler struct {
-	uService    *UserService
-	usService   *UserStateService
-	sHandler    *session.SessionHandler
-	uaHandler   *actions.UserActionsHandler
-	upHandler   *permissions.UserPermissionHandler
-	uprHandler  *preferences.UserPreferencesHandler
-	uproHandler *profile.UserProfileHandler
+	uService  *UserService
+	usService *UserStateService
+	sProvider core.Provider[*models.Session]
+	// sHandler    *session.SessionHandler
+	// uaHandler   *actions.UserActionsHandler
+	// upHandler   *permissions.UserPermissionHandler
+	// uprHandler  *preferences.UserPreferencesHandler
+	// uproHandler *profile.UserProfileHandler
 }
 
 func NewUserHandler(
 	uService *UserService,
 	usService *UserStateService,
-	sHandler *session.SessionHandler,
-	uaHandler *actions.UserActionsHandler,
-	upHandler *permissions.UserPermissionHandler,
-	uprHandler *preferences.UserPreferencesHandler,
-	uproHandler *profile.UserProfileHandler,
+	sProvider core.Provider[*models.Session],
+	// sHandler *session.SessionHandler,
+	// uaHandler *actions.UserActionsHandler,
+	// upHandler *permissions.UserPermissionHandler,
+	// uprHandler *preferences.UserPreferencesHandler,
+	// uproHandler *profile.UserProfileHandler,
 ) *UserHandler {
 	return &UserHandler{
-		uService:    uService,
-		usService:   usService,
-		sHandler:    sHandler,
-		uaHandler:   uaHandler,
-		upHandler:   upHandler,
-		uprHandler:  uprHandler,
-		uproHandler: uproHandler,
+		uService:  uService,
+		usService: usService,
+		sProvider: sProvider,
 	}
 }
 
@@ -57,7 +51,7 @@ func (h *UserHandler) Routes(r chi.Router) {
 		})
 
 		u.Group(func(auth chi.Router) {
-			auth.Use(middlewares.RequiresSession(h.sHandler.sService.GetByID))
+			auth.Use(middlewares.RequiresSession(h.sProvider.GetByID))
 
 			auth.Group(func(admin chi.Router) {
 				admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
@@ -178,15 +172,15 @@ func (h *UserHandler) Routes(r chi.Router) {
 					})
 				})
 
-				h.uaHandler.UserRoutes(uid)
-				h.upHandler.UserRoutes(uid)
-				h.uprHandler.UserRoutes(uid)
-				h.uproHandler.UserRoutes(uid)
-				h.sHandler.UserRoutes(uid)
+				// h.uaHandler.UserRoutes(uid)
+				// h.upHandler.UserRoutes(uid)
+				// h.uprHandler.UserRoutes(uid)
+				// h.uproHandler.UserRoutes(uid)
+				// h.sHandler.UserRoutes(uid)
 			})
 
-			h.uaHandler.Routes(auth)
-			h.uprHandler.Routes(auth)
+			// h.uaHandler.Routes(auh)
+			// h.uprHandler.Routes(auth)
 		})
 	})
 }
@@ -333,18 +327,9 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdateEmail(r.Context(), dto.Email, uid); err != nil {
+	if err = h.uService.UpdateEmail(r.Context(), rc.Session, dto.Email, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if rc.Session.User.ID == uid {
-		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondAccepted(nil, "email updated"))
@@ -372,23 +357,9 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdatePassword(r.Context(), uid, dto.NewPassword); err != nil {
+	if err = h.uService.UpdatePassword(r.Context(), rc.Session, uid, dto.NewPassword); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if err = h.sHandler.sService.CloseAllByUser(r.Context(), uid); err != nil {
-		responses.HandleReqError(w, err)
-		return
-	}
-
-	if rc.Session.User.ID == uid {
-		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondAccepted(nil, "password updated"))
@@ -416,18 +387,9 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdateUsername(r.Context(), dto.Username, uid); err != nil {
+	if err = h.uService.UpdateUsername(r.Context(), rc.Session, dto.Username, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if rc.Session.User.ID == uid {
-		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondAccepted(nil, "username updated"))
@@ -455,18 +417,9 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdatePhoneNumber(r.Context(), dto.PhoneNumber, uid); err != nil {
+	if err = h.uService.UpdatePhoneNumber(r.Context(), rc.Session, dto.PhoneNumber, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
-	}
-
-	if rc.Session.User.ID == uid {
-		if perm, ok := rc.Session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
-			if err := h.upHandler.upService.Delete(r.Context(), rc.Session.User.ID, perm.Permission.ID); err != nil {
-				responses.HandleReqError(w, err)
-				return
-			}
-		}
 	}
 
 	responses.WriteJSON(w, responses.RespondAccepted(nil, "phone number updated"))
