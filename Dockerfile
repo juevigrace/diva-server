@@ -15,12 +15,9 @@ COPY cmd ./cmd
 COPY internal ./internal
 COPY server ./server
 COPY storage ./storage
-COPY concurrency ./concurrency
+COPY pkg ./pkg
 COPY Makefile ./
 COPY sqlc.yaml ./
-
-# Copy env file for production
-COPY .env ./
 
 # Build the application
 RUN go build -o ./bin/diva-server ./cmd/server/main.go

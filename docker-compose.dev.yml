@@ -32,7 +32,7 @@ services:
       - ./server:/app/server
       - ./internal:/app/internal
       - ./storage:/app/storage
-      - ./concurrency:/app/concurrency
+      - ./pkg:/app/pkg
       - ./sqlc.yaml:/app/sqlc.yaml
     depends_on:
       diva_db:

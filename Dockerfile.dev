@@ -18,7 +18,7 @@ COPY cmd ./cmd
 COPY internal ./internal
 COPY server ./server
 COPY storage ./storage
-COPY concurrency ./concurrency
+COPY pkg ./pkg
 COPY Makefile ./
 COPY .air.toml ./
 COPY sqlc.yaml ./

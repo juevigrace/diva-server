@@ -6,7 +6,7 @@ BINARY_DIR = ./bin
 SERVER_BINARY = $(BINARY_DIR)/diva-server
 SERVER_MAIN = ./cmd/server/main.go
 
-.PHONY: help build run test itest clean watch sqlc dev-build dev-up dev-down dev-logs dev-shell prod-build prod-up prod-down prod-logs prod-shell db-shell-dev db-shell-prod rebuild ps
+.PHONY: help build run test itest clean watch sqlc sqlc-install dev-build dev-up dev-down dev-logs dev-shell prod-build prod-up prod-down prod-logs prod-shell db-shell-dev db-shell-prod rebuild ps
 
 # Default target
 help:
@@ -68,10 +68,16 @@ watch:
 		air; \
 	fi
 
-sqlc:
+sqlc: sqlc-install
 	@echo "Generating SQL code..."
 	@sqlc generate
 	@echo "SQL code generated!"
+
+sqlc-install:
+	@if ! command -v sqlc > /dev/null; then \
+		echo "Installing sqlc..."; \
+		go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest; \
+	fi
 
 # Testing
 test:
