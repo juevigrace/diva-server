@@ -6,8 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/juevigrace/diva-server/internal/di"
-	"github.com/juevigrace/diva-server/internal/mail"
+	"github.com/juevigrace/diva-server/internal/core/permission"
+	"github.com/juevigrace/diva-server/internal/core/session"
+	"github.com/juevigrace/diva-server/internal/core/user"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/server"
 	"github.com/juevigrace/diva-server/storage"
@@ -49,17 +50,17 @@ func main() {
 		log.Fatal("invalid config")
 	}
 
-	mailClient := mail.NewClient(serverConf.ResendAPIKey, serverConf.ResendFromEmail)
+	pModule := permission.NewPermissionModule(queries)
+	sModule := session.NewSessionModule(queries)
+	uModule := user.NewUserModule(queries, pModule.Repo, sModule.Repo, sModule.Handler, nil)
 
-	serviceModule := di.NewServiceModule(queries, mailClient)
-
-	user := dtos.CreateUserDto{
+	userDto := dtos.CreateUserDto{
 		Email:    serverConf.RootEmail,
 		Username: serverConf.RootUsername,
 		Password: serverConf.RootPassword,
 	}
 
-	id, err := serviceModule.User.Create(context.Background(), &user)
+	id, err := uModule.URepo.Create(context.Background(), &userDto)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -4,43 +4,20 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 )
 
 type AuthHandler struct {
-	aService *AuthService
-	sService *session.SessionService
+	aRepo *AuthRepo
 }
 
-func NewAuthHandler(
-	aService *AuthService,
-	sService *session.SessionService,
-) *AuthHandler {
+func NewAuthHandler(aRepo *AuthRepo) *AuthHandler {
 	return &AuthHandler{
-		aService: aService,
-		sService: sService,
+		aRepo: aRepo,
 	}
-}
-
-func (h *AuthHandler) Routes(r chi.Router) {
-	r.Route("/auth", func(auth chi.Router) {
-		auth.Post("/signIn", h.signIn)
-		auth.Post("/signUp", h.signUp)
-
-		auth.Group(func(protected chi.Router) {
-			protected.Use(middlewares.RequiresSession(h.sService.GetByID))
-			protected.Post("/signOut", h.signOut)
-			protected.Post("/ping", h.ping)
-			protected.Post("/refresh", h.refresh)
-		})
-
-		auth.Post("/forgot/password/confirm", h.forgotPasswordConfirm)
-	})
 }
 
 func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +28,7 @@ func (h *AuthHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	session, err := h.aService.SignIn(r.Context(), &dto)
+	session, err := h.aRepo.SignIn(r.Context(), &dto)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -68,7 +45,7 @@ func (h *AuthHandler) signUp(w http.ResponseWriter, r *http.Request) {
 	}
 	dto.SessionData.IpAddress = strings.Split(r.RemoteAddr, ":")[0]
 
-	session, err := h.aService.SignUp(r.Context(), &dto)
+	session, err := h.aRepo.SignUp(r.Context(), &dto)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -90,7 +67,7 @@ func (h *AuthHandler) signOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.aService.SignOut(r.Context(), session.ID); err != nil {
+	if err := h.aRepo.SignOut(r.Context(), session.ID); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -115,7 +92,7 @@ func (h *AuthHandler) refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.aService.Refresh(r.Context(), session, &dto)
+	res, err := h.aRepo.Refresh(r.Context(), session, &dto)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -138,7 +115,7 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	session, err := h.aService.ForgotPasswordConfirm(r.Context(), parsedID, &dto.SessionData)
+	session, err := h.aRepo.ForgotPasswordConfirm(r.Context(), parsedID, &dto.SessionData)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return

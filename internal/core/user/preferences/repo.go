@@ -4,26 +4,28 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserPreferencesService struct {
-	queries      *db.Queries
-	onPermDelete func(ctx context.Context, uid, pid uuid.UUID) error
+type UserPreferencesRepo struct {
+	queries   *db.Queries
+	upRepo *permissions.UserPermissionRepo
 }
 
-func NewUserPreferencesService(
+func NewUserPreferencesRepo(
 	queries *db.Queries,
-	onPermDelete func(ctx context.Context, uid, pid uuid.UUID) error,
-) *UserPreferencesService {
-	return &UserPreferencesService{
-		queries: queries,
+	upRepo *permissions.UserPermissionRepo,
+) *UserPreferencesRepo {
+	return &UserPreferencesRepo{
+		queries:   queries,
+		upRepo: upRepo,
 	}
 }
 
-func (s *UserPreferencesService) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPreferences, error) {
+func (s *UserPreferencesRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPreferences, error) {
 	rows, err := s.queries.GetPreferencesByUser(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		return nil, err
@@ -37,7 +39,7 @@ func (s *UserPreferencesService) GetByUser(ctx context.Context, userID uuid.UUID
 	return prefs, nil
 }
 
-func (s *UserPreferencesService) GetByID(ctx context.Context, id uuid.UUID) (*models.UserPreferences, error) {
+func (s *UserPreferencesRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.UserPreferences, error) {
 	row, err := s.queries.GetPreferencesByID(ctx, models.UUIDPtrToDB(&id))
 	if err != nil {
 		return nil, err
@@ -46,7 +48,7 @@ func (s *UserPreferencesService) GetByID(ctx context.Context, id uuid.UUID) (*mo
 	return models.UserPrefsFromDB(&row), nil
 }
 
-func (s *UserPreferencesService) Create(ctx context.Context, session *models.Session, uid uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
+func (s *UserPreferencesRepo) Create(ctx context.Context, session *models.Session, uid uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
 		ID:                  uuid.New(),
 		Device:              dto.Device,
@@ -59,7 +61,7 @@ func (s *UserPreferencesService) Create(ctx context.Context, session *models.Ses
 	}
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PREFERENCES_WRITE]; ok {
-			if err := s.onPermDelete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+			if err := s.upRepo.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
 				return err
 			}
 		}
@@ -67,7 +69,7 @@ func (s *UserPreferencesService) Create(ctx context.Context, session *models.Ses
 	return nil
 }
 
-func (s *UserPreferencesService) Update(ctx context.Context, id uuid.UUID, dto *dtos.UpdateUserPreferencesDto) error {
+func (s *UserPreferencesRepo) Update(ctx context.Context, id uuid.UUID, dto *dtos.UpdateUserPreferencesDto) error {
 	pref := &models.UserPreferences{
 		ID:       id,
 		Theme:    models.ThemeFromString(dto.Theme),

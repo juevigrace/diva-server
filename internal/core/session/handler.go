@@ -12,11 +12,11 @@ import (
 )
 
 type SessionHandler struct {
-	sService *SessionService
+	sRepo *SessionRepo
 }
 
-func NewSessionHandler(sService *SessionService) *SessionHandler {
-	return &SessionHandler{sService: sService}
+func NewSessionHandler(sRepo *SessionRepo) *SessionHandler {
+	return &SessionHandler{sRepo: sRepo}
 }
 
 func (h *SessionHandler) UserRoutes(r chi.Router) {
@@ -40,60 +40,6 @@ func (h *SessionHandler) UserRoutes(r chi.Router) {
 	})
 }
 
-func (h *SessionHandler) Routes(r chi.Router) {
-	r.Route("/sessions", func(s chi.Router) {
-		s.Use(middlewares.RequiresSession(h.sService.GetByID))
-
-		s.Route("/{sid}", func(sid chi.Router) {
-			sid.With(middlewares.RequireResourceOwner(
-				&middlewares.RequireOwnerParams{
-					UrlParams: []string{"sid"},
-					Perms:     []models.PermissionAction{models.PERMISSION_SESSIONS_READ},
-				},
-				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-					resid, err := uuid.Parse(resParams[0])
-					if err != nil {
-						return nil, false
-					}
-					dbSession, err := h.sService.GetByID(ctx, resid)
-					if err != nil {
-						return nil, false
-					}
-					if dbSession.User.ID != reqid {
-						return nil, false
-					}
-					return map[string]any{"sid": dbSession}, true
-				},
-			)).Get("/", h.getByID)
-			sid.With(middlewares.RequireResourceOwner(
-				&middlewares.RequireOwnerParams{
-					UrlParams: []string{"sid"},
-					Perms:     []models.PermissionAction{models.PERMISSION_SESSIONS_WRITE},
-				},
-				func(ctx context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-					resid, err := uuid.Parse(resParams[0])
-					if err != nil {
-						return nil, false
-					}
-					dbSession, err := h.sService.GetByID(ctx, resid)
-					if err != nil {
-						return nil, false
-					}
-					if dbSession.User.ID != reqid {
-						return nil, false
-					}
-					return map[string]any{"sid": dbSession}, true
-				},
-			)).Delete("/", h.close)
-		})
-
-		s.Group(func(admin chi.Router) {
-			admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
-			admin.Delete("/expired", h.deleteExpired)
-		})
-	})
-}
-
 func (h *SessionHandler) listByUser(w http.ResponseWriter, r *http.Request) {
 	rc, err := middlewares.GetRequestContext(r.Context())
 	if err != nil {
@@ -110,7 +56,7 @@ func (h *SessionHandler) listByUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sessions, err := h.sService.GetByUser(r.Context(), uid)
+	sessions, err := h.sRepo.GetByUser(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -139,7 +85,7 @@ func (h *SessionHandler) getByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		session, err = h.sService.GetByID(r.Context(), sid)
+		session, err = h.sRepo.GetByID(r.Context(), sid)
 		if err != nil {
 			responses.HandleReqError(w, err)
 			return
@@ -168,7 +114,7 @@ func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
 		sid = session.ID
 	}
 
-	if err := h.sService.Close(r.Context(), sid); err != nil {
+	if err := h.sRepo.Close(r.Context(), sid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -177,7 +123,7 @@ func (h *SessionHandler) close(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SessionHandler) deleteExpired(w http.ResponseWriter, r *http.Request) {
-	if err := h.sService.DeleteExpired(r.Context()); err != nil {
+	if err := h.sRepo.DeleteExpired(r.Context()); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

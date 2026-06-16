@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -14,55 +12,13 @@ import (
 )
 
 type PermissionHandler struct {
-	pService *PermissionService
-	provider core.Provider[*models.Session]
+	pRepo *PermissionRepo
 }
 
-func NewPermissionHandler(
-	pService *PermissionService,
-	provider core.Provider[*models.Session],
-) *PermissionHandler {
+func NewPermissionHandler(pRepo *PermissionRepo) *PermissionHandler {
 	return &PermissionHandler{
-		pService: pService,
-		provider: provider,
+		pRepo: pRepo,
 	}
-}
-
-func (h *PermissionHandler) Routes(r chi.Router) {
-	r.Route("/permissions", func(p chi.Router) {
-		p.Use(middlewares.RequiresSession(h.provider.GetByID))
-
-		p.With(
-			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-			middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
-		).Get("/", h.list)
-
-		p.Route("/{pid}", func(pid chi.Router) {
-			pid.With(
-				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
-			).Get("/", h.getByID)
-
-			pid.Group(func(wg chi.Router) {
-				wg.Use(
-					middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-					middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
-				)
-				wg.Put("/", h.update)
-				wg.Patch("/restore", h.restore)
-			})
-			pid.Group(func(wg chi.Router) {
-				wg.Use(middlewares.RequireRole(models.ROLE_ADMIN))
-				wg.Delete("/", h.softDelete)
-				wg.Delete("/forever", h.delete)
-			})
-		})
-
-		p.With(
-			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-			middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
-		).Post("/", h.create)
-	})
 }
 
 func (h *PermissionHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -78,13 +34,13 @@ func (h *PermissionHandler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	perms, err := h.pService.List(r.Context(), pagination)
+	perms, err := h.pRepo.List(r.Context(), pagination)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
-	total, err := h.pService.Count(r.Context())
+	total, err := h.pRepo.Count(r.Context())
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -106,7 +62,7 @@ func (h *PermissionHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	perm, err := h.pService.GetByID(r.Context(), pid)
+	perm, err := h.pRepo.GetByID(r.Context(), pid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -134,7 +90,7 @@ func (h *PermissionHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pService.Create(r.Context(), &dto); err != nil {
+	if err := h.pRepo.Create(r.Context(), &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -155,7 +111,7 @@ func (h *PermissionHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pService.Update(r.Context(), pid, &dto); err != nil {
+	if err := h.pRepo.Update(r.Context(), pid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -170,7 +126,7 @@ func (h *PermissionHandler) restore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pService.Restore(r.Context(), pid); err != nil {
+	if err := h.pRepo.Restore(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -185,7 +141,7 @@ func (h *PermissionHandler) softDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pService.SoftDelete(r.Context(), pid); err != nil {
+	if err := h.pRepo.SoftDelete(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -200,7 +156,7 @@ func (h *PermissionHandler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.pService.Delete(r.Context(), pid); err != nil {
+	if err := h.pRepo.Delete(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/juevigrace/diva-server/internal/core/user"
 	"github.com/juevigrace/diva-server/internal/core/user/actions"
 	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/mail"
@@ -16,38 +17,35 @@ import (
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserVerificationService struct {
-	mail       *mail.Client
-	queries    *db.Queries
-	uaService  *actions.UserActionsService
-	upService  *permissions.UserPermissionService
-	getUser    func(ctx context.Context, email string) (*models.User, error)
-	onRestore  func(ctx context.Context, uid uuid.UUID) error
-	onVerified func(ctx context.Context, v bool, uid uuid.UUID) error
+type VerificationRepo struct {
+	mail      *mail.Client
+	queries   *db.Queries
+	uRepo  *user.UserRepo
+	uaRepo *actions.UserActionsRepo
+	upRepo *permissions.UserPermissionRepo
+	usRepo *user.UserStateRepo
 }
 
-func NewVerificationService(
+func NewVerificationRepo(
 	mail *mail.Client,
 	queries *db.Queries,
-	uaService *actions.UserActionsService,
-	upService *permissions.UserPermissionService,
-	getUser func(ctx context.Context, email string) (*models.User, error),
-	onRestore func(ctx context.Context, uid uuid.UUID) error,
-	onVerified func(ctx context.Context, v bool, uid uuid.UUID) error,
-) *UserVerificationService {
-	return &UserVerificationService{
-		mail:       mail,
-		queries:    queries,
-		uaService:  uaService,
-		upService:  upService,
-		getUser:    getUser,
-		onRestore:  onRestore,
-		onVerified: onVerified,
+	uRepo *user.UserRepo,
+	uaRepo *actions.UserActionsRepo,
+	upRepo *permissions.UserPermissionRepo,
+	usRepo *user.UserStateRepo,
+) *VerificationRepo {
+	return &VerificationRepo{
+		mail:      mail,
+		queries:   queries,
+		uRepo:  uRepo,
+		uaRepo: uaRepo,
+		upRepo: upRepo,
+		usRepo: usRepo,
 	}
 }
 
-func (s *UserVerificationService) GetByID(ctx context.Context, actionID uuid.UUID) (*models.UserActionVerification, error) {
-	dbAction, err := s.uaService.GetOneByID(ctx, actionID)
+func (s *VerificationRepo) GetByID(ctx context.Context, actionID uuid.UUID) (*models.UserActionVerification, error) {
+	dbAction, err := s.uaRepo.GetOneByID(ctx, actionID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +64,7 @@ func (s *UserVerificationService) GetByID(ctx context.Context, actionID uuid.UUI
 	}, nil
 }
 
-func (s *UserVerificationService) RequestVerification(
+func (s *VerificationRepo) RequestVerification(
 	ctx context.Context,
 	email string,
 	action string,
@@ -76,12 +74,21 @@ func (s *UserVerificationService) RequestVerification(
 		return nil, errs.ErrActionNotFound
 	}
 
-	user, err := s.getUser(ctx, email)
+	user, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
 
-	dbAction, err := s.uaService.GetOneByName(ctx, user.ID, parsedAction)
+	if !user.ID.Valid {
+		return nil, errs.ErrIDRequired
+	}
+
+	parsedID, err := uuid.Parse(user.ID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	dbAction, err := s.uaRepo.GetOneByName(ctx, parsedID, parsedAction)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +109,7 @@ func (s *UserVerificationService) RequestVerification(
 	return &verification.Action, nil
 }
 
-func (s *UserVerificationService) Generate(
+func (s *VerificationRepo) Generate(
 	ctx context.Context,
 	action *models.UserAction,
 ) (*models.UserActionVerification, error) {
@@ -140,7 +147,7 @@ func (s *UserVerificationService) Generate(
 	return exists, nil
 }
 
-func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID, token string) error {
+func (s *VerificationRepo) Verify(ctx context.Context, actionID uuid.UUID, token string) error {
 	record, err := s.GetByID(ctx, actionID)
 	if err != nil {
 		return err
@@ -171,7 +178,7 @@ func (s *UserVerificationService) Verify(ctx context.Context, actionID uuid.UUID
 	return s.HandleVerified(ctx, va)
 }
 
-func (s *UserVerificationService) HandleVerified(ctx context.Context, va *models.UserActionVerification) error {
+func (s *VerificationRepo) HandleVerified(ctx context.Context, va *models.UserActionVerification) error {
 	if !va.Verified {
 		return errs.ErrActionNotVerified
 	}
@@ -180,12 +187,12 @@ func (s *UserVerificationService) HandleVerified(ctx context.Context, va *models
 	case models.ActionPasswordUpdate:
 		return nil
 	case models.ActionUserRestore:
-		if err := s.onRestore(ctx, va.Action.UserID); err != nil {
+		if err := s.uRepo.Restore(ctx, va.Action.UserID); err != nil {
 			return err
 		}
 
 	case models.ActionUserVerification:
-		if err := s.onVerified(ctx, true, va.Action.UserID); err != nil {
+		if err := s.usRepo.UpdateVerified(ctx, true, va.Action.UserID); err != nil {
 			return err
 		}
 	case models.ActionEmailUpdate, models.ActionUsernameUpdate, models.ActionPhoneUpdate:
@@ -199,30 +206,30 @@ func (s *UserVerificationService) HandleVerified(ctx context.Context, va *models
 			permAction = models.PERMISSION_USERS_PHONE_WRITE
 		}
 
-		dbPerm, err := s.upService.GetOneByName(ctx, va.Action.UserID, permAction)
+		dbPerm, err := s.upRepo.GetOneByName(ctx, va.Action.UserID, permAction)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
 
 		exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
 		if dbPerm == nil {
-			if err := s.upService.CreateByName(ctx, permAction, nil, true, &exp, va.Action.UserID); err != nil {
+			if err := s.upRepo.CreateByName(ctx, permAction, nil, true, &exp, va.Action.UserID); err != nil {
 				return err
 			}
 		} else if dbPerm.ExpiresAt != nil && time.UnixMilli(*dbPerm.ExpiresAt).Before(time.Now().UTC()) {
-			if err := s.upService.Update(ctx, va.Action.UserID, dbPerm.Permission.ID, true, &exp); err != nil {
+			if err := s.upRepo.Update(ctx, va.Action.UserID, dbPerm.Permission.ID, true, &exp); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err := s.uaService.Delete(ctx, va.Action.ID); err != nil {
+	if err := s.uaRepo.Delete(ctx, va.Action.ID); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *UserVerificationService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *VerificationRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.queries.DeleteUserVerification(ctx, models.UUIDPtrToDB(&id))
 }

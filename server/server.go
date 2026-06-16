@@ -10,7 +10,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/juevigrace/diva-server/internal/core/auth"
+	"github.com/juevigrace/diva-server/internal/core/permission"
 	"github.com/juevigrace/diva-server/internal/core/session"
+	"github.com/juevigrace/diva-server/internal/core/user"
+	"github.com/juevigrace/diva-server/internal/core/verification"
 	"github.com/juevigrace/diva-server/internal/mail"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
@@ -64,22 +68,25 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
-// TODO: create channels that pass in information from other modules
 func (s *Server) routes() {
 	queries := s.database.Queries()
 
-	session := session.NewSessionModule(queries)
+	pModule := permission.NewPermissionModule(queries)
+	sModule := session.NewSessionModule(queries)
+	uModule := user.NewUserModule(queries, pModule.Repo, sModule.Repo, sModule.Handler, s.files)
+	vModule := verification.NewVerificationModule(s.mail, queries, uModule)
+	aModule := auth.NewAuthModule(pModule.Repo, sModule.Repo, uModule.URepo, vModule.Repo)
 
 	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
 
 	s.router.Route("/api", func(api chi.Router) {
 		api.Use(apiLimiter.Middleware)
 
-		handlerModule.Auth.Routes(api)
-		handlerModule.User.Routes(api)
-		handlerModule.Session.Routes(api)
-		handlerModule.Verification.Routes(api)
-		handlerModule.Permissions.Routes(api)
+		uModule.Routes(api)
+		sModule.Routes(api, uModule.URepo.GetByID)
+		aModule.Routes(api)
+		pModule.Routes(api, sModule.Repo.GetByID, uModule.URepo.GetByID)
+		vModule.Routes(api)
 	})
 
 	s.router.Route("/health", func(rc chi.Router) {
@@ -114,11 +121,6 @@ func (s *Server) setup() error {
 		Addr:    fmt.Sprintf(":%d", s.config.Port),
 		Handler: s.router,
 	}
-
-	return nil
-}
-
-func (s *Server) createStorage() error {
 
 	return nil
 }

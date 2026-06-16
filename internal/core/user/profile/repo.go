@@ -4,27 +4,28 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserProfileService struct {
-	queries      *db.Queries
-	onPermDelete func(ctx context.Context, uid, pid uuid.UUID) error
+type UserProfileRepo struct {
+	queries   *db.Queries
+	upRepo *permissions.UserPermissionRepo
 }
 
-func NewUserProfileService(
+func NewUserProfileRepo(
 	queries *db.Queries,
-	onPermDelete func(ctx context.Context, uid, pid uuid.UUID) error,
-) *UserProfileService {
-	return &UserProfileService{
-		queries:      queries,
-		onPermDelete: onPermDelete,
+	upRepo *permissions.UserPermissionRepo,
+) *UserProfileRepo {
+	return &UserProfileRepo{
+		queries:   queries,
+		upRepo: upRepo,
 	}
 }
 
-func (s *UserProfileService) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserProfile, error) {
+func (s *UserProfileRepo) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserProfile, error) {
 	row, err := s.queries.GetUserProfileByUserID(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		return nil, err
@@ -32,7 +33,7 @@ func (s *UserProfileService) GetByUserID(ctx context.Context, userID uuid.UUID) 
 	return models.UserProfileFromDB(&row), nil
 }
 
-func (s *UserProfileService) Create(ctx context.Context, session *models.Session, uid uuid.UUID, dto *dtos.CreateProfileDto) error {
+func (s *UserProfileRepo) Create(ctx context.Context, session *models.Session, uid uuid.UUID, dto *dtos.CreateProfileDto) error {
 	profile := &models.UserProfile{
 		FirstName: dto.FirstName,
 		LastName:  dto.LastName,
@@ -45,7 +46,7 @@ func (s *UserProfileService) Create(ctx context.Context, session *models.Session
 	}
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PROFILE_WRITE]; ok {
-			if err := s.onPermDelete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+			if err := s.upRepo.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
 				return err
 			}
 		}
@@ -53,7 +54,7 @@ func (s *UserProfileService) Create(ctx context.Context, session *models.Session
 	return nil
 }
 
-func (s *UserProfileService) Update(ctx context.Context, userID uuid.UUID, dto *dtos.UpdateProfileDto) error {
+func (s *UserProfileRepo) Update(ctx context.Context, userID uuid.UUID, dto *dtos.UpdateProfileDto) error {
 	profile := &models.UserProfile{
 		FirstName: dto.FirstName,
 		LastName:  dto.LastName,
@@ -64,7 +65,7 @@ func (s *UserProfileService) Update(ctx context.Context, userID uuid.UUID, dto *
 	return s.queries.UpdateUserProfile(ctx, *profile.DBUpdate(userID))
 }
 
-func (s *UserProfileService) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatar string) error {
+func (s *UserProfileRepo) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatar string) error {
 	return s.queries.UpdateUserProfileAvatar(ctx, db.UpdateUserProfileAvatarParams{
 		Avatar: avatar,
 		UserID: models.UUIDPtrToDB(&userID),

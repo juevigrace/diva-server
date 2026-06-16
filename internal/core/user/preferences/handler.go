@@ -15,17 +15,17 @@ import (
 )
 
 type UserPreferencesHandler struct {
-	upService  *permissions.UserPermissionService
-	uprService *UserPreferencesService
+	upRepo  *permissions.UserPermissionRepo
+	uprRepo *UserPreferencesRepo
 }
 
 func NewUserPreferencesHandler(
-	upService *permissions.UserPermissionService,
-	uprService *UserPreferencesService,
+	upRepo *permissions.UserPermissionRepo,
+	uprRepo *UserPreferencesRepo,
 ) *UserPreferencesHandler {
 	return &UserPreferencesHandler{
-		upService:  upService,
-		uprService: uprService,
+		upRepo:  upRepo,
+		uprRepo: uprRepo,
 	}
 }
 
@@ -83,7 +83,7 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 					if err != nil {
 						return nil, false
 					}
-					pref, err := h.uprService.GetByID(ctx, resid)
+					pref, err := h.uprRepo.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
 					}
@@ -104,7 +104,7 @@ func (h *UserPreferencesHandler) Routes(r chi.Router) {
 					if err != nil {
 						return nil, false
 					}
-					pref, err := h.uprService.GetByID(ctx, resid)
+					pref, err := h.uprRepo.GetByID(ctx, resid)
 					if err != nil {
 						return nil, false
 					}
@@ -134,7 +134,7 @@ func (h *UserPreferencesHandler) getByUser(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	prefs, err := h.uprService.GetByUser(r.Context(), uid)
+	prefs, err := h.uprRepo.GetByUser(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -162,7 +162,7 @@ func (h *UserPreferencesHandler) getByID(w http.ResponseWriter, r *http.Request)
 			responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 			return
 		}
-		pref, err = h.uprService.GetByID(r.Context(), pid)
+		pref, err = h.uprRepo.GetByID(r.Context(), pid)
 		if err != nil {
 			responses.HandleReqError(w, err)
 			return
@@ -201,7 +201,7 @@ func (h *UserPreferencesHandler) createPreferences(w http.ResponseWriter, r *htt
 
 	dto.Device = session.Device
 
-	if err = h.uprService.Create(r.Context(), rc.Session, uid, &dto); err != nil {
+	if err = h.uprRepo.Create(r.Context(), rc.Session, uid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -233,7 +233,7 @@ func (h *UserPreferencesHandler) updatePreferences(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if err = h.uprService.Update(r.Context(), pid, &dto); err != nil {
+	if err = h.uprRepo.Update(r.Context(), pid, &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

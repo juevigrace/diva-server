@@ -8,17 +8,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/internal/models/responses"
+	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/pkg/jwt"
 )
 
-type SessionCall func(ctx context.Context, sessionId uuid.UUID) (*models.Session, error)
+type SessionCall func(ctx context.Context, sid uuid.UUID) (*models.Session, error)
+type UserCall func(ctx context.Context, uid uuid.UUID) (*models.User, error)
 
-func RequiresSession(session SessionCall) func(h http.Handler) http.Handler {
+func RequiresSession(session SessionCall, user UserCall) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			s, err := extractSession(session, r)
+			s, err := extractSession(r, session, user)
 			if err != nil {
 				responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrNotAuthorized.Error()))
 				return
@@ -31,7 +32,7 @@ func RequiresSession(session SessionCall) func(h http.Handler) http.Handler {
 	}
 }
 
-func extractSession(sessionCall SessionCall, r *http.Request) (*models.Session, error) {
+func extractSession(r *http.Request, sessionCall SessionCall, userCall UserCall) (*models.Session, error) {
 	claims, err := extractJWTFromHeader(r)
 	if err != nil {
 		return nil, err
@@ -41,6 +42,13 @@ func extractSession(sessionCall SessionCall, r *http.Request) (*models.Session, 
 	if err != nil {
 		return nil, err
 	}
+
+	user, err := userCall(r.Context(), session.User.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	session.User = *user
 
 	return session, nil
 }

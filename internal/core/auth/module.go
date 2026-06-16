@@ -1,33 +1,48 @@
 package auth
 
 import (
-	"github.com/juevigrace/diva-server/internal/core"
+	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/core/permission"
 	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/core/user"
+	"github.com/juevigrace/diva-server/internal/core/verification"
+	"github.com/juevigrace/diva-server/internal/middlewares"
 )
 
 type AuthModule struct {
-	handler *AuthHandler
-	service *AuthService
+	Handler  *AuthHandler
+	Repo  *AuthRepo
+	sRepo *session.SessionRepo
+	uRepo *user.UserRepo
 }
 
 func NewAuthModule(
-	pService *permission.PermissionService,
-	sService *session.SessionService,
-	uService *user.UserService,
+	pRepo *permission.PermissionRepo,
+	sRepo *session.SessionRepo,
+	uRepo *user.UserRepo,
+	vRepo *verification.VerificationRepo,
 ) *AuthModule {
-	service := NewAuthService(pService, sService, uService)
+	repo := NewAuthRepo(pRepo, sRepo, uRepo, vRepo)
 	return &AuthModule{
-		handler: NewAuthHandler(service, sService),
-		service: service,
+		Handler:  NewAuthHandler(repo),
+		Repo:  repo,
+		sRepo: sRepo,
+		uRepo: uRepo,
 	}
 }
 
-func (m *AuthModule) Handler() core.Handler {
-	return m.handler
-}
+func (m *AuthModule) Routes(r chi.Router) {
+	r.Route("/auth", func(auth chi.Router) {
+		auth.Post("/signIn", m.Handler.signIn)
+		auth.Post("/signUp", m.Handler.signUp)
 
-func (m *AuthModule) Service() core.Service {
-	return m.service
+		auth.Group(func(protected chi.Router) {
+			protected.Use(middlewares.RequiresSession(m.sRepo.GetByID, m.uRepo.GetByID))
+			protected.Post("/signOut", m.Handler.signOut)
+			protected.Post("/ping", m.Handler.ping)
+			protected.Post("/refresh", m.Handler.refresh)
+		})
+
+		auth.Post("/forgot/password/confirm", m.Handler.forgotPasswordConfirm)
+	})
 }

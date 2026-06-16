@@ -11,17 +11,17 @@ import (
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserActionsService struct {
+type UserActionsRepo struct {
 	queries *db.Queries
 }
 
-func NewUserActionsService(queries *db.Queries) *UserActionsService {
-	return &UserActionsService{
+func NewUserActionsRepo(queries *db.Queries) *UserActionsRepo {
+	return &UserActionsRepo{
 		queries: queries,
 	}
 }
 
-func (s *UserActionsService) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]models.UserAction, error) {
+func (s *UserActionsRepo) GetAllByUser(ctx context.Context, userID uuid.UUID) ([]models.UserAction, error) {
 	rows, err := s.queries.ListActionsByUser(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (s *UserActionsService) GetAllByUser(ctx context.Context, userID uuid.UUID)
 	return actions, nil
 }
 
-func (s *UserActionsService) GetOneByID(ctx context.Context, id uuid.UUID) (*models.UserAction, error) {
+func (s *UserActionsRepo) GetOneByID(ctx context.Context, id uuid.UUID) (*models.UserAction, error) {
 	row, err := s.queries.GetUserActionByID(ctx, models.UUIDPtrToDB(&id))
 	if err != nil {
 		if ok := errors.Is(err, pgx.ErrNoRows); ok {
@@ -48,7 +48,7 @@ func (s *UserActionsService) GetOneByID(ctx context.Context, id uuid.UUID) (*mod
 	return models.UserActionFromDB(&row), nil
 }
 
-func (s *UserActionsService) GetOneByName(ctx context.Context, userID uuid.UUID, action models.Action) (*models.UserAction, error) {
+func (s *UserActionsRepo) GetOneByName(ctx context.Context, userID uuid.UUID, action models.Action) (*models.UserAction, error) {
 	row, err := s.queries.GetUserActionByUserAndName(ctx, db.GetUserActionByUserAndNameParams{
 		UserID: models.UUIDPtrToDB(&userID),
 		Name:   action.String(),
@@ -60,7 +60,7 @@ func (s *UserActionsService) GetOneByName(ctx context.Context, userID uuid.UUID,
 	return models.UserActionFromDB(&row), nil
 }
 
-func (s *UserActionsService) Create(ctx context.Context, userID uuid.UUID, action models.Action) (*uuid.UUID, error) {
+func (s *UserActionsRepo) Create(ctx context.Context, userID uuid.UUID, action models.Action) (*uuid.UUID, error) {
 	params := &models.UserAction{
 		ID:     uuid.New(),
 		Name:   action,
@@ -74,10 +74,10 @@ func (s *UserActionsService) Create(ctx context.Context, userID uuid.UUID, actio
 	return &params.ID, nil
 }
 
-func (s *UserActionsService) Delete(ctx context.Context, id uuid.UUID) error {
+func (s *UserActionsRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.queries.DeleteUserAction(ctx, models.UUIDPtrToDB(&id))
 }
 
-func (s *UserActionsService) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
+func (s *UserActionsRepo) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
 	return s.queries.DeleteUserActionByUser(ctx, models.UUIDPtrToDB(&userID))
 }

@@ -1,13 +1,11 @@
 package user
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/core"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -16,173 +14,18 @@ import (
 )
 
 type UserHandler struct {
-	uService  *UserService
-	usService *UserStateService
-	sProvider core.Provider[*models.Session]
-	// sHandler    *session.SessionHandler
-	// uaHandler   *actions.UserActionsHandler
-	// upHandler   *permissions.UserPermissionHandler
-	// uprHandler  *preferences.UserPreferencesHandler
-	// uproHandler *profile.UserProfileHandler
+	uRepo  *UserRepo
+	usRepo *UserStateRepo
 }
 
 func NewUserHandler(
-	uService *UserService,
-	usService *UserStateService,
-	sProvider core.Provider[*models.Session],
-	// sHandler *session.SessionHandler,
-	// uaHandler *actions.UserActionsHandler,
-	// upHandler *permissions.UserPermissionHandler,
-	// uprHandler *preferences.UserPreferencesHandler,
-	// uproHandler *profile.UserProfileHandler,
+	uRepo *UserRepo,
+	usRepo *UserStateRepo,
 ) *UserHandler {
 	return &UserHandler{
-		uService:  uService,
-		usService: usService,
-		sProvider: sProvider,
+		uRepo:  uRepo,
+		usRepo: usRepo,
 	}
-}
-
-func (h *UserHandler) Routes(r chi.Router) {
-	r.Route("/user", func(u chi.Router) {
-		u.Route("/check", func(check chi.Router) {
-			check.Get("/username/{username}", h.checkUsername)
-			check.Get("/email/{email}", h.checkEmail)
-		})
-
-		u.Group(func(auth chi.Router) {
-			auth.Use(middlewares.RequiresSession(h.sProvider.GetByID))
-
-			auth.Group(func(admin chi.Router) {
-				admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
-				admin.Get("/", h.getAll)
-				admin.Post("/", h.create)
-			})
-
-			auth.Route("/{uid}", func(uid chi.Router) {
-				uid.Get("/", h.getByID)
-
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_EMAIL_WRITE),
-					middlewares.RequireResourceOwner(
-						&middlewares.RequireOwnerParams{
-							UrlParams: []string{"uid"},
-							Perms:     []models.PermissionAction{models.PERMISSION_USERS_EMAIL_WRITE},
-						},
-						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-							resid, err := uuid.Parse(resParams[0])
-							if err != nil {
-								return nil, false
-							}
-							return map[string]any{"uid": resid}, reqid == resid
-						},
-					),
-				).Patch("/email", h.updateEmail)
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_PHONE_WRITE),
-					middlewares.RequireResourceOwner(
-						&middlewares.RequireOwnerParams{
-							UrlParams: []string{"uid"},
-							Perms:     []models.PermissionAction{models.PERMISSION_USERS_PHONE_WRITE},
-						},
-						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-							resid, err := uuid.Parse(resParams[0])
-							if err != nil {
-								return nil, false
-							}
-							return map[string]any{"uid": resid}, reqid == resid
-						},
-					),
-				).Patch("/phone", h.updatePhone)
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_USERNAME_WRITE),
-					middlewares.RequireResourceOwner(
-						&middlewares.RequireOwnerParams{
-							UrlParams: []string{"uid"},
-							Perms:     []models.PermissionAction{models.PERMISSION_USERS_USERNAME_WRITE},
-						},
-						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-							resid, err := uuid.Parse(resParams[0])
-							if err != nil {
-								return nil, false
-							}
-							return map[string]any{"uid": resid}, reqid == resid
-						},
-					),
-				).Patch("/username", h.updateUsername)
-				uid.With(
-					middlewares.RequirePermission(models.PERMISSION_USERS_PASSWORD_WRITE),
-					middlewares.RequireResourceOwner(
-						&middlewares.RequireOwnerParams{
-							UrlParams: []string{"uid"},
-							Perms:     []models.PermissionAction{models.PERMISSION_USERS_PASSWORD_WRITE},
-						},
-						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-							resid, err := uuid.Parse(resParams[0])
-							if err != nil {
-								return nil, false
-							}
-							return map[string]any{"uid": resid}, reqid == resid
-						},
-					),
-				).Patch("/password", h.updatePassword)
-
-				uid.Group(func(admin chi.Router) {
-					admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
-					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_ROLE_WRITE)).Patch("/role", h.updateRole)
-					admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_RESTORE_WRITE)).Patch("/restore", h.restore)
-				})
-
-				uid.Group(func(wg chi.Router) {
-					wg.Use(middlewares.RequireResourceOwner(
-						&middlewares.RequireOwnerParams{
-							UrlParams: []string{"uid"},
-							Perms:     []models.PermissionAction{models.PERMISSION_USERS_WRITE},
-						},
-						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-							resid, err := uuid.Parse(resParams[0])
-							if err != nil {
-								return nil, false
-							}
-							return map[string]any{"uid": resid}, reqid == resid
-						},
-					))
-					wg.Delete("/", h.softDelete)
-					wg.Delete("/forever", h.delete)
-				})
-
-				uid.Route("/status", func(sr chi.Router) {
-					sr.With(middlewares.RequireResourceOwner(
-						&middlewares.RequireOwnerParams{
-							UrlParams: []string{"uid"},
-						},
-						func(_ context.Context, reqid uuid.UUID, resParams []string) (map[string]any, bool) {
-							resid, err := uuid.Parse(resParams[0])
-							if err != nil {
-								return nil, false
-							}
-							return map[string]any{"uid": resid}, reqid == resid
-						},
-					)).Post("/ping", h.pingStatus)
-
-					sr.Group(func(admin chi.Router) {
-						admin.Use(middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR))
-						admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_VERIFIED_WRITE)).Patch("/verified", h.updateVerified)
-						admin.With(middlewares.RequirePermission(models.PERMISSION_USERS_WRITE)).Put("/", h.updateStatus)
-					})
-				})
-
-				// h.uaHandler.UserRoutes(uid)
-				// h.upHandler.UserRoutes(uid)
-				// h.uprHandler.UserRoutes(uid)
-				// h.uproHandler.UserRoutes(uid)
-				// h.sHandler.UserRoutes(uid)
-			})
-
-			// h.uaHandler.Routes(auh)
-			// h.uprHandler.Routes(auth)
-		})
-	})
 }
 
 func (h *UserHandler) checkUsername(w http.ResponseWriter, r *http.Request) {
@@ -192,7 +35,7 @@ func (h *UserHandler) checkUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	available, err := h.uService.CheckUsernameAvailable(r.Context(), username)
+	available, err := h.uRepo.CheckUsernameAvailable(r.Context(), username)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -213,7 +56,7 @@ func (h *UserHandler) checkEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	available, err := h.uService.CheckEmailAvailable(r.Context(), email)
+	available, err := h.uRepo.CheckEmailAvailable(r.Context(), email)
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
@@ -241,13 +84,13 @@ func (h *UserHandler) getAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	users, err := h.uService.GetAll(r.Context(), pagination)
+	users, err := h.uRepo.GetAll(r.Context(), pagination)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
-	total, err := h.uService.Count(r.Context())
+	total, err := h.uRepo.Count(r.Context())
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -276,7 +119,7 @@ func (h *UserHandler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbUser, err := h.uService.GetByID(r.Context(), uid)
+	dbUser, err := h.uRepo.GetByID(r.Context(), uid)
 	if err != nil {
 		responses.HandleReqError(w, err)
 		return
@@ -297,7 +140,7 @@ func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.uService.Create(r.Context(), &dto); err != nil {
+	if _, err := h.uRepo.Create(r.Context(), &dto); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -327,7 +170,7 @@ func (h *UserHandler) updateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdateEmail(r.Context(), rc.Session, dto.Email, uid); err != nil {
+	if err = h.uRepo.UpdateEmail(r.Context(), rc.Session, dto.Email, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -357,7 +200,7 @@ func (h *UserHandler) updatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdatePassword(r.Context(), rc.Session, uid, dto.NewPassword); err != nil {
+	if err = h.uRepo.UpdatePassword(r.Context(), rc.Session, uid, dto.NewPassword); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -387,7 +230,7 @@ func (h *UserHandler) updateUsername(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdateUsername(r.Context(), rc.Session, dto.Username, uid); err != nil {
+	if err = h.uRepo.UpdateUsername(r.Context(), rc.Session, dto.Username, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -417,7 +260,7 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdatePhoneNumber(r.Context(), rc.Session, dto.PhoneNumber, uid); err != nil {
+	if err = h.uRepo.UpdatePhoneNumber(r.Context(), rc.Session, dto.PhoneNumber, uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -438,7 +281,7 @@ func (h *UserHandler) updateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uService.UpdateRole(r.Context(), models.RoleFromString(dto.Role), id); err != nil {
+	if err = h.uRepo.UpdateRole(r.Context(), models.RoleFromString(dto.Role), id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -459,7 +302,7 @@ func (h *UserHandler) updateVerified(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.usService.UpdateVerified(r.Context(), dto.Verified, id); err != nil {
+	if err = h.usRepo.UpdateVerified(r.Context(), dto.Verified, id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -480,7 +323,7 @@ func (h *UserHandler) updateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.usService.UpdateStatus(r.Context(), models.UserStatusFromString(dto.Status), id); err != nil {
+	if err = h.usRepo.UpdateStatus(r.Context(), models.UserStatusFromString(dto.Status), id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -504,7 +347,7 @@ func (h *UserHandler) pingStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.usService.UpdateLastActiveAt(r.Context(), uid); err != nil {
+	if err := h.usRepo.UpdateLastActiveAt(r.Context(), uid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -528,7 +371,7 @@ func (h *UserHandler) softDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.uService.SoftDelete(r.Context(), id); err != nil {
+	if err := h.uRepo.SoftDelete(r.Context(), id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -552,7 +395,7 @@ func (h *UserHandler) delete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.uService.Delete(r.Context(), id); err != nil {
+	if err := h.uRepo.Delete(r.Context(), id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
@@ -567,7 +410,7 @@ func (h *UserHandler) restore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.uService.Restore(r.Context(), id); err != nil {
+	if err := h.uRepo.Restore(r.Context(), id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}

@@ -3,9 +3,11 @@ package user
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/core/user/actions"
 	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/core/user/profile"
@@ -16,38 +18,38 @@ import (
 	"github.com/juevigrace/diva-server/storage/db"
 )
 
-type UserService struct {
-	queries    *db.Queries
-	uaService  *actions.UserActionsService
-	upService  *permissions.UserPermissionService
-	uprService *profile.UserProfileService
-	usService  *UserStateService
-	onClose    func(ctx context.Context, uid uuid.UUID) error
+type UserRepo struct {
+	queries     *db.Queries
+	sRepo    *session.SessionRepo
+	uaRepo   *actions.UserActionsRepo
+	upRepo   *permissions.UserPermissionRepo
+	uproRepo *profile.UserProfileRepo
+	usRepo   *UserStateRepo
 }
 
-func NewUserService(
+func NewUserRepo(
 	queries *db.Queries,
-	uaService *actions.UserActionsService,
-	upService *permissions.UserPermissionService,
-	uprService *profile.UserProfileService,
-	usService *UserStateService,
-	onClose func(ctx context.Context, uid uuid.UUID) error,
-) *UserService {
-	return &UserService{
-		uaService:  uaService,
-		upService:  upService,
-		uprService: uprService,
-		usService:  usService,
-		queries:    queries,
-		onClose:    onClose,
+	sRepo *session.SessionRepo,
+	uaRepo *actions.UserActionsRepo,
+	upRepo *permissions.UserPermissionRepo,
+	uproRepo *profile.UserProfileRepo,
+	usRepo *UserStateRepo,
+) *UserRepo {
+	return &UserRepo{
+		queries:     queries,
+		sRepo:    sRepo,
+		uaRepo:   uaRepo,
+		upRepo:   upRepo,
+		uproRepo: uproRepo,
+		usRepo:   usRepo,
 	}
 }
 
-func (s *UserService) Count(ctx context.Context) (int64, error) {
+func (s *UserRepo) Count(ctx context.Context) (int64, error) {
 	return s.queries.CountUsers(ctx)
 }
 
-func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination) ([]models.User, error) {
+func (s *UserRepo) GetAll(ctx context.Context, pagination *models.Pagination) ([]models.User, error) {
 	rows, err := s.queries.ListUsers(ctx, db.ListUsersParams{
 		Limit:  int32(pagination.GetLimit()),
 		Offset: int32(pagination.GetOffset()),
@@ -64,7 +66,7 @@ func (s *UserService) GetAll(ctx context.Context, pagination *models.Pagination)
 	return users, nil
 }
 
-func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+func (s *UserRepo) GetByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
 	row, err := s.queries.GetUserByID(ctx, models.UUIDPtrToDB(&userID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -75,13 +77,13 @@ func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.Us
 
 	dbUser := models.UserFromDB(&row)
 
-	dbProfile, err := s.uprService.GetByUserID(ctx, dbUser.ID)
+	dbProfile, err := s.uproRepo.GetByUserID(ctx, dbUser.ID)
 	if err != nil {
 		return nil, err
 	}
 	dbUser.Profile = dbProfile
 
-	dbPerms, err := s.upService.GetByUser(ctx, dbUser.ID)
+	dbPerms, err := s.upRepo.GetByUser(ctx, dbUser.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +93,7 @@ func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.Us
 		dbUser.Permissions[perm.Permission.Action] = perm
 	}
 
-	dbState, err := s.usService.GetByUserID(ctx, dbUser.ID)
+	dbState, err := s.usRepo.GetByUserID(ctx, dbUser.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +102,7 @@ func (s *UserService) GetByID(ctx context.Context, userID uuid.UUID) (*models.Us
 	return dbUser, nil
 }
 
-func (s *UserService) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+func (s *UserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
 	row, err := s.queries.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -111,7 +113,7 @@ func (s *UserService) GetByUsername(ctx context.Context, username string) (*mode
 	return models.UserFromDB(&row), nil
 }
 
-func (s *UserService) CheckUsernameAvailable(ctx context.Context, username string) (bool, error) {
+func (s *UserRepo) CheckUsernameAvailable(ctx context.Context, username string) (bool, error) {
 	_, err := s.GetByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserNotFound) {
@@ -123,7 +125,7 @@ func (s *UserService) CheckUsernameAvailable(ctx context.Context, username strin
 	return false, nil
 }
 
-func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+func (s *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	row, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -135,7 +137,7 @@ func (s *UserService) GetByEmail(ctx context.Context, email string) (*models.Use
 	return models.UserFromDB(&row), nil
 }
 
-func (s *UserService) CheckEmailAvailable(ctx context.Context, email string) (bool, error) {
+func (s *UserRepo) CheckEmailAvailable(ctx context.Context, email string) (bool, error) {
 	_, err := s.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserNotFound) {
@@ -147,7 +149,7 @@ func (s *UserService) CheckEmailAvailable(ctx context.Context, email string) (bo
 	return false, nil
 }
 
-func (s *UserService) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
+func (s *UserRepo) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
 	row, err := s.queries.GetUserByUsernameOrEmail(ctx, value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -159,7 +161,7 @@ func (s *UserService) GetByUsernameOrEmail(ctx context.Context, value string) (*
 	return models.UserFromDB(&row), nil
 }
 
-func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UUID, error) {
+func (s *UserRepo) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UUID, error) {
 	passwordHash, err := bcrypt.HashPassword(dto.Password)
 	if err != nil {
 		return uuid.Nil, err
@@ -178,20 +180,20 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 		return uuid.Nil, err
 	}
 
-	if err := s.usService.Create(ctx, params.ID, &models.UserState{}); err != nil {
+	if err := s.usRepo.Create(ctx, params.ID, &models.UserState{}); err != nil {
 		if err := s.Delete(ctx, params.ID); err != nil {
 			return uuid.Nil, err
 		}
 		return uuid.Nil, err
 	}
 
-	if _, err := s.uaService.Create(ctx, params.ID, models.ActionUserVerification); err != nil {
+	if _, err := s.uaRepo.Create(ctx, params.ID, models.ActionUserVerification); err != nil {
 		return uuid.Nil, err
 	}
 
 	perms := []models.PermissionAction{models.PERMISSION_USERS_PROFILE_WRITE, models.PERMISSION_USERS_PREFERENCES_WRITE}
 	for i := range perms {
-		if err := s.upService.CreateByName(ctx, perms[i], nil, true, nil, uid); err != nil {
+		if err := s.upRepo.CreateByName(ctx, perms[i], nil, true, nil, uid); err != nil {
 			if err := s.Delete(ctx, uid); err != nil {
 				return uuid.Nil, err
 			}
@@ -202,7 +204,20 @@ func (s *UserService) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid
 	return uid, nil
 }
 
-func (s *UserService) UpdatePassword(ctx context.Context, session *models.Session, uid uuid.UUID, newPassword string) error {
+func (s *UserRepo) UpdatePasswordConfirm(ctx context.Context, aid, uid uuid.UUID) error {
+	exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
+	if err := s.upRepo.CreateByName(ctx, models.PERMISSION_USERS_PASSWORD_WRITE, nil, true, &exp, uid); err != nil {
+		return err
+	}
+
+	if err := s.uaRepo.Delete(ctx, aid); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserRepo) UpdatePassword(ctx context.Context, session *models.Session, uid uuid.UUID, newPassword string) error {
 	dbUser, err := s.GetByID(ctx, uid)
 	if err != nil {
 		return err
@@ -224,13 +239,13 @@ func (s *UserService) UpdatePassword(ctx context.Context, session *models.Sessio
 		return err
 	}
 
-	if err = s.onClose(ctx, uid); err != nil {
+	if err := s.sRepo.Close(ctx, uid); err != nil {
 		return err
 	}
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PASSWORD_WRITE]; ok {
-			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+			if err := s.upRepo.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
 				return err
 			}
 		}
@@ -239,7 +254,7 @@ func (s *UserService) UpdatePassword(ctx context.Context, session *models.Sessio
 	return nil
 }
 
-func (s *UserService) UpdatePhoneNumber(ctx context.Context, session *models.Session, phone string, uid uuid.UUID) error {
+func (s *UserRepo) UpdatePhoneNumber(ctx context.Context, session *models.Session, phone string, uid uuid.UUID) error {
 	if err := s.queries.UpdatePhoneNumber(ctx, db.UpdatePhoneNumberParams{
 		PhoneNumber: phone,
 		ID:          models.UUIDPtrToDB(&uid),
@@ -249,7 +264,7 @@ func (s *UserService) UpdatePhoneNumber(ctx context.Context, session *models.Ses
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_PHONE_WRITE]; ok {
-			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+			if err := s.upRepo.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
 				return err
 			}
 		}
@@ -258,7 +273,7 @@ func (s *UserService) UpdatePhoneNumber(ctx context.Context, session *models.Ses
 	return nil
 }
 
-func (s *UserService) UpdateUsername(ctx context.Context, session *models.Session, username string, uid uuid.UUID) error {
+func (s *UserRepo) UpdateUsername(ctx context.Context, session *models.Session, username string, uid uuid.UUID) error {
 	if err := s.queries.UpdateUsername(ctx, db.UpdateUsernameParams{
 		Username: username,
 		ID:       models.UUIDPtrToDB(&uid),
@@ -268,7 +283,7 @@ func (s *UserService) UpdateUsername(ctx context.Context, session *models.Sessio
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_USERNAME_WRITE]; ok {
-			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+			if err := s.upRepo.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
 				return err
 			}
 		}
@@ -277,7 +292,7 @@ func (s *UserService) UpdateUsername(ctx context.Context, session *models.Sessio
 	return nil
 }
 
-func (s *UserService) UpdateEmail(ctx context.Context, session *models.Session, email string, uid uuid.UUID) error {
+func (s *UserRepo) UpdateEmail(ctx context.Context, session *models.Session, email string, uid uuid.UUID) error {
 	if err := s.queries.UpdateEmail(ctx, db.UpdateEmailParams{
 		Email: email,
 		ID:    models.UUIDPtrToDB(&uid),
@@ -287,7 +302,7 @@ func (s *UserService) UpdateEmail(ctx context.Context, session *models.Session, 
 
 	if session.User.ID == uid {
 		if perm, ok := session.User.Permissions[models.PERMISSION_USERS_EMAIL_WRITE]; ok {
-			if err := s.upService.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
+			if err := s.upRepo.Delete(ctx, session.User.ID, perm.Permission.ID); err != nil {
 				return err
 			}
 		}
@@ -296,29 +311,29 @@ func (s *UserService) UpdateEmail(ctx context.Context, session *models.Session, 
 	return nil
 }
 
-func (s *UserService) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {
+func (s *UserRepo) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {
 	return s.queries.UpdateRole(ctx, db.UpdateRoleParams{
 		Role: role.ToDB(),
 		ID:   models.UUIDPtrToDB(&userID),
 	})
 }
 
-func (s *UserService) SoftDelete(ctx context.Context, userID uuid.UUID) error {
+func (s *UserRepo) SoftDelete(ctx context.Context, userID uuid.UUID) error {
 	if err := s.queries.SoftDeleteUser(ctx, models.UUIDPtrToDB(&userID)); err != nil {
 		return err
 	}
 
-	return s.usService.UpdateStatus(ctx, models.USER_STATUS_INACTIVE, userID)
+	return s.usRepo.UpdateStatus(ctx, models.USER_STATUS_INACTIVE, userID)
 }
 
-func (s *UserService) Delete(ctx context.Context, userID uuid.UUID) error {
+func (s *UserRepo) Delete(ctx context.Context, userID uuid.UUID) error {
 	return s.queries.DeleteUser(ctx, models.UUIDPtrToDB(&userID))
 }
 
-func (r *UserService) Restore(ctx context.Context, userID uuid.UUID) error {
+func (r *UserRepo) Restore(ctx context.Context, userID uuid.UUID) error {
 	if err := r.queries.RestoreUser(ctx, models.UUIDPtrToDB(&userID)); err != nil {
 		return err
 	}
 
-	return r.usService.UpdateStatus(ctx, models.USER_STATUS_ACTIVE, userID)
+	return r.usRepo.UpdateStatus(ctx, models.USER_STATUS_ACTIVE, userID)
 }
