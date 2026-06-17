@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	"github.com/juevigrace/diva-server/internal/models"
 	resend "github.com/resend/resend-go/v2"
 )
 
@@ -22,7 +21,6 @@ func NewClient(apiKey, fromEmail string) *Client {
 }
 
 func (c *Client) Send(ctx context.Context, to, subject string, component templ.Component) error {
-
 	var sb strings.Builder
 	if err := component.Render(ctx, &sb); err != nil {
 		return err
@@ -36,8 +34,4 @@ func (c *Client) Send(ctx context.Context, to, subject string, component templ.C
 	})
 
 	return err
-}
-
-func (c *Client) SendVerificationEmail(ctx context.Context, to string, verification *models.UserActionVerification) error {
-	return c.Send(ctx, to, "Email Verification", VerificationEmail(verification))
 }

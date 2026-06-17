@@ -15,7 +15,7 @@ import (
 	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/core/user"
 	"github.com/juevigrace/diva-server/internal/core/verification"
-	"github.com/juevigrace/diva-server/internal/mail"
+	"github.com/juevigrace/diva-server/pkg/mail"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"

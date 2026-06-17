@@ -10,7 +10,7 @@ import (
 	"github.com/juevigrace/diva-server/internal/core/user"
 	"github.com/juevigrace/diva-server/internal/core/user/actions"
 	"github.com/juevigrace/diva-server/internal/core/user/permissions"
-	"github.com/juevigrace/diva-server/internal/mail"
+	"github.com/juevigrace/diva-server/pkg/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/pkg/otp"
@@ -18,12 +18,12 @@ import (
 )
 
 type VerificationRepo struct {
-	mail      *mail.Client
-	queries   *db.Queries
-	uRepo  *user.UserRepo
-	uaRepo *actions.UserActionsRepo
-	upRepo *permissions.UserPermissionRepo
-	usRepo *user.UserStateRepo
+	mail    *mail.Client
+	queries *db.Queries
+	uRepo   *user.UserRepo
+	uaRepo  *actions.UserActionsRepo
+	upRepo  *permissions.UserPermissionRepo
+	usRepo  *user.UserStateRepo
 }
 
 func NewVerificationRepo(
@@ -35,12 +35,12 @@ func NewVerificationRepo(
 	usRepo *user.UserStateRepo,
 ) *VerificationRepo {
 	return &VerificationRepo{
-		mail:      mail,
-		queries:   queries,
-		uRepo:  uRepo,
-		uaRepo: uaRepo,
-		upRepo: upRepo,
-		usRepo: usRepo,
+		mail:    mail,
+		queries: queries,
+		uRepo:   uRepo,
+		uaRepo:  uaRepo,
+		upRepo:  upRepo,
+		usRepo:  usRepo,
 	}
 }
 
@@ -99,7 +99,7 @@ func (s *VerificationRepo) RequestVerification(
 	}
 	verification.Action = *dbAction
 
-	if err := s.mail.SendVerificationEmail(ctx, user.Email, verification); err != nil {
+	if err := s.mail.Send(ctx, user.Email, "Email verification", VerificationEmail(verification)); err != nil {
 		if err := s.Delete(ctx, verification.Action.ID); err != nil {
 			return nil, err
 		}
