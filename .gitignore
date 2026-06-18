@@ -27,3 +27,5 @@ bin/
 
 resources/static/css/output.css
 tailwindcss
+
+config.json

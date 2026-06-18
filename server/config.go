@@ -1,34 +1,41 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 
-	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/config"
+	"github.com/juevigrace/diva-server/pkg/validator"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type ServerConfig struct {
-	Version         string           `json:"-"`
-	Port            uint16           `json:"port"`
-	Domain          string           `json:"domain"`
-	Env             models.ServerEnv `json:"env"`
-	Debug           bool             `json:"debug"`
-	JWTSecret       string           `json:"jwt_secret"`
-	ResendAPIKey    string           `json:"resend_api_key"`
-	ResendFromEmail string           `json:"resend_from_email"`
-	RootUsername    string           `json:"root_username"`
-	RootPassword    string           `json:"root_password"`
-	RootEmail       string           `json:"root_email"`
-	UploadsDir      string           `json:"uploads_dir"`
+	Flags           *ServerFlags          `json:"-"`
+	Version         string                `json:"-"`
+	Port            uint16                `json:"port" validate:"required"`
+	Domain          string                `json:"domain" validate:"required"`
+	Env             config.Env            `json:"env" validate:"max=1"`
+	Debug           bool                  `json:"debug"`
+	JWTSecret       string                `json:"jwt_secret" validate:"required"`
+	ResendAPIKey    string                `json:"resend_api_key" validate:"required"`
+	ResendFromEmail string                `json:"resend_from_email" validate:"required"`
+	RootUsername    string                `json:"root_username" validate:"required"`
+	RootPassword    string                `json:"root_password" validate:"required"`
+	RootEmail       string                `json:"root_email" validate:"required"`
+	UploadsDir      string                `json:"uploads_dir" validate:"required"`
+	Database        *storage.DatabaseConf `json:"database" validate:"required"`
 }
 
-func NewServerConfig() models.Config {
+func NewServerConfig(flags *ServerFlags) config.Config {
 	var config *ServerConfig = new(ServerConfig)
+	config.Flags = flags
 	config.LoadDefault()
 	return config
 }
 
-func (c *ServerConfig) Configure(config models.Config) error {
-	sc, ok := config.(*ServerConfig)
+func (c *ServerConfig) Merge(from config.Config) error {
+	sc, ok := from.(*ServerConfig)
 	if !ok {
 		return errors.New("server: incorrect config type")
 	}
@@ -54,57 +61,65 @@ func (c *ServerConfig) Configure(config models.Config) error {
 	c.RootEmail = sc.RootEmail
 	c.UploadsDir = sc.UploadsDir
 
+	if err := c.Database.Merge(sc.Database); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (c *ServerConfig) LoadFromEnv() {
+	c.Port = config.GetEnvOrDefault(SERVER_PORT_KEY, c.Port)
+	c.Domain = config.GetEnvOrDefault(SERVER_DOMAIN_KEY, c.Domain)
+	c.Debug = config.GetEnvOrDefault(SERVER_DEBUG_KEY, c.Debug)
+
+	envStr := config.GetEnvOrDefault(SERVER_ENV_KEY, c.Env.String())
+	c.Env = config.StringToEnv(envStr)
+
+	c.JWTSecret = config.GetEnvOrDefault(JWT_SECRET_KEY, c.JWTSecret)
+	c.ResendAPIKey = config.GetEnvOrDefault(RESEND_API_KEY, c.ResendAPIKey)
+	c.ResendFromEmail = config.GetEnvOrDefault(RESEND_FROM_EMAIL, c.ResendFromEmail)
+	c.RootUsername = config.GetEnvOrDefault(ROOT_USERNAME_KEY, c.RootUsername)
+	c.RootPassword = config.GetEnvOrDefault(ROOT_PASSWORD_KEY, c.RootPassword)
+	c.RootEmail = config.GetEnvOrDefault(ROOT_EMAIL_KEY, c.RootEmail)
+	c.UploadsDir = config.GetEnvOrDefault(UPLOADS_DIR_KEY, c.UploadsDir)
+
+	c.Database.LoadFromEnv()
+}
+
+func (c *ServerConfig) LoadFromFile(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, c)
 }
 
 func (c *ServerConfig) LoadDefault() {
 	c.Version = VERSION
-	c.Port = models.GetEnvOrDefault(SERVER_PORT_KEY, SERVER_PORT)
-	c.Domain = models.GetEnvOrDefault(SERVER_DOMAIN_KEY, SERVER_DOMAIN)
-	c.Debug = models.GetEnvOrDefault(SERVER_DEBUG_KEY, SERVER_DEBUG)
+	c.Port = SERVER_PORT
+	c.Domain = SERVER_DOMAIN
+	c.Env = SERVER_ENV
+	c.Debug = SERVER_DEBUG
+	c.JWTSecret = JWT_SECRET_DEFAULT
+	c.ResendAPIKey = RESEND_API_KEY_DEFAULT
+	c.ResendFromEmail = RESEND_FROM_EMAIL_DEF
+	c.RootUsername = ROOT_USERNAME
+	c.RootPassword = ROOT_PASSWORD
+	c.RootEmail = ROOT_EMAIL
+	c.UploadsDir = UPLOADS_DIR
 
-	envStr := models.GetEnvOrDefault(SERVER_ENV_KEY, SERVER_ENV.String())
-	c.Env = models.StringToServerEnv(envStr)
+	c.Database = storage.NewDatabaseConf()
+}
 
-	c.JWTSecret = models.GetEnvOrDefault(JWT_SECRET_KEY, JWT_SECRET_DEFAULT)
-	c.ResendAPIKey = models.GetEnvOrDefault(RESEND_API_KEY, RESEND_API_KEY_DEFAULT)
-	c.ResendFromEmail = models.GetEnvOrDefault(RESEND_FROM_EMAIL, RESEND_FROM_EMAIL_DEF)
-	c.RootUsername = models.GetEnvOrDefault(ROOT_USERNAME_KEY, ROOT_USERNAME)
-	c.RootPassword = models.GetEnvOrDefault(ROOT_PASSWORD_KEY, ROOT_PASSWORD)
-	c.RootEmail = models.GetEnvOrDefault(ROOT_EMAIL_KEY, ROOT_EMAIL)
-	c.UploadsDir = models.GetEnvOrDefault(UPLOADS_DIR_KEY, UPLOADS_DIR)
+func (c *ServerConfig) SaveToFile(path string) error {
+	data, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 func (c *ServerConfig) Validate() error {
-	if c.Port == 0 {
-		return errors.New("server: port is required")
-	}
-	if c.Domain == "" {
-		return errors.New("server: domain is required")
-	}
-	if c.JWTSecret == "" {
-		return errors.New("server: jwt secret is required")
-	}
-	if c.RootUsername == "" {
-		return errors.New("server: root username is required")
-	}
-	if c.RootPassword == "" {
-		return errors.New("server: root password is required")
-	}
-	if c.RootEmail == "" {
-		return errors.New("server: root email is required")
-	}
-	if c.Env != models.DEVELOPMENT && c.Env != models.PRODUCTION {
-		return errors.New("server: invalid environment")
-	}
-	if c.ResendAPIKey == "" {
-		return errors.New("server: resend api key is required")
-	}
-	if c.ResendFromEmail == "" {
-		return errors.New("server: resend from email is required")
-	}
-	if c.UploadsDir == "" {
-		return errors.New("server: uploads directory is required")
-	}
-	return nil
+	return validator.GetInstance().Validate(c)
 }

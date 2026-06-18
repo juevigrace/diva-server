@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "bin"
 
 [build]
-  args_bin = []
+  args_bin = ["-e"]
   entrypoint = "./bin/diva-server"
   cmd = "make build"
   delay = 1000

@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: prod
-    command: ["./bin/diva-server"]
+    command: ["./bin/diva-server", "-e"]
     restart: unless-stopped
     ports:
       - "${PORT}:${PORT}"

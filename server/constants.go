@@ -1,23 +1,23 @@
 package server
 
-import "github.com/juevigrace/diva-server/internal/models"
+import "github.com/juevigrace/diva-server/internal/config"
 
 const (
 	VERSION string = "1.0.0"
 )
 
 const (
-	SERVER_PORT            uint16           = 5000
-	SERVER_DOMAIN          string           = "localhost"
-	SERVER_ENV             models.ServerEnv = models.DEVELOPMENT
-	SERVER_DEBUG           bool             = true
-	JWT_SECRET_DEFAULT     string           = "super secret"
-	RESEND_API_KEY_DEFAULT string           = ""
-	RESEND_FROM_EMAIL_DEF  string           = "onboarding@resend.dev"
-	ROOT_USERNAME          string           = "user"
-	ROOT_PASSWORD          string           = "1234"
-	ROOT_EMAIL             string           = "user@gmail.com"
-	UPLOADS_DIR            string           = "./uploads"
+	SERVER_PORT            uint16     = 5000
+	SERVER_DOMAIN          string     = "localhost"
+	SERVER_ENV             config.Env = config.DEVELOPMENT
+	SERVER_DEBUG           bool       = true
+	JWT_SECRET_DEFAULT     string     = "super secret"
+	RESEND_API_KEY_DEFAULT string     = ""
+	RESEND_FROM_EMAIL_DEF  string     = "onboarding@resend.dev"
+	ROOT_USERNAME          string     = "user"
+	ROOT_PASSWORD          string     = "1234"
+	ROOT_EMAIL             string     = "user@gmail.com"
+	UPLOADS_DIR            string     = "./uploads"
 )
 
 const (

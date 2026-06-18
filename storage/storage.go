@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/juevigrace/diva-server/pkg/concurrency"
-	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage/db"
 	"github.com/juevigrace/diva-server/storage/db/migrations"
 )
@@ -27,10 +26,14 @@ type StorageS struct {
 	config  *DatabaseConf
 }
 
-func New(config models.Config) (Storage, error) {
+func New(cfg *DatabaseConf) (Storage, error) {
 	dbInstance := new(StorageS)
-	dbInstance.config = NewDatabaseConf().(*DatabaseConf)
-	dbInstance.config.Configure(config)
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("storage: %w", err)
+	}
+
+	dbInstance.config = cfg
 	log.Println("Finished configuring")
 
 	if err := dbInstance.initialize(); err != nil {

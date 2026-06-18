@@ -5,27 +5,28 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/config"
+	"github.com/juevigrace/diva-server/pkg/validator"
 )
 
 type DatabaseConf struct {
-	Driver   string `json:"driver"`
-	Name     string `json:"name"`
-	Host     string `json:"host"`
-	Port     uint16 `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Driver   string `json:"driver" validate:"required"`
+	Name     string `json:"name" validate:"required"`
+	Host     string `json:"host" validate:"required"`
+	Port     uint16 `json:"port" validate:"required"`
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
 	Schema   string `json:"schema"`
 	Options  string `json:"options"`
 }
 
-func NewDatabaseConf() models.Config {
+func NewDatabaseConf() *DatabaseConf {
 	var database *DatabaseConf = new(DatabaseConf)
 	database.LoadDefault()
 	return database
 }
 
-func (c *DatabaseConf) Configure(config models.Config) error {
+func (c *DatabaseConf) Merge(config config.Config) error {
 	dc, ok := config.(*DatabaseConf)
 	if !ok {
 		return errors.New("database: incorrect config type")
@@ -51,34 +52,37 @@ func (c *DatabaseConf) Configure(config models.Config) error {
 	return nil
 }
 
+func (c *DatabaseConf) LoadFromFile(path string) error {
+	return nil
+}
+
+func (c *DatabaseConf) LoadFromEnv() {
+	c.Driver = config.GetEnvOrDefault(DB_DRIVER_KEY, c.Driver)
+	c.Name = config.GetEnvOrDefault(DB_NAME_KEY, c.Name)
+	c.Host = config.GetEnvOrDefault(DB_HOST_KEY, c.Host)
+	c.Port = config.GetEnvOrDefault(DB_PORT_KEY, c.Port)
+	c.Username = config.GetEnvOrDefault(DB_USER_KEY, c.Username)
+	c.Password = config.GetEnvOrDefault(DB_PASSWORD_KEY, c.Password)
+	c.Options = config.GetEnvOrDefault(DB_OPTIONS_KEY, c.Options)
+	c.Schema = config.GetEnvOrDefault(DB_SCHEMA_KEY, c.Schema)
+}
+
 func (c *DatabaseConf) LoadDefault() {
-	c.Driver = models.GetEnvOrDefault(DB_DRIVER_KEY, DB_DRIVER)
-	c.Name = models.GetEnvOrDefault(DB_NAME_KEY, DB_NAME)
-	c.Host = models.GetEnvOrDefault(DB_HOST_KEY, DB_HOST)
-	c.Port = models.GetEnvOrDefault(DB_PORT_KEY, DB_PORT)
-	c.Username = models.GetEnvOrDefault(DB_USER_KEY, DB_USERNAME)
-	c.Password = models.GetEnvOrDefault(DB_PASSWORD_KEY, DB_PASSWORD)
-	c.Options = models.GetEnvOrDefault(DB_OPTIONS_KEY, "")
-	c.Schema = models.GetEnvOrDefault(DB_SCHEMA_KEY, DB_SCHEMA)
+	c.Driver = DB_DRIVER
+	c.Name = DB_NAME
+	c.Host = DB_HOST
+	c.Port = DB_PORT
+	c.Username = DB_USERNAME
+	c.Password = DB_PASSWORD
+	c.Schema = DB_SCHEMA
+}
+
+func (c *DatabaseConf) SaveToFile(path string) error {
+	return nil
 }
 
 func (c *DatabaseConf) Validate() error {
-	if c.Driver != "pgx" && c.Driver != "postgres" {
-		return errors.New("database: driver must be 'pgx' or 'postgres'")
-	}
-	if c.Host == "" {
-		return errors.New("database: host is required")
-	}
-	if c.Port == 0 {
-		return errors.New("database: port is required")
-	}
-	if c.Username == "" {
-		return errors.New("database: username is required")
-	}
-	if c.Name == "" {
-		return errors.New("database: name is required")
-	}
-	return nil
+	return validator.GetInstance().Validate(c)
 }
 
 func (c *DatabaseConf) Url() (string, error) {

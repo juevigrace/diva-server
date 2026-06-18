@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/juevigrace/diva-server/internal/core/permission"
-	"github.com/juevigrace/diva-server/internal/core/session"
-	"github.com/juevigrace/diva-server/internal/core/user"
+	"github.com/juevigrace/diva-server/internal/api/core/permission"
+	"github.com/juevigrace/diva-server/internal/api/core/session"
+	"github.com/juevigrace/diva-server/internal/api/core/user"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/server"
 	"github.com/juevigrace/diva-server/storage"
@@ -45,7 +45,7 @@ func main() {
 
 	queries := database.Queries()
 
-	serverConf, ok := server.NewServerConfig().(*server.ServerConfig)
+	serverConf, ok := server.NewServerConfig(nil).(*server.ServerConfig)
 	if !ok {
 		log.Fatal("invalid config")
 	}

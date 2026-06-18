@@ -5,22 +5,23 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/juevigrace/diva-server/internal/core/auth"
-	"github.com/juevigrace/diva-server/internal/core/permission"
-	"github.com/juevigrace/diva-server/internal/core/session"
-	"github.com/juevigrace/diva-server/internal/core/user"
-	"github.com/juevigrace/diva-server/internal/core/verification"
-	"github.com/juevigrace/diva-server/pkg/mail"
-	"github.com/juevigrace/diva-server/internal/middlewares"
-	"github.com/juevigrace/diva-server/internal/models"
+	"github.com/juevigrace/diva-server/internal/api/core/auth"
+	"github.com/juevigrace/diva-server/internal/api/core/permission"
+	"github.com/juevigrace/diva-server/internal/api/core/session"
+	"github.com/juevigrace/diva-server/internal/api/core/user"
+	"github.com/juevigrace/diva-server/internal/api/core/verification"
+	"github.com/juevigrace/diva-server/internal/api/middlewares"
+	"github.com/juevigrace/diva-server/internal/config"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/pkg/concurrency"
 	"github.com/juevigrace/diva-server/pkg/filehelper"
+	"github.com/juevigrace/diva-server/pkg/mail"
 	"github.com/juevigrace/diva-server/storage"
 )
 
@@ -34,10 +35,26 @@ type Server struct {
 	files    *filehelper.FileHelper
 }
 
-func NewServer(config models.Config) (*Server, error) {
+func NewServer(cfg config.Config) (*Server, error) {
 	var server *Server = new(Server)
-	server.config = NewServerConfig().(*ServerConfig)
-	server.config.Configure(config)
+	c := cfg.(*ServerConfig)
+
+	if c.Flags.UsesEnv {
+		c.LoadFromEnv()
+	} else if c.Flags.ConfigPath != "" {
+		if _, err := os.Stat(c.Flags.ConfigPath); err == nil {
+			if err := c.LoadFromFile(c.Flags.ConfigPath); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := c.SaveToFile(c.Flags.ConfigPath); err != nil {
+				return nil, err
+			}
+			log.Printf("config file created at %s, edit it to configure the server", c.Flags.ConfigPath)
+		}
+	}
+
+	server.config = c
 
 	if err := server.setup(); err != nil {
 		return nil, err
@@ -108,8 +125,7 @@ func (s *Server) routes() {
 func (s *Server) setup() error {
 	s.setupRouter()
 
-	conf := storage.NewDatabaseConf()
-	database, err := storage.New(conf)
+	database, err := storage.New(s.config.Database)
 	if err != nil {
 		return err
 	}
