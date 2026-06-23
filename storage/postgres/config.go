@@ -1,4 +1,4 @@
-package storage
+package postgres
 
 import (
 	"errors"
@@ -9,8 +9,7 @@ import (
 	"github.com/juevigrace/diva-server/pkg/validator"
 )
 
-type DatabaseConf struct {
-	Driver   string `json:"driver" validate:"required"`
+type PGConf struct {
 	Name     string `json:"name" validate:"required"`
 	Host     string `json:"host" validate:"required"`
 	Port     uint16 `json:"port" validate:"required"`
@@ -20,14 +19,14 @@ type DatabaseConf struct {
 	Options  string `json:"options"`
 }
 
-func NewDatabaseConf() *DatabaseConf {
-	var database *DatabaseConf = new(DatabaseConf)
-	database.LoadDefault()
-	return database
+func NewPGConf() config.Config {
+	var conf *PGConf = new(PGConf)
+	conf.LoadDefault()
+	return conf
 }
 
-func (c *DatabaseConf) Merge(config config.Config) error {
-	dc, ok := config.(*DatabaseConf)
+func (c *PGConf) Merge(config config.Config) error {
+	dc, ok := config.(*PGConf)
 	if !ok {
 		return errors.New("database: incorrect config type")
 	}
@@ -40,7 +39,6 @@ func (c *DatabaseConf) Merge(config config.Config) error {
 		return err
 	}
 
-	c.Driver = dc.Driver
 	c.Name = dc.Name
 	c.Host = dc.Host
 	c.Port = dc.Port
@@ -52,12 +50,7 @@ func (c *DatabaseConf) Merge(config config.Config) error {
 	return nil
 }
 
-func (c *DatabaseConf) LoadFromFile(path string) error {
-	return nil
-}
-
-func (c *DatabaseConf) LoadFromEnv() {
-	c.Driver = config.GetEnvOrDefault(DB_DRIVER_KEY, c.Driver)
+func (c *PGConf) LoadFromEnv() {
 	c.Name = config.GetEnvOrDefault(DB_NAME_KEY, c.Name)
 	c.Host = config.GetEnvOrDefault(DB_HOST_KEY, c.Host)
 	c.Port = config.GetEnvOrDefault(DB_PORT_KEY, c.Port)
@@ -67,8 +60,7 @@ func (c *DatabaseConf) LoadFromEnv() {
 	c.Schema = config.GetEnvOrDefault(DB_SCHEMA_KEY, c.Schema)
 }
 
-func (c *DatabaseConf) LoadDefault() {
-	c.Driver = DB_DRIVER
+func (c *PGConf) LoadDefault() {
 	c.Name = DB_NAME
 	c.Host = DB_HOST
 	c.Port = DB_PORT
@@ -77,29 +69,37 @@ func (c *DatabaseConf) LoadDefault() {
 	c.Schema = DB_SCHEMA
 }
 
-func (c *DatabaseConf) SaveToFile(path string) error {
-	return nil
-}
-
-func (c *DatabaseConf) Validate() error {
+func (c *PGConf) Validate() error {
 	return validator.GetInstance().Validate(c)
 }
 
-func (c *DatabaseConf) Url() (string, error) {
+func (c *PGConf) Url() (string, error) {
 	schema := c.Schema
 	if schema == "" {
 		schema = "public"
 	}
 
-	url := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?search_path=%s",
-		c.Username, c.Password, c.Host, c.Port, c.Name, schema)
+	var url strings.Builder
+	fmt.Fprintf(
+		&url,
+		"postgres://%s:%s@%s:%d/%s?search_path=%s",
+		c.Username,
+		c.Password,
+		c.Host,
+		c.Port,
+		c.Name,
+		schema,
+	)
 
 	if c.Options != "" {
-		options := strings.Split(c.Options, ",")
-		for _, opt := range options {
-			url += "&" + strings.TrimSpace(opt)
+		options := strings.SplitSeq(c.Options, ",")
+		for opt := range options {
+			url.WriteString("&")
+			url.WriteString(strings.TrimSpace(opt))
 		}
 	}
 
-	return url, nil
+	return url.String(), nil
 }
+
+

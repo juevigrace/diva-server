@@ -1,37 +1,31 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
 
 	"github.com/juevigrace/diva-server/internal/config"
 	"github.com/juevigrace/diva-server/pkg/validator"
-	"github.com/juevigrace/diva-server/storage"
 )
 
 type ServerConfig struct {
-	Flags           *ServerFlags          `json:"-"`
-	Version         string                `json:"-"`
-	Port            uint16                `json:"port" validate:"required"`
-	Domain          string                `json:"domain" validate:"required"`
-	Env             config.Env            `json:"env" validate:"max=1"`
-	Debug           bool                  `json:"debug"`
-	JWTSecret       string                `json:"jwt_secret" validate:"required"`
-	ResendAPIKey    string                `json:"resend_api_key" validate:"required"`
-	ResendFromEmail string                `json:"resend_from_email" validate:"required"`
-	RootUsername    string                `json:"root_username" validate:"required"`
-	RootPassword    string                `json:"root_password" validate:"required"`
-	RootEmail       string                `json:"root_email" validate:"required"`
-	UploadsDir      string                `json:"uploads_dir" validate:"required"`
-	Database        *storage.DatabaseConf `json:"database" validate:"required"`
+	Version         string
+	Port            uint16
+	Domain          string
+	Env             config.Env
+	Debug           bool
+	UploadsDir      string
+	JWTSecret       string
+	ResendAPIKey    string
+	ResendFromEmail string
+	RootUsername    string
+	RootPassword    string
+	RootEmail       string
 }
 
-func NewServerConfig(flags *ServerFlags) config.Config {
-	var config *ServerConfig = new(ServerConfig)
-	config.Flags = flags
-	config.LoadDefault()
-	return config
+func NewServerConfig() config.Config {
+	var c *ServerConfig = new(ServerConfig)
+	c.LoadDefault()
+	return c
 }
 
 func (c *ServerConfig) Merge(from config.Config) error {
@@ -48,22 +42,17 @@ func (c *ServerConfig) Merge(from config.Config) error {
 		return err
 	}
 
-	c.Version = sc.Version
 	c.Port = sc.Port
 	c.Domain = sc.Domain
 	c.Env = sc.Env
 	c.Debug = sc.Debug
+	c.UploadsDir = sc.UploadsDir
 	c.JWTSecret = sc.JWTSecret
 	c.ResendAPIKey = sc.ResendAPIKey
 	c.ResendFromEmail = sc.ResendFromEmail
 	c.RootUsername = sc.RootUsername
 	c.RootPassword = sc.RootPassword
 	c.RootEmail = sc.RootEmail
-	c.UploadsDir = sc.UploadsDir
-
-	if err := c.Database.Merge(sc.Database); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -83,16 +72,6 @@ func (c *ServerConfig) LoadFromEnv() {
 	c.RootPassword = config.GetEnvOrDefault(ROOT_PASSWORD_KEY, c.RootPassword)
 	c.RootEmail = config.GetEnvOrDefault(ROOT_EMAIL_KEY, c.RootEmail)
 	c.UploadsDir = config.GetEnvOrDefault(UPLOADS_DIR_KEY, c.UploadsDir)
-
-	c.Database.LoadFromEnv()
-}
-
-func (c *ServerConfig) LoadFromFile(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, c)
 }
 
 func (c *ServerConfig) LoadDefault() {
@@ -108,16 +87,6 @@ func (c *ServerConfig) LoadDefault() {
 	c.RootPassword = ROOT_PASSWORD
 	c.RootEmail = ROOT_EMAIL
 	c.UploadsDir = UPLOADS_DIR
-
-	c.Database = storage.NewDatabaseConf()
-}
-
-func (c *ServerConfig) SaveToFile(path string) error {
-	data, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
 }
 
 func (c *ServerConfig) Validate() error {

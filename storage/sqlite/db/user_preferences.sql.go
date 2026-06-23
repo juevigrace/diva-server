@@ -3,15 +3,15 @@
 //   sqlc v1.31.1
 // source: user_preferences.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUserPreferences = `-- name: CreateUserPreferences :exec
+;
+
 insert into diva_user_preferences (
     id,
     user_id,
@@ -20,26 +20,26 @@ insert into diva_user_preferences (
     onboarding_completed,
     language
 ) values (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreateUserPreferencesParams struct {
-	ID                  pgtype.UUID
-	UserID              pgtype.UUID
+	ID                  string
+	UserID              string
 	Device              string
-	Theme               ThemeType
+	Theme               string
 	OnboardingCompleted bool
 	Language            string
 }
 
 func (q *Queries) CreateUserPreferences(ctx context.Context, arg CreateUserPreferencesParams) error {
-	_, err := q.db.Exec(ctx, createUserPreferences,
+	_, err := q.db.ExecContext(ctx, createUserPreferences,
 		arg.ID,
 		arg.UserID,
 		arg.Device,
@@ -62,11 +62,11 @@ select
     up.created_at,
     up.updated_at
 from diva_user_preferences up
-where up.id = $1
+where up.id = ?
 `
 
-func (q *Queries) GetPreferencesByID(ctx context.Context, id pgtype.UUID) (DivaUserPreference, error) {
-	row := q.db.QueryRow(ctx, getPreferencesByID, id)
+func (q *Queries) GetPreferencesByID(ctx context.Context, id string) (DivaUserPreference, error) {
+	row := q.db.QueryRowContext(ctx, getPreferencesByID, id)
 	var i DivaUserPreference
 	err := row.Scan(
 		&i.ID,
@@ -83,6 +83,8 @@ func (q *Queries) GetPreferencesByID(ctx context.Context, id pgtype.UUID) (DivaU
 }
 
 const getPreferencesByUser = `-- name: GetPreferencesByUser :many
+;
+
 select
     up.id as id,
     up.user_id,
@@ -94,11 +96,11 @@ select
     up.created_at,
     up.updated_at
 from diva_user_preferences up
-where up.user_id = $1
+where up.user_id = ?
 `
 
-func (q *Queries) GetPreferencesByUser(ctx context.Context, userID pgtype.UUID) ([]DivaUserPreference, error) {
-	rows, err := q.db.Query(ctx, getPreferencesByUser, userID)
+func (q *Queries) GetPreferencesByUser(ctx context.Context, userID string) ([]DivaUserPreference, error) {
+	rows, err := q.db.QueryContext(ctx, getPreferencesByUser, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +123,9 @@ func (q *Queries) GetPreferencesByUser(ctx context.Context, userID pgtype.UUID) 
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -129,20 +134,20 @@ func (q *Queries) GetPreferencesByUser(ctx context.Context, userID pgtype.UUID) 
 
 const updateUserPreferences = `-- name: UpdateUserPreferences :exec
 update diva_user_preferences set
-    theme = $1,
-    language = $2,
-    last_sync_at = now(),
-    updated_at = now()
-where id = $3
+    theme = ?,
+    language = ?,
+    last_sync_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdateUserPreferencesParams struct {
-	Theme    ThemeType
+	Theme    string
 	Language string
-	ID       pgtype.UUID
+	ID       string
 }
 
 func (q *Queries) UpdateUserPreferences(ctx context.Context, arg UpdateUserPreferencesParams) error {
-	_, err := q.db.Exec(ctx, updateUserPreferences, arg.Theme, arg.Language, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUserPreferences, arg.Theme, arg.Language, arg.ID)
 	return err
 }

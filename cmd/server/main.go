@@ -3,26 +3,23 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 
-	"github.com/joho/godotenv"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/juevigrace/diva-server/server"
+	"github.com/juevigrace/diva-server/storage/postgres"
 )
 
 func main() {
-	flags := server.NewServerFlags()
+	cfg := server.NewServerConfig()
+	dbCfg := postgres.NewPGConf()
+	dbCfg.LoadFromEnv()
 
-	if flags.UsesEnv {
-		for _, f := range []string{".env", ".env.dev"} {
-			if _, err := os.Stat(f); err == nil {
-				godotenv.Load(f)
-			}
-		}
-		log.Printf("envs loaded\n")
+	database, err := postgres.New(dbCfg.(*postgres.PGConf))
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	config := server.NewServerConfig(flags)
-	newServer, err := server.NewServer(config)
+	newServer, err := server.NewServer(cfg, database)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,7 +1,6 @@
-package storage
+package postgres
 
 const (
-	DB_DRIVER   string = "pgx"
 	DB_NAME     string = "diva"
 	DB_HOST     string = "localhost"
 	DB_PORT     uint16 = 5432
@@ -11,7 +10,6 @@ const (
 )
 
 const (
-	DB_DRIVER_KEY   string = "DB_DRIVER"
 	DB_HOST_KEY     string = "DB_HOST"
 	DB_PORT_KEY     string = "DB_PORT"
 	DB_USER_KEY     string = "DB_USER"

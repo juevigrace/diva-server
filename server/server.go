@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/juevigrace/diva-server/internal/api/core/verification"
 	"github.com/juevigrace/diva-server/internal/api/middlewares"
 	"github.com/juevigrace/diva-server/internal/config"
+	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/pkg/concurrency"
 	"github.com/juevigrace/diva-server/pkg/filehelper"
@@ -25,67 +25,69 @@ import (
 	"github.com/juevigrace/diva-server/storage"
 )
 
-type Server struct {
-	srv    *http.Server
+type Server[T any] struct {
+	srv      *http.Server
+	serverCh chan error
+
 	config *ServerConfig
 
-	database storage.Storage
+	database storage.Storage[T]
 	router   *chi.Mux
 	mail     *mail.Client
 	files    *filehelper.FileHelper
 }
 
-func NewServer(cfg config.Config) (*Server, error) {
-	var server *Server = new(Server)
-	c := cfg.(*ServerConfig)
+func NewServer[T any](cfg config.Config, database storage.Storage[T]) (*Server[T], error) {
+	var server *Server[T] = new(Server[T])
+	server.config = cfg.(*ServerConfig)
+	server.config.LoadFromEnv()
 
-	if c.Flags.UsesEnv {
-		c.LoadFromEnv()
-	} else if c.Flags.ConfigPath != "" {
-		if _, err := os.Stat(c.Flags.ConfigPath); err == nil {
-			if err := c.LoadFromFile(c.Flags.ConfigPath); err != nil {
-				return nil, err
-			}
-		} else {
-			if err := c.SaveToFile(c.Flags.ConfigPath); err != nil {
-				return nil, err
-			}
-			log.Printf("config file created at %s, edit it to configure the server", c.Flags.ConfigPath)
-		}
-	}
+	server.database = database
 
-	server.config = c
-
-	if err := server.setup(); err != nil {
-		return nil, err
-	}
 	return server, nil
 }
 
-func (s *Server) ListenAndServe(ctx context.Context) error {
+func (s *Server[T]) ListenAndServe(ctx context.Context) error {
 	notifyCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	done := make(chan error, 1)
-	go func() {
-		s.printBanner()
-		s.routes()
-		if err := s.srv.ListenAndServe(); err != http.ErrServerClosed {
-			done <- err
-		}
-		close(done)
-	}()
+	s.serverCh = make(chan error, 1)
+	defer close(s.serverCh)
+
+	s.start()
 
 	select {
 	case <-notifyCtx.Done():
 		log.Println("shutting down gracefully, press Ctrl+C again to force")
 		return s.shutdown(ctx)
-	case err := <-done:
+	case err := <-s.serverCh:
 		return err
 	}
 }
 
-func (s *Server) routes() {
+func (s *Server[T]) start() {
+	s.mail = mail.NewClient(s.config.ResendAPIKey, s.config.ResendFromEmail)
+	s.files = filehelper.NewFileHelper(s.config.UploadsDir, make(map[string]string), 0)
+	s.setupApi()
+	s.start()
+
+	s.setupRouter()
+	s.srv = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.config.Port),
+		Handler: s.router,
+	}
+
+	s.printBanner()
+	go func() {
+		if err := s.srv.ListenAndServe(); err != http.ErrServerClosed {
+			s.serverCh <- err
+		}
+	}()
+}
+
+func (s *Server[T]) setupApi() {
+	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
+
 	queries := s.database.Queries()
 
 	pModule := permission.NewPermissionModule(queries)
@@ -94,27 +96,31 @@ func (s *Server) routes() {
 	vModule := verification.NewVerificationModule(s.mail, queries, uModule)
 	aModule := auth.NewAuthModule(pModule.Repo, sModule.Repo, uModule.URepo, vModule.Repo)
 
-	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
+	root := s.router.Route("/", func(root chi.Router) {
+		root.Use(apiLimiter.Middleware)
+		root.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			// TODO: main page
+		})
 
-	s.router.Route("/api", func(api chi.Router) {
-		api.Use(apiLimiter.Middleware)
-
-		uModule.Routes(api)
-		sModule.Routes(api, uModule.URepo.GetByID)
-		aModule.Routes(api)
-		pModule.Routes(api, sModule.Repo.GetByID, uModule.URepo.GetByID)
-		vModule.Routes(api)
-	})
-
-	s.router.Route("/health", func(rc chi.Router) {
-		rc.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			res := responses.RespondOk(s.database.Health(context.Background()), "Success")
-			responses.WriteJSON(w, res)
+		root.Route("/api", func(api chi.Router) {
+			uModule.Routes(api)
+			sModule.Routes(api, uModule.URepo.GetByID)
+			aModule.Routes(api)
+			pModule.Routes(api, sModule.Repo.GetByID, uModule.URepo.GetByID)
+			vModule.Routes(api)
 		})
 	})
 
+	root.With(
+		middlewares.RequiresSession(sModule.Repo.GetByID, uModule.URepo.GetByID),
+		middlewares.RequireRole(models.ROLE_MODERATOR, models.ROLE_ADMIN),
+	).Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		res := responses.RespondOk(s.database.Health(context.Background()), "Success")
+		responses.WriteJSON(w, res)
+	})
+
 	fileServer := http.FileServer(http.Dir(s.config.UploadsDir))
-	s.router.Handle("/", fileServer)
+	s.router.Handle("/uploads", fileServer)
 
 	s.router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		res := responses.RespondNotFound(nil, "Route not found")
@@ -122,26 +128,7 @@ func (s *Server) routes() {
 	})
 }
 
-func (s *Server) setup() error {
-	s.setupRouter()
-
-	database, err := storage.New(s.config.Database)
-	if err != nil {
-		return err
-	}
-
-	s.database = database
-	s.mail = mail.NewClient(s.config.ResendAPIKey, s.config.ResendFromEmail)
-	s.files = filehelper.NewFileHelper(s.config.UploadsDir, make(map[string]string), 0)
-	s.srv = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.config.Port),
-		Handler: s.router,
-	}
-
-	return nil
-}
-
-func (s *Server) shutdown(ctx context.Context) error {
+func (s *Server[T]) shutdown(ctx context.Context) error {
 	return concurrency.WithTimeout(ctx, 1*time.Minute, func(ctx context.Context) error {
 		if err := s.database.Close(); err != nil {
 			return err
@@ -154,7 +141,7 @@ func (s *Server) shutdown(ctx context.Context) error {
 	})
 }
 
-func (s *Server) printBanner() {
+func (s *Server[T]) printBanner() {
 	const cyan = "\033[38;5;51m"
 	const reset = "\033[0m"
 

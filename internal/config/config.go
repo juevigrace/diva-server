@@ -7,10 +7,8 @@ import (
 
 type Config interface {
 	LoadDefault()
-	LoadFromFile(path string) error
 	LoadFromEnv()
 	Merge(from Config) error
-	SaveToFile(path string) error
 	Validate() error
 }
 

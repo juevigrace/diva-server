@@ -3,27 +3,29 @@
 //   sqlc v1.31.1
 // source: user.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countUsers = `-- name: CountUsers :one
+;
+
 select count(*)
 from diva_user
 `
 
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsers)
+	row := q.db.QueryRowContext(ctx, countUsers)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createUser = `-- name: CreateUser :exec
+;
+
 insert into diva_user (
     id,
     username,
@@ -31,24 +33,24 @@ insert into diva_user (
     password_hash,
     role
 ) values (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreateUserParams struct {
-	ID           pgtype.UUID
+	ID           string
 	Username     string
 	Email        string
 	PasswordHash string
-	Role         RoleType
+	Role         string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.Exec(ctx, createUser,
+	_, err := q.db.ExecContext(ctx, createUser,
 		arg.ID,
 		arg.Username,
 		arg.Email,
@@ -60,15 +62,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 
 const deleteUser = `-- name: DeleteUser :exec
 delete from diva_user
-where id = $1
+where id = ?
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteUser, id)
+func (q *Queries) DeleteUser(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
+;
+
 select
     u.id as id,
     u.username,
@@ -80,11 +84,11 @@ select
     u.updated_at,
     u.deleted_at
 from diva_user u
-where u.email = $1
+where u.email = ?
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (DivaUser, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i DivaUser
 	err := row.Scan(
 		&i.ID,
@@ -112,11 +116,11 @@ select
     u.updated_at,
     u.deleted_at
 from diva_user u
-where u.id = $1
+where u.id = ?
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (DivaUser, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
+func (q *Queries) GetUserByID(ctx context.Context, id string) (DivaUser, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
 	var i DivaUser
 	err := row.Scan(
 		&i.ID,
@@ -133,6 +137,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (DivaUser, er
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
+;
+
 select
     u.id as id,
     u.username,
@@ -144,11 +150,11 @@ select
     u.updated_at,
     u.deleted_at
 from diva_user u
-where u.username = $1
+where u.username = ?
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (DivaUser, error) {
-	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
 	var i DivaUser
 	err := row.Scan(
 		&i.ID,
@@ -165,6 +171,8 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (DivaU
 }
 
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
+;
+
 select
     u.id as id,
     u.username,
@@ -176,11 +184,16 @@ select
     u.updated_at,
     u.deleted_at
 from diva_user u
-where u.email = $1 or u.username = $1
+where u.email = ? or u.username = ?
 `
 
-func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, email string) (DivaUser, error) {
-	row := q.db.QueryRow(ctx, getUserByUsernameOrEmail, email)
+type GetUserByUsernameOrEmailParams struct {
+	Email    string
+	Username string
+}
+
+func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (DivaUser, error) {
+	row := q.db.QueryRowContext(ctx, getUserByUsernameOrEmail, arg.Email, arg.Username)
 	var i DivaUser
 	err := row.Scan(
 		&i.ID,
@@ -197,6 +210,8 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, email string) (D
 }
 
 const listUsers = `-- name: ListUsers :many
+;
+
 select
     u.id as id,
     u.username,
@@ -209,17 +224,17 @@ select
     u.deleted_at
 from diva_user u
 order by u.created_at desc
-limit $1
-offset $2
+limit ?
+offset ?
 `
 
 type ListUsersParams struct {
-	Limit  int32
-	Offset int32
+	Limit  int64
+	Offset int64
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUser, error) {
-	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +257,9 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUse
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -251,107 +269,109 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]DivaUse
 const restoreUser = `-- name: RestoreUser :exec
 update diva_user set
     deleted_at = null,
-    updated_at = now()
-where id = $1
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
-func (q *Queries) RestoreUser(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, restoreUser, id)
+func (q *Queries) RestoreUser(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, restoreUser, id)
 	return err
 }
 
 const softDeleteUser = `-- name: SoftDeleteUser :exec
+;
+
 update diva_user set
-    deleted_at = now()
-where id = $1
+    deleted_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
-func (q *Queries) SoftDeleteUser(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, softDeleteUser, id)
+func (q *Queries) SoftDeleteUser(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, softDeleteUser, id)
 	return err
 }
 
 const updateEmail = `-- name: UpdateEmail :exec
 update diva_user set
-    email = $1,
-    updated_at = now()
-where id = $2
+    email = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdateEmailParams struct {
 	Email string
-	ID    pgtype.UUID
+	ID    string
 }
 
 func (q *Queries) UpdateEmail(ctx context.Context, arg UpdateEmailParams) error {
-	_, err := q.db.Exec(ctx, updateEmail, arg.Email, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateEmail, arg.Email, arg.ID)
 	return err
 }
 
 const updatePassword = `-- name: UpdatePassword :exec
 update diva_user set
-    password_hash = $1,
-    updated_at = now()
-where id = $2
+    password_hash = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdatePasswordParams struct {
 	PasswordHash string
-	ID           pgtype.UUID
+	ID           string
 }
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
-	_, err := q.db.Exec(ctx, updatePassword, arg.PasswordHash, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePassword, arg.PasswordHash, arg.ID)
 	return err
 }
 
 const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
 update diva_user set
-    phone_number = $1,
-    updated_at = now()
-where id = $2
+    phone_number = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdatePhoneNumberParams struct {
 	PhoneNumber string
-	ID          pgtype.UUID
+	ID          string
 }
 
 func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
-	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.PhoneNumber, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePhoneNumber, arg.PhoneNumber, arg.ID)
 	return err
 }
 
 const updateRole = `-- name: UpdateRole :exec
 update diva_user set
-    role = $1,
-    updated_at = now()
-where id = $2
+    role = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdateRoleParams struct {
-	Role RoleType
-	ID   pgtype.UUID
+	Role string
+	ID   string
 }
 
 func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) error {
-	_, err := q.db.Exec(ctx, updateRole, arg.Role, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRole, arg.Role, arg.ID)
 	return err
 }
 
 const updateUsername = `-- name: UpdateUsername :exec
 update diva_user set
-    username = $1,
-    updated_at = now()
-where id = $2
+    username = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdateUsernameParams struct {
 	Username string
-	ID       pgtype.UUID
+	ID       string
 }
 
 func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
-	_, err := q.db.Exec(ctx, updateUsername, arg.Username, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUsername, arg.Username, arg.ID)
 	return err
 }

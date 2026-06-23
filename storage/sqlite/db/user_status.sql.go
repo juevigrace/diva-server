@@ -3,45 +3,45 @@
 //   sqlc v1.31.1
 // source: user_status.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUserState = `-- name: CreateUserState :exec
+;
+
 insert into diva_user_state (
     user_id,
     verified,
     status
 ) values (
-    $1,
-    $2,
-    $3
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreateUserStateParams struct {
-	UserID   pgtype.UUID
+	UserID   string
 	Verified bool
-	Status   UserStatusType
+	Status   string
 }
 
 func (q *Queries) CreateUserState(ctx context.Context, arg CreateUserStateParams) error {
-	_, err := q.db.Exec(ctx, createUserState, arg.UserID, arg.Verified, arg.Status)
+	_, err := q.db.ExecContext(ctx, createUserState, arg.UserID, arg.Verified, arg.Status)
 	return err
 }
 
 const getUserStateByUserID = `-- name: GetUserStateByUserID :one
 select us.user_id, us.verified, us.status, us.last_active_at, us.updated_at
 from diva_user_state us
-where us.user_id = $1
+where us.user_id = ?
 `
 
-func (q *Queries) GetUserStateByUserID(ctx context.Context, userID pgtype.UUID) (DivaUserState, error) {
-	row := q.db.QueryRow(ctx, getUserStateByUserID, userID)
+func (q *Queries) GetUserStateByUserID(ctx context.Context, userID string) (DivaUserState, error) {
+	row := q.db.QueryRowContext(ctx, getUserStateByUserID, userID)
 	var i DivaUserState
 	err := row.Scan(
 		&i.UserID,
@@ -55,46 +55,46 @@ func (q *Queries) GetUserStateByUserID(ctx context.Context, userID pgtype.UUID) 
 
 const updateLastActiveAt = `-- name: UpdateLastActiveAt :exec
 update diva_user_state set
-    last_active_at = now(),
-    updated_at = now()
-where user_id = $1
+    last_active_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+where user_id = ?
 `
 
-func (q *Queries) UpdateLastActiveAt(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, updateLastActiveAt, userID)
+func (q *Queries) UpdateLastActiveAt(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, updateLastActiveAt, userID)
 	return err
 }
 
 const updateUserStatus = `-- name: UpdateUserStatus :exec
 update diva_user_state set
-    status = $1,
-    updated_at = now()
-where user_id = $2
+    status = ?,
+    updated_at = CURRENT_TIMESTAMP
+where user_id = ?
 `
 
 type UpdateUserStatusParams struct {
-	Status UserStatusType
-	UserID pgtype.UUID
+	Status string
+	UserID string
 }
 
 func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
-	_, err := q.db.Exec(ctx, updateUserStatus, arg.Status, arg.UserID)
+	_, err := q.db.ExecContext(ctx, updateUserStatus, arg.Status, arg.UserID)
 	return err
 }
 
 const updateUserVerified = `-- name: UpdateUserVerified :exec
 update diva_user_state set
-    verified = $1,
-    updated_at = now()
-where user_id = $2
+    verified = ?,
+    updated_at = CURRENT_TIMESTAMP
+where user_id = ?
 `
 
 type UpdateUserVerifiedParams struct {
 	Verified bool
-	UserID   pgtype.UUID
+	UserID   string
 }
 
 func (q *Queries) UpdateUserVerified(ctx context.Context, arg UpdateUserVerifiedParams) error {
-	_, err := q.db.Exec(ctx, updateUserVerified, arg.Verified, arg.UserID)
+	_, err := q.db.ExecContext(ctx, updateUserVerified, arg.Verified, arg.UserID)
 	return err
 }

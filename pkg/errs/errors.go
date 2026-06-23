@@ -47,6 +47,7 @@ var (
 
 var (
 	ErrFileRequired     = errors.New("file is required")
+	ErrFilePathRequired = errors.New("file path is required")
 	ErrUnsupportedImage = errors.New("unsupported image type")
 	ErrFileTooLarge     = errors.New("file too large")
 )

@@ -3,63 +3,65 @@
 //   sqlc v1.31.1
 // source: user_verification.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+	"time"
 )
 
 const createUserVerification = `-- name: CreateUserVerification :exec
+;
+
 insert into diva_action_verification (
     action_id,
     token,
     expires_at
 ) values (
-    $1,
-    $2,
-    $3
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreateUserVerificationParams struct {
-	ActionID  pgtype.UUID
+	ActionID  string
 	Token     string
-	ExpiresAt pgtype.Timestamptz
+	ExpiresAt time.Time
 }
 
 func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) error {
-	_, err := q.db.Exec(ctx, createUserVerification, arg.ActionID, arg.Token, arg.ExpiresAt)
+	_, err := q.db.ExecContext(ctx, createUserVerification, arg.ActionID, arg.Token, arg.ExpiresAt)
 	return err
 }
 
 const deleteUserVerification = `-- name: DeleteUserVerification :exec
 delete from diva_action_verification
-where action_id = $1
+where action_id = ?
 `
 
-func (q *Queries) DeleteUserVerification(ctx context.Context, actionID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteUserVerification, actionID)
+func (q *Queries) DeleteUserVerification(ctx context.Context, actionID string) error {
+	_, err := q.db.ExecContext(ctx, deleteUserVerification, actionID)
 	return err
 }
 
 const getUserVerification = `-- name: GetUserVerification :one
 select v.action_id, v.token, v.expires_at, v.used_at, v.verified
 from diva_action_verification v
-where v.action_id = $1
+where v.action_id = ?
 `
 
 type GetUserVerificationRow struct {
-	ActionID  pgtype.UUID
+	ActionID  string
 	Token     string
-	ExpiresAt pgtype.Timestamptz
-	UsedAt    pgtype.Timestamptz
+	ExpiresAt time.Time
+	UsedAt    sql.NullTime
 	Verified  bool
 }
 
-func (q *Queries) GetUserVerification(ctx context.Context, actionID pgtype.UUID) (GetUserVerificationRow, error) {
-	row := q.db.QueryRow(ctx, getUserVerification, actionID)
+func (q *Queries) GetUserVerification(ctx context.Context, actionID string) (GetUserVerificationRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserVerification, actionID)
 	var i GetUserVerificationRow
 	err := row.Scan(
 		&i.ActionID,
@@ -73,17 +75,17 @@ func (q *Queries) GetUserVerification(ctx context.Context, actionID pgtype.UUID)
 
 const updateUserVerification = `-- name: UpdateUserVerification :exec
 update diva_action_verification set
-    verified = $1,
-    used_at = now()
-where action_id = $2
+    verified = ?,
+    used_at = CURRENT_TIMESTAMP
+where action_id = ?
 `
 
 type UpdateUserVerificationParams struct {
 	Verified bool
-	ActionID pgtype.UUID
+	ActionID string
 }
 
 func (q *Queries) UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error {
-	_, err := q.db.Exec(ctx, updateUserVerification, arg.Verified, arg.ActionID)
+	_, err := q.db.ExecContext(ctx, updateUserVerification, arg.Verified, arg.ActionID)
 	return err
 }

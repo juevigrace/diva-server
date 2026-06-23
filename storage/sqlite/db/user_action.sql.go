@@ -3,83 +3,89 @@
 //   sqlc v1.31.1
 // source: user_action.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUserAction = `-- name: CreateUserAction :exec
+;
+
 insert into diva_action (
     id,
     name,
     user_id
 ) values (
-    $1,
-    $2,
-    $3
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreateUserActionParams struct {
-	ID     pgtype.UUID
+	ID     string
 	Name   string
-	UserID pgtype.UUID
+	UserID string
 }
 
 func (q *Queries) CreateUserAction(ctx context.Context, arg CreateUserActionParams) error {
-	_, err := q.db.Exec(ctx, createUserAction, arg.ID, arg.Name, arg.UserID)
+	_, err := q.db.ExecContext(ctx, createUserAction, arg.ID, arg.Name, arg.UserID)
 	return err
 }
 
 const deleteUserAction = `-- name: DeleteUserAction :exec
 delete from diva_action
-where id = $1
+where id = ?
 `
 
-func (q *Queries) DeleteUserAction(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteUserAction, id)
+func (q *Queries) DeleteUserAction(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteUserAction, id)
 	return err
 }
 
 const deleteUserActionByUser = `-- name: DeleteUserActionByUser :exec
+;
+
 delete from diva_action
-where user_id = $1
+where user_id = ?
 `
 
-func (q *Queries) DeleteUserActionByUser(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteUserActionByUser, userID)
+func (q *Queries) DeleteUserActionByUser(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deleteUserActionByUser, userID)
 	return err
 }
 
 const getUserActionByID = `-- name: GetUserActionByID :one
+;
+
 select ua.id, ua.name, ua.user_id
 from diva_action ua
-where ua.id = $1
+where ua.id = ?
 `
 
-func (q *Queries) GetUserActionByID(ctx context.Context, id pgtype.UUID) (DivaAction, error) {
-	row := q.db.QueryRow(ctx, getUserActionByID, id)
+func (q *Queries) GetUserActionByID(ctx context.Context, id string) (DivaAction, error) {
+	row := q.db.QueryRowContext(ctx, getUserActionByID, id)
 	var i DivaAction
 	err := row.Scan(&i.ID, &i.Name, &i.UserID)
 	return i, err
 }
 
 const getUserActionByUserAndName = `-- name: GetUserActionByUserAndName :one
+;
+
 select ua.id, ua.name, ua.user_id
 from diva_action ua
-where ua.user_id = $1 and ua.name = $2
+where ua.user_id = ? and ua.name = ?
 `
 
 type GetUserActionByUserAndNameParams struct {
-	UserID pgtype.UUID
+	UserID string
 	Name   string
 }
 
 func (q *Queries) GetUserActionByUserAndName(ctx context.Context, arg GetUserActionByUserAndNameParams) (DivaAction, error) {
-	row := q.db.QueryRow(ctx, getUserActionByUserAndName, arg.UserID, arg.Name)
+	row := q.db.QueryRowContext(ctx, getUserActionByUserAndName, arg.UserID, arg.Name)
 	var i DivaAction
 	err := row.Scan(&i.ID, &i.Name, &i.UserID)
 	return i, err
@@ -88,11 +94,11 @@ func (q *Queries) GetUserActionByUserAndName(ctx context.Context, arg GetUserAct
 const listActionsByUser = `-- name: ListActionsByUser :many
 select ua.id, ua.name, ua.user_id
 from diva_action ua
-where ua.user_id = $1
+where ua.user_id = ?
 `
 
-func (q *Queries) ListActionsByUser(ctx context.Context, userID pgtype.UUID) ([]DivaAction, error) {
-	rows, err := q.db.Query(ctx, listActionsByUser, userID)
+func (q *Queries) ListActionsByUser(ctx context.Context, userID string) ([]DivaAction, error) {
+	rows, err := q.db.QueryContext(ctx, listActionsByUser, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -104,6 +110,9 @@ func (q *Queries) ListActionsByUser(ctx context.Context, userID pgtype.UUID) ([]
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

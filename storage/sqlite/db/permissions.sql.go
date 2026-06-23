@@ -3,27 +3,29 @@
 //   sqlc v1.31.1
 // source: permissions.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countPermissions = `-- name: CountPermissions :one
+;
+
 select count(*)
 from diva_permissions
 `
 
 func (q *Queries) CountPermissions(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countPermissions)
+	row := q.db.QueryRowContext(ctx, countPermissions)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createPermission = `-- name: CreatePermission :exec
+;
+
 insert into diva_permissions (
     id,
     name,
@@ -31,24 +33,24 @@ insert into diva_permissions (
     action,
     role_level
 ) values (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreatePermissionParams struct {
-	ID          pgtype.UUID
+	ID          string
 	Name        string
 	Description string
 	Action      string
-	RoleLevel   RoleType
+	RoleLevel   string
 }
 
 func (q *Queries) CreatePermission(ctx context.Context, arg CreatePermissionParams) error {
-	_, err := q.db.Exec(ctx, createPermission,
+	_, err := q.db.ExecContext(ctx, createPermission,
 		arg.ID,
 		arg.Name,
 		arg.Description,
@@ -60,11 +62,11 @@ func (q *Queries) CreatePermission(ctx context.Context, arg CreatePermissionPara
 
 const deletePermission = `-- name: DeletePermission :exec
 delete from diva_permissions
-where id = $1
+where id = ?
 `
 
-func (q *Queries) DeletePermission(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deletePermission, id)
+func (q *Queries) DeletePermission(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deletePermission, id)
 	return err
 }
 
@@ -79,11 +81,11 @@ select
     p.updated_at,
     p.deleted_at
 from diva_permissions p
-where p.id = $1
+where p.id = ?
 `
 
-func (q *Queries) GetPermissionByID(ctx context.Context, id pgtype.UUID) (DivaPermission, error) {
-	row := q.db.QueryRow(ctx, getPermissionByID, id)
+func (q *Queries) GetPermissionByID(ctx context.Context, id string) (DivaPermission, error) {
+	row := q.db.QueryRowContext(ctx, getPermissionByID, id)
 	var i DivaPermission
 	err := row.Scan(
 		&i.ID,
@@ -99,6 +101,8 @@ func (q *Queries) GetPermissionByID(ctx context.Context, id pgtype.UUID) (DivaPe
 }
 
 const getPermissionByName = `-- name: GetPermissionByName :one
+;
+
 select
     p.id as id,
     p.name,
@@ -109,11 +113,11 @@ select
     p.updated_at,
     p.deleted_at
 from diva_permissions p
-where p.name = $1
+where p.name = ?
 `
 
 func (q *Queries) GetPermissionByName(ctx context.Context, name string) (DivaPermission, error) {
-	row := q.db.QueryRow(ctx, getPermissionByName, name)
+	row := q.db.QueryRowContext(ctx, getPermissionByName, name)
 	var i DivaPermission
 	err := row.Scan(
 		&i.ID,
@@ -129,6 +133,8 @@ func (q *Queries) GetPermissionByName(ctx context.Context, name string) (DivaPer
 }
 
 const listPermissions = `-- name: ListPermissions :many
+;
+
 select
     p.id as id,
     p.name,
@@ -140,17 +146,17 @@ select
     p.deleted_at
 from diva_permissions p
 order by p.name
-limit $1
-offset $2
+limit ?
+offset ?
 `
 
 type ListPermissionsParams struct {
-	Limit  int32
-	Offset int32
+	Limit  int64
+	Offset int64
 }
 
 func (q *Queries) ListPermissions(ctx context.Context, arg ListPermissionsParams) ([]DivaPermission, error) {
-	rows, err := q.db.Query(ctx, listPermissions, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listPermissions, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +178,9 @@ func (q *Queries) ListPermissions(ctx context.Context, arg ListPermissionsParams
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -181,75 +190,77 @@ func (q *Queries) ListPermissions(ctx context.Context, arg ListPermissionsParams
 const restorePermission = `-- name: RestorePermission :exec
 update diva_permissions set
     deleted_at = null
-where id = $1
+where id = ?
 `
 
-func (q *Queries) RestorePermission(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, restorePermission, id)
+func (q *Queries) RestorePermission(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, restorePermission, id)
 	return err
 }
 
 const softDeletePermission = `-- name: SoftDeletePermission :exec
+;
+
 update diva_permissions
 set
-    deleted_at = now()
-where id = $1
+    deleted_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
-func (q *Queries) SoftDeletePermission(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, softDeletePermission, id)
+func (q *Queries) SoftDeletePermission(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, softDeletePermission, id)
 	return err
 }
 
 const updatePermission = `-- name: UpdatePermission :exec
 update diva_permissions set
-    name = $1,
-    description = $2,
-    updated_at = now()
-where id = $3
+    name = ?,
+    description = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdatePermissionParams struct {
 	Name        string
 	Description string
-	ID          pgtype.UUID
+	ID          string
 }
 
 func (q *Queries) UpdatePermission(ctx context.Context, arg UpdatePermissionParams) error {
-	_, err := q.db.Exec(ctx, updatePermission, arg.Name, arg.Description, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePermission, arg.Name, arg.Description, arg.ID)
 	return err
 }
 
 const updatePermissionAction = `-- name: UpdatePermissionAction :exec
 update diva_permissions set
-    action = $1,
-    updated_at = now()
-where id = $2
+    action = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdatePermissionActionParams struct {
 	Action string
-	ID     pgtype.UUID
+	ID     string
 }
 
 func (q *Queries) UpdatePermissionAction(ctx context.Context, arg UpdatePermissionActionParams) error {
-	_, err := q.db.Exec(ctx, updatePermissionAction, arg.Action, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePermissionAction, arg.Action, arg.ID)
 	return err
 }
 
 const updatePermissionRoleLevel = `-- name: UpdatePermissionRoleLevel :exec
 update diva_permissions set
-    role_level = $1,
-    updated_at = now()
-where id = $2
+    role_level = ?,
+    updated_at = CURRENT_TIMESTAMP
+where id = ?
 `
 
 type UpdatePermissionRoleLevelParams struct {
-	RoleLevel RoleType
-	ID        pgtype.UUID
+	RoleLevel string
+	ID        string
 }
 
 func (q *Queries) UpdatePermissionRoleLevel(ctx context.Context, arg UpdatePermissionRoleLevelParams) error {
-	_, err := q.db.Exec(ctx, updatePermissionRoleLevel, arg.RoleLevel, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePermissionRoleLevel, arg.RoleLevel, arg.ID)
 	return err
 }

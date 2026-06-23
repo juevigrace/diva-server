@@ -1,10 +1,17 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "storage/db/queries"
-    schema: "storage/db/migrations"
+    queries: "storage/postgres/db/queries"
+    schema: "storage/postgres/db/migrations"
     gen:
       go:
-        out: "storage/db"
-        package: "db"
+        out: "storage/postgres/db"
+        package: "pg"
         sql_package: "pgx/v5"
+  - engine: "sqlite"
+    queries: "storage/sqlite/db/queries"
+    schema: "storage/sqlite/db/migrations"
+    gen:
+      go:
+        out: "storage/sqlite/db"
+        package: "sqli"

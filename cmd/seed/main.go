@@ -4,14 +4,13 @@ import (
 	"context"
 	"flag"
 	"log"
-	"os"
 
 	"github.com/juevigrace/diva-server/internal/api/core/permission"
 	"github.com/juevigrace/diva-server/internal/api/core/session"
 	"github.com/juevigrace/diva-server/internal/api/core/user"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/server"
-	"github.com/juevigrace/diva-server/storage"
+	"github.com/juevigrace/diva-server/storage/postgres"
 
 	"github.com/joho/godotenv"
 )
@@ -29,26 +28,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := os.Setenv(storage.DB_HOST_KEY, "localhost"); err != nil {
-		log.Fatal(err)
-	}
+	dbCfg := postgres.NewPGConf()
+	dbCfg.LoadFromEnv()
 
-	if err := os.Setenv(storage.DB_PORT_KEY, "5433"); err != nil {
-		log.Fatal(err)
-	}
-
-	conf := storage.NewDatabaseConf()
-	database, err := storage.New(conf)
+	database, err := postgres.New(dbCfg.(*postgres.PGConf))
 	if err != nil {
 		log.Fatal("failed to create storage: %w", err)
 	}
 
 	queries := database.Queries()
 
-	serverConf, ok := server.NewServerConfig(nil).(*server.ServerConfig)
-	if !ok {
-		log.Fatal("invalid config")
-	}
+	serverConf := server.NewServerConfig().(*server.ServerConfig)
 
 	pModule := permission.NewPermissionModule(queries)
 	sModule := session.NewSessionModule(queries)

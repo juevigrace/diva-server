@@ -3,15 +3,16 @@
 //   sqlc v1.31.1
 // source: user_profile.sql
 
-package db
+package sqli
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 const createUserProfile = `-- name: CreateUserProfile :exec
+;
+
 insert into diva_user_profile (
     user_id,
     first_name,
@@ -20,26 +21,26 @@ insert into diva_user_profile (
     alias,
     bio
 ) values (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?
 )
 `
 
 type CreateUserProfileParams struct {
-	UserID    pgtype.UUID
+	UserID    string
 	FirstName string
 	LastName  string
-	BirthDate pgtype.Timestamptz
+	BirthDate sql.NullTime
 	Alias     string
 	Bio       string
 }
 
 func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) error {
-	_, err := q.db.Exec(ctx, createUserProfile,
+	_, err := q.db.ExecContext(ctx, createUserProfile,
 		arg.UserID,
 		arg.FirstName,
 		arg.LastName,
@@ -61,11 +62,11 @@ select
     up.avatar,
     up.updated_at
 from diva_user_profile up
-where up.user_id = $1
+where up.user_id = ?
 `
 
-func (q *Queries) GetUserProfileByUserID(ctx context.Context, userID pgtype.UUID) (DivaUserProfile, error) {
-	row := q.db.QueryRow(ctx, getUserProfileByUserID, userID)
+func (q *Queries) GetUserProfileByUserID(ctx context.Context, userID string) (DivaUserProfile, error) {
+	row := q.db.QueryRowContext(ctx, getUserProfileByUserID, userID)
 	var i DivaUserProfile
 	err := row.Scan(
 		&i.UserID,
@@ -82,26 +83,26 @@ func (q *Queries) GetUserProfileByUserID(ctx context.Context, userID pgtype.UUID
 
 const updateUserProfile = `-- name: UpdateUserProfile :exec
 update diva_user_profile set
-    first_name = $1,
-    last_name = $2,
-    birth_date = $3,
-    alias = $4,
-    bio = $5,
-    updated_at = now()
-where user_id = $6
+    first_name = ?,
+    last_name = ?,
+    birth_date = ?,
+    alias = ?,
+    bio = ?,
+    updated_at = CURRENT_TIMESTAMP
+where user_id = ?
 `
 
 type UpdateUserProfileParams struct {
 	FirstName string
 	LastName  string
-	BirthDate pgtype.Timestamptz
+	BirthDate sql.NullTime
 	Alias     string
 	Bio       string
-	UserID    pgtype.UUID
+	UserID    string
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error {
-	_, err := q.db.Exec(ctx, updateUserProfile,
+	_, err := q.db.ExecContext(ctx, updateUserProfile,
 		arg.FirstName,
 		arg.LastName,
 		arg.BirthDate,
@@ -114,17 +115,17 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 
 const updateUserProfileAvatar = `-- name: UpdateUserProfileAvatar :exec
 update diva_user_profile set
-    avatar = $1,
-    updated_at = now()
-where user_id = $2
+    avatar = ?,
+    updated_at = CURRENT_TIMESTAMP
+where user_id = ?
 `
 
 type UpdateUserProfileAvatarParams struct {
 	Avatar string
-	UserID pgtype.UUID
+	UserID string
 }
 
 func (q *Queries) UpdateUserProfileAvatar(ctx context.Context, arg UpdateUserProfileAvatarParams) error {
-	_, err := q.db.Exec(ctx, updateUserProfileAvatar, arg.Avatar, arg.UserID)
+	_, err := q.db.ExecContext(ctx, updateUserProfileAvatar, arg.Avatar, arg.UserID)
 	return err
 }
