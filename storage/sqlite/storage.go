@@ -16,12 +16,21 @@ import (
 )
 
 type SQLiteStorage struct {
-	db      *sql.DB
-	queries *sqli.Queries
-	config  *SQLiteConf
+	db                 *sql.DB
+	queries            *sqli.Queries
+	config             *SQLiteConf
+	userStore          *UserStore
+	permissionStore    *PermissionStore
+	sessionStore       *SessionStore
+	userStateStore     *UserStateStore
+	userProfileStore   *UserProfileStore
+	userPreferenceStore *UserPreferenceStore
+	userPermissionStore *UserPermissionStore
+	userActionStore    *UserActionStore
+	userVerificationStore *UserVerificationStore
 }
 
-func New(cfg *SQLiteConf) (storage.Storage[sqli.Queries], error) {
+func New(cfg *SQLiteConf) (storage.Storage, error) {
 	dbInstance := new(SQLiteStorage)
 
 	if err := cfg.Validate(); err != nil {
@@ -48,6 +57,16 @@ func (s *SQLiteStorage) initialize() error {
 	}
 
 	s.queries = sqli.New(s.db)
+
+	s.userStore = NewUserStore(s.queries)
+	s.permissionStore = NewPermissionStore(s.queries)
+	s.sessionStore = NewSessionStore(s.queries)
+	s.userStateStore = NewUserStateStore(s.queries)
+	s.userProfileStore = NewUserProfileStore(s.queries)
+	s.userPreferenceStore = NewUserPreferenceStore(s.queries)
+	s.userPermissionStore = NewUserPermissionStore(s.queries)
+	s.userActionStore = NewUserActionStore(s.queries)
+	s.userVerificationStore = NewUserVerificationStore(s.queries)
 
 	return nil
 }
@@ -95,9 +114,15 @@ func (s *SQLiteStorage) openConnection(ctx context.Context) error {
 	})
 }
 
-func (s *SQLiteStorage) Queries() *sqli.Queries {
-	return s.queries
-}
+func (s *SQLiteStorage) UserStore() storage.UserStore               { return s.userStore }
+func (s *SQLiteStorage) PermissionStore() storage.PermissionStore    { return s.permissionStore }
+func (s *SQLiteStorage) SessionStore() storage.SessionStore          { return s.sessionStore }
+func (s *SQLiteStorage) UserStateStore() storage.UserStateStore      { return s.userStateStore }
+func (s *SQLiteStorage) UserProfileStore() storage.UserProfileStore  { return s.userProfileStore }
+func (s *SQLiteStorage) UserPreferenceStore() storage.UserPreferenceStore   { return s.userPreferenceStore }
+func (s *SQLiteStorage) UserPermissionStore() storage.UserPermissionStore   { return s.userPermissionStore }
+func (s *SQLiteStorage) UserActionStore() storage.UserActionStore    { return s.userActionStore }
+func (s *SQLiteStorage) UserVerificationStore() storage.UserVerificationStore { return s.userVerificationStore }
 
 func (s *SQLiteStorage) Close() error {
 	return s.db.Close()

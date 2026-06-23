@@ -5,45 +5,45 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type UserStateRepo struct {
-	queries *db.Queries
+	store storage.UserStateStore
 }
 
-func NewUserStateRepo(queries *db.Queries) *UserStateRepo {
+func NewUserStateRepo(store storage.UserStateStore) *UserStateRepo {
 	return &UserStateRepo{
-		queries: queries,
+		store: store,
 	}
 }
 
 func (s *UserStateRepo) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserState, error) {
-	row, err := s.queries.GetUserStateByUserID(ctx, models.UUIDPtrToDB(&userID))
+	row, err := s.store.GetUserStateByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return models.UserStateFromDB(&row), nil
+	return models.UserStateFromDB(row), nil
 }
 
 func (s *UserStateRepo) Create(ctx context.Context, userID uuid.UUID, us *models.UserState) error {
-	return s.queries.CreateUserState(ctx, *us.DBCreate(userID))
+	return s.store.CreateUserState(ctx, *us.DBCreate(userID))
 }
 
 func (s *UserStateRepo) UpdateVerified(ctx context.Context, verified bool, userID uuid.UUID) error {
-	return s.queries.UpdateUserVerified(ctx, db.UpdateUserVerifiedParams{
+	return s.store.UpdateUserVerified(ctx, storage.UpdateUserVerifiedParams{
 		Verified: verified,
-		UserID:   models.UUIDPtrToDB(&userID),
+		UserID:   userID,
 	})
 }
 
 func (s *UserStateRepo) UpdateStatus(ctx context.Context, status models.UserStatus, userID uuid.UUID) error {
-	return s.queries.UpdateUserStatus(ctx, db.UpdateUserStatusParams{
+	return s.store.UpdateUserStatus(ctx, storage.UpdateUserStatusParams{
 		Status: status.ToDB(),
-		UserID: models.UUIDPtrToDB(&userID),
+		UserID: userID,
 	})
 }
 
 func (s *UserStateRepo) UpdateLastActiveAt(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.UpdateLastActiveAt(ctx, models.UUIDPtrToDB(&userID))
+	return s.store.UpdateLastActiveAt(ctx, userID)
 }

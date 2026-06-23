@@ -1,6 +1,6 @@
 package models
 
-import "github.com/juevigrace/diva-server/storage/db"
+import "github.com/juevigrace/diva-server/storage"
 
 type SessionType int
 
@@ -31,22 +31,22 @@ func SessionTypeFromString(s string) SessionType {
 	}
 }
 
-func (st *SessionType) ToDB() db.SessionType {
+func (st *SessionType) ToDB() storage.SessionType {
 	switch *st {
 	case SESSION_NORMAL:
-		return db.SessionTypeNORMAL
+		return storage.SessionTypeNORMAL
 	case SESSION_TEMPORAL:
-		return db.SessionTypeTEMPORAL
+		return storage.SessionTypeTEMPORAL
 	default:
-		return db.SessionTypeNORMAL
+		return storage.SessionTypeNORMAL
 	}
 }
 
-func SessionTypeFromDB(t db.SessionType) SessionType {
+func SessionTypeFromDB(t storage.SessionType) SessionType {
 	switch t {
-	case db.SessionTypeNORMAL:
+	case storage.SessionTypeNORMAL:
 		return SESSION_NORMAL
-	case db.SessionTypeTEMPORAL:
+	case storage.SessionTypeTEMPORAL:
 		return SESSION_TEMPORAL
 	default:
 		return SESSION_NORMAL

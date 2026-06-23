@@ -27,6 +27,7 @@ services:
       - ROOT_USERNAME=${ROOT_USERNAME}
       - ROOT_PASSWORD=${ROOT_PASSWORD}
       - ROOT_EMAIL=${ROOT_EMAIL}
+      - BUILD_TAGS=postgres
     volumes:
       - ./cmd:/app/cmd
       - ./server:/app/server

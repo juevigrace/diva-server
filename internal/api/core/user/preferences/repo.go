@@ -7,26 +7,26 @@ import (
 	"github.com/juevigrace/diva-server/internal/api/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type UserPreferencesRepo struct {
-	queries   *db.Queries
+	store  storage.UserPreferenceStore
 	upRepo *permissions.UserPermissionRepo
 }
 
 func NewUserPreferencesRepo(
-	queries *db.Queries,
+	store storage.UserPreferenceStore,
 	upRepo *permissions.UserPermissionRepo,
 ) *UserPreferencesRepo {
 	return &UserPreferencesRepo{
-		queries:   queries,
+		store:  store,
 		upRepo: upRepo,
 	}
 }
 
 func (s *UserPreferencesRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.UserPreferences, error) {
-	rows, err := s.queries.GetPreferencesByUser(ctx, models.UUIDPtrToDB(&userID))
+	rows, err := s.store.GetPreferencesByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +40,12 @@ func (s *UserPreferencesRepo) GetByUser(ctx context.Context, userID uuid.UUID) (
 }
 
 func (s *UserPreferencesRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.UserPreferences, error) {
-	row, err := s.queries.GetPreferencesByID(ctx, models.UUIDPtrToDB(&id))
+	row, err := s.store.GetPreferencesByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	return models.UserPrefsFromDB(&row), nil
+	return models.UserPrefsFromDB(row), nil
 }
 
 func (s *UserPreferencesRepo) Create(ctx context.Context, session *models.Session, uid uuid.UUID, dto *dtos.CreateUserPreferencesDto) error {
@@ -56,7 +56,7 @@ func (s *UserPreferencesRepo) Create(ctx context.Context, session *models.Sessio
 		OnboardingCompleted: dto.OnboardingCompleted,
 		Language:            dto.Language,
 	}
-	if err := s.queries.CreateUserPreferences(ctx, *pref.DBCreate(uid)); err != nil {
+	if err := s.store.CreateUserPreferences(ctx, *pref.DBCreate(uid)); err != nil {
 		return err
 	}
 	if session.User.ID == uid {
@@ -76,5 +76,5 @@ func (s *UserPreferencesRepo) Update(ctx context.Context, id uuid.UUID, dto *dto
 		Language: dto.Language,
 	}
 
-	return s.queries.UpdateUserPreferences(ctx, *pref.DBUpdate())
+	return s.store.UpdateUserPreferences(ctx, *pref.DBUpdate())
 }

@@ -1,11 +1,17 @@
 package storage
 
-import (
-	"context"
-)
+import "context"
 
-type Storage[T any] interface {
+type Storage interface {
 	Close() error
 	Health(ctx context.Context) HealthResult
-	Queries() *T
+	UserStore() UserStore
+	PermissionStore() PermissionStore
+	SessionStore() SessionStore
+	UserStateStore() UserStateStore
+	UserProfileStore() UserProfileStore
+	UserPreferenceStore() UserPreferenceStore
+	UserPermissionStore() UserPermissionStore
+	UserActionStore() UserActionStore
+	UserVerificationStore() UserVerificationStore
 }

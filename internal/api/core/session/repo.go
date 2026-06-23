@@ -5,25 +5,24 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/pkg/jwt"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type SessionRepo struct {
-	queries *db.Queries
+	store storage.SessionStore
 }
 
-func NewSessionRepo(queries *db.Queries) *SessionRepo {
+func NewSessionRepo(store storage.SessionStore) *SessionRepo {
 	return &SessionRepo{
-		queries: queries,
+		store: store,
 	}
 }
 
 func (s *SessionRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]*models.Session, error) {
-	rows, err := s.queries.ListSessionsByUser(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	rows, err := s.store.ListSessionsByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,12 +35,12 @@ func (s *SessionRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([]*model
 }
 
 func (s *SessionRepo) GetByID(ctx context.Context, sessionID uuid.UUID) (*models.Session, error) {
-	row, err := s.queries.GetSessionByID(ctx, models.UUIDPtrToDB(&sessionID))
+	row, err := s.store.GetSessionByID(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	return models.SessionFromDB(&row), nil
+	return models.SessionFromDB(row), nil
 }
 
 func (s *SessionRepo) Create(ctx context.Context, userID uuid.UUID, sType models.SessionType, dto *dtos.SessionDataDto) (*models.Session, error) {
@@ -74,7 +73,7 @@ func (s *SessionRepo) Create(ctx context.Context, userID uuid.UUID, sType models
 		ExpiresAt:    expiration.UnixMilli(),
 	}
 
-	if err := s.queries.CreateSession(ctx, *session.DBCreate()); err != nil {
+	if err := s.store.CreateSession(ctx, *session.DBCreate()); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +104,7 @@ func (s *SessionRepo) Update(ctx context.Context, session *models.Session) (*mod
 	session.RefreshToken = refreshToken
 	session.ExpiresAt = expiration.UnixMilli()
 
-	if err := s.queries.UpdateSession(ctx, *session.DBUpdate()); err != nil {
+	if err := s.store.UpdateSession(ctx, *session.DBUpdate()); err != nil {
 		return nil, err
 	}
 
@@ -113,9 +112,9 @@ func (s *SessionRepo) Update(ctx context.Context, session *models.Session) (*mod
 }
 
 func (s *SessionRepo) UpdateStatus(ctx context.Context, status models.SessionStatus, sessionID uuid.UUID) error {
-	return s.queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
+	return s.store.UpdateSessionStatus(ctx, storage.UpdateSessionStatusParams{
 		Status: status.ToDB(),
-		ID:     models.UUIDPtrToDB(&sessionID),
+		ID:     sessionID,
 	})
 
 }
@@ -129,15 +128,15 @@ func (s *SessionRepo) Close(ctx context.Context, sessionID uuid.UUID) error {
 }
 
 func (s *SessionRepo) Delete(ctx context.Context, sessionID uuid.UUID) error {
-	return s.queries.DeleteSession(ctx, models.UUIDPtrToDB(&sessionID))
+	return s.store.DeleteSession(ctx, sessionID)
 }
 
 func (s *SessionRepo) DeleteByUser(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.DeleteSessionsByUser(ctx, models.UUIDPtrToDB(&userID))
+	return s.store.DeleteSessionsByUser(ctx, userID)
 }
 
 func (s *SessionRepo) DeleteExpired(ctx context.Context) error {
-	return s.queries.DeleteExpiredSessions(ctx)
+	return s.store.DeleteExpiredSessions(ctx)
 }
 
 func (s *SessionRepo) CloseAllByUser(ctx context.Context, userID uuid.UUID) error {

@@ -1,6 +1,6 @@
 package models
 
-import "github.com/juevigrace/diva-server/storage/db"
+import "github.com/juevigrace/diva-server/storage"
 
 type Theme int
 
@@ -23,24 +23,24 @@ func (t Theme) String() string {
 	}
 }
 
-func (t Theme) ToDB() db.ThemeType {
+func (t Theme) ToDB() storage.ThemeType {
 	switch t {
 	case THEME_LIGHT:
-		return db.ThemeTypeLIGHT
+		return storage.ThemeTypeLIGHT
 	case THEME_DARK:
-		return db.ThemeTypeDARK
+		return storage.ThemeTypeDARK
 	case THEME_SYSTEM:
-		return db.ThemeTypeSYSTEM
+		return storage.ThemeTypeSYSTEM
 	default:
-		return db.ThemeTypeSYSTEM
+		return storage.ThemeTypeSYSTEM
 	}
 }
 
-func ThemeFromDB(t db.ThemeType) Theme {
+func ThemeFromDB(t storage.ThemeType) Theme {
 	switch t {
-	case db.ThemeTypeLIGHT:
+	case storage.ThemeTypeLIGHT:
 		return THEME_LIGHT
-	case db.ThemeTypeDARK:
+	case storage.ThemeTypeDARK:
 		return THEME_DARK
 	default:
 		return THEME_SYSTEM

@@ -3,7 +3,7 @@ package models
 import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type Session struct {
@@ -38,10 +38,10 @@ func (s *Session) Response() *responses.SessionResponse {
 	}
 }
 
-func (s *Session) DBCreate() *db.CreateSessionParams {
-	return &db.CreateSessionParams{
-		ID:           UUIDPtrToDB(&s.ID),
-		UserID:       UUIDPtrToDB(&s.User.ID),
+func (s *Session) DBCreate() *storage.CreateSessionParams {
+	return &storage.CreateSessionParams{
+		ID:           s.ID,
+		UserID:       s.User.ID,
 		AccessToken:  s.AccessToken,
 		RefreshToken: s.RefreshToken,
 		Status:       s.Status.ToDB(),
@@ -49,24 +49,24 @@ func (s *Session) DBCreate() *db.CreateSessionParams {
 		Device:       s.Device,
 		IpAddress:    s.IpAddress,
 		UserAgent:    s.UserAgent,
-		ExpiresAt:    IntPtrToDBTime(&s.ExpiresAt),
+		ExpiresAt:    s.ExpiresAt,
 	}
 }
 
-func (s *Session) DBUpdate() *db.UpdateSessionParams {
-	return &db.UpdateSessionParams{
+func (s *Session) DBUpdate() *storage.UpdateSessionParams {
+	return &storage.UpdateSessionParams{
 		AccessToken:  s.AccessToken,
 		RefreshToken: s.RefreshToken,
 		IpAddress:    s.IpAddress,
-		ExpiresAt:    IntPtrToDBTime(&s.ExpiresAt),
-		ID:           UUIDPtrToDB(&s.ID),
+		ExpiresAt:    s.ExpiresAt,
+		ID:           s.ID,
 	}
 }
 
-func SessionFromDB(row *db.DivaSession) *Session {
+func SessionFromDB(row *storage.DivaSession) *Session {
 	return &Session{
-		ID:           DBUUIDToUUID(row.ID),
-		User:         User{ID: DBUUIDToUUID(row.UserID)},
+		ID:           row.ID,
+		User:         User{ID: row.UserID},
 		AccessToken:  row.AccessToken,
 		RefreshToken: row.RefreshToken,
 		Device:       row.Device,
@@ -74,8 +74,8 @@ func SessionFromDB(row *db.DivaSession) *Session {
 		UserAgent:    row.UserAgent,
 		Status:       SessionStatusFromDB(row.Status),
 		Type:         SessionTypeFromDB(row.Type),
-		ExpiresAt:    DBTimeToInt(row.ExpiresAt),
-		CreatedAt:    DBTimeToInt(row.CreatedAt),
-		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
+		ExpiresAt:    row.ExpiresAt,
+		CreatedAt:    row.CreatedAt,
+		UpdatedAt:    row.UpdatedAt,
 	}
 }

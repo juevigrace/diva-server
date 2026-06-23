@@ -14,7 +14,7 @@ import (
 	"github.com/juevigrace/diva-server/internal/api/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/pkg/filehelper"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type UserModule struct {
@@ -34,24 +34,29 @@ type UserModule struct {
 }
 
 func NewUserModule(
-	queries *db.Queries,
+	userStore storage.UserStore,
+	actionStore storage.UserActionStore,
+	permissionStore storage.UserPermissionStore,
+	preferenceStore storage.UserPreferenceStore,
+	profileStore storage.UserProfileStore,
+	stateStore storage.UserStateStore,
 	pRepo *permission.PermissionRepo,
 	sRepo *session.SessionRepo,
 	sHandler *session.SessionHandler,
 	files *filehelper.FileHelper,
 ) *UserModule {
-	uaRepo := actions.NewUserActionsRepo(queries)
-	upRepo := permissions.NewUserPermissionRepo(queries, pRepo)
-	uprRepo := preferences.NewUserPreferencesRepo(queries, upRepo)
-	uproRepo := profile.NewUserProfileRepo(queries, upRepo)
+	uaRepo := actions.NewUserActionsRepo(actionStore)
+	upRepo := permissions.NewUserPermissionRepo(permissionStore, pRepo)
+	uprRepo := preferences.NewUserPreferencesRepo(preferenceStore, upRepo)
+	uproRepo := profile.NewUserProfileRepo(profileStore, upRepo)
 
 	uaHandler := actions.NewUserActionsHandler(uaRepo)
 	upHandler := permissions.NewUserPermissionHandler(upRepo)
 	uprHandler := preferences.NewUserPreferencesHandler(upRepo, uprRepo)
 	uproHandler := profile.NewUserProfileHandler(uproRepo, files)
 
-	usRepo := NewUserStateRepo(queries)
-	uRepo := NewUserRepo(queries, sRepo, uaRepo, upRepo, uproRepo, usRepo)
+	usRepo := NewUserStateRepo(stateStore)
+	uRepo := NewUserRepo(userStore, sRepo, uaRepo, upRepo, uproRepo, usRepo)
 	uHandler := NewUserHandler(uRepo, usRepo)
 
 	return &UserModule{

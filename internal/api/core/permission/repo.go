@@ -6,23 +6,23 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type PermissionRepo struct {
-	queries *db.Queries
+	store storage.PermissionStore
 }
 
-func NewPermissionRepo(queries *db.Queries) *PermissionRepo {
+func NewPermissionRepo(store storage.PermissionStore) *PermissionRepo {
 	return &PermissionRepo{
-		queries: queries,
+		store: store,
 	}
 }
 
 func (s *PermissionRepo) List(ctx context.Context, pagination *models.Pagination) ([]*models.Permission, error) {
-	rows, err := s.queries.ListPermissions(ctx, db.ListPermissionsParams{
-		Limit:  int32(pagination.GetLimit()),
-		Offset: int32(pagination.GetOffset()),
+	rows, err := s.store.ListPermissions(ctx, storage.ListPermissionsParams{
+		Limit:  int64(pagination.GetLimit()),
+		Offset: int64(pagination.GetOffset()),
 	})
 	if err != nil {
 		return nil, err
@@ -37,25 +37,25 @@ func (s *PermissionRepo) List(ctx context.Context, pagination *models.Pagination
 }
 
 func (s *PermissionRepo) Count(ctx context.Context) (int64, error) {
-	return s.queries.CountPermissions(ctx)
+	return s.store.CountPermissions(ctx)
 }
 
 func (s *PermissionRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Permission, error) {
-	row, err := s.queries.GetPermissionByID(ctx, models.UUIDPtrToDB(&id))
+	row, err := s.store.GetPermissionByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	return models.PermissionFromDB(&row), nil
+	return models.PermissionFromDB(row), nil
 }
 
 func (s *PermissionRepo) GetByName(ctx context.Context, action models.PermissionAction) (*models.Permission, error) {
-	row, err := s.queries.GetPermissionByName(ctx, action.String())
+	row, err := s.store.GetPermissionByName(ctx, action.String())
 	if err != nil {
 		return nil, err
 	}
 
-	return models.PermissionFromDB(&row), nil
+	return models.PermissionFromDB(row), nil
 }
 
 func (s *PermissionRepo) Create(ctx context.Context, dto *dtos.CreatePermissionDto) error {
@@ -66,7 +66,7 @@ func (s *PermissionRepo) Create(ctx context.Context, dto *dtos.CreatePermissionD
 		Action:      models.PermissionActionFromString(dto.Action),
 		RoleLevel:   models.RoleFromString(dto.RoleLevel),
 	}
-	return s.queries.CreatePermission(ctx, *perm.DBCreate())
+	return s.store.CreatePermission(ctx, *perm.DBCreate())
 }
 
 func (s *PermissionRepo) Update(ctx context.Context, pid uuid.UUID, dto *dtos.UpdatePermissionDto) error {
@@ -75,17 +75,17 @@ func (s *PermissionRepo) Update(ctx context.Context, pid uuid.UUID, dto *dtos.Up
 		Name:        dto.Name,
 		Description: dto.Description,
 	}
-	return s.queries.UpdatePermission(ctx, *perm.DBUpdate())
+	return s.store.UpdatePermission(ctx, *perm.DBUpdate())
 }
 
 func (s *PermissionRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.queries.DeletePermission(ctx, models.UUIDPtrToDB(&id))
+	return s.store.DeletePermission(ctx, id)
 }
 
 func (s *PermissionRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
-	return s.queries.SoftDeletePermission(ctx, models.UUIDPtrToDB(&id))
+	return s.store.SoftDeletePermission(ctx, id)
 }
 
 func (s *PermissionRepo) Restore(ctx context.Context, id uuid.UUID) error {
-	return s.queries.RestorePermission(ctx, models.UUIDPtrToDB(&id))
+	return s.store.RestorePermission(ctx, id)
 }

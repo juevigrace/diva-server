@@ -4,7 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/api/core/user"
 	"github.com/juevigrace/diva-server/pkg/mail"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type VerificationModule struct {
@@ -12,8 +12,8 @@ type VerificationModule struct {
 	Repo *VerificationRepo
 }
 
-func NewVerificationModule(mail *mail.Client, queries *db.Queries, uModule *user.UserModule) *VerificationModule {
-	repo := NewVerificationRepo(mail, queries, uModule.URepo, uModule.UARepo, uModule.UPRepo, uModule.USRepo)
+func NewVerificationModule(mail *mail.Client, userStore storage.UserStore, verificationStore storage.UserVerificationStore, uModule *user.UserModule) *VerificationModule {
+	repo := NewVerificationRepo(mail, userStore, verificationStore, uModule.URepo, uModule.UARepo, uModule.UPRepo, uModule.USRepo)
 	return &VerificationModule{
 		Handler: NewVerificationHandler(repo),
 		Repo: repo,

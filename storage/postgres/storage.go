@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/juevigrace/diva-server/pkg/concurrency"
 	"github.com/juevigrace/diva-server/storage"
 	pg "github.com/juevigrace/diva-server/storage/postgres/db"
@@ -15,12 +16,21 @@ import (
 )
 
 type PGStorage struct {
-	pool    *pgxpool.Pool
-	queries *pg.Queries
-	config  *PGConf
+	pool               *pgxpool.Pool
+	queries            *pg.Queries
+	config             *PGConf
+	userStore          *UserStore
+	permissionStore    *PermissionStore
+	sessionStore       *SessionStore
+	userStateStore     *UserStateStore
+	userProfileStore   *UserProfileStore
+	userPreferenceStore *UserPreferenceStore
+	userPermissionStore *UserPermissionStore
+	userActionStore    *UserActionStore
+	userVerificationStore *UserVerificationStore
 }
 
-func New(cfg *PGConf) (storage.Storage[pg.Queries], error) {
+func New(cfg *PGConf) (storage.Storage, error) {
 	dbInstance := new(PGStorage)
 
 	if err := cfg.Validate(); err != nil {
@@ -47,6 +57,16 @@ func (s *PGStorage) initialize() error {
 	}
 
 	s.queries = pg.New(s.pool)
+
+	s.userStore = NewUserStore(s.queries)
+	s.permissionStore = NewPermissionStore(s.queries)
+	s.sessionStore = NewSessionStore(s.queries)
+	s.userStateStore = NewUserStateStore(s.queries)
+	s.userProfileStore = NewUserProfileStore(s.queries)
+	s.userPreferenceStore = NewUserPreferenceStore(s.queries)
+	s.userPermissionStore = NewUserPermissionStore(s.queries)
+	s.userActionStore = NewUserActionStore(s.queries)
+	s.userVerificationStore = NewUserVerificationStore(s.queries)
 
 	return nil
 }
@@ -94,9 +114,15 @@ func (s *PGStorage) openConnection(ctx context.Context) error {
 	})
 }
 
-func (s *PGStorage) Queries() *pg.Queries {
-	return s.queries
-}
+func (s *PGStorage) UserStore() storage.UserStore               { return s.userStore }
+func (s *PGStorage) PermissionStore() storage.PermissionStore    { return s.permissionStore }
+func (s *PGStorage) SessionStore() storage.SessionStore          { return s.sessionStore }
+func (s *PGStorage) UserStateStore() storage.UserStateStore      { return s.userStateStore }
+func (s *PGStorage) UserProfileStore() storage.UserProfileStore  { return s.userProfileStore }
+func (s *PGStorage) UserPreferenceStore() storage.UserPreferenceStore   { return s.userPreferenceStore }
+func (s *PGStorage) UserPermissionStore() storage.UserPermissionStore   { return s.userPermissionStore }
+func (s *PGStorage) UserActionStore() storage.UserActionStore    { return s.userActionStore }
+func (s *PGStorage) UserVerificationStore() storage.UserVerificationStore { return s.userVerificationStore }
 
 func (s *PGStorage) Close() error {
 	s.pool.Close()

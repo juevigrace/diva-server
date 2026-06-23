@@ -20,7 +20,7 @@ COPY Makefile ./
 COPY sqlc.yaml ./
 
 # Build the application
-RUN go build -o ./bin/diva-server ./cmd/server/main.go
+RUN go build -tags postgres -o ./bin/diva-server ./cmd/server/
 
 # Production stage
 FROM alpine:3.20.1 AS prod

@@ -15,20 +15,20 @@ import (
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/pkg/bcrypt"
 	"github.com/juevigrace/diva-server/pkg/errs"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type UserRepo struct {
-	queries     *db.Queries
-	sRepo    *session.SessionRepo
-	uaRepo   *actions.UserActionsRepo
-	upRepo   *permissions.UserPermissionRepo
+	store   storage.UserStore
+	sRepo   *session.SessionRepo
+	uaRepo  *actions.UserActionsRepo
+	upRepo  *permissions.UserPermissionRepo
 	uproRepo *profile.UserProfileRepo
-	usRepo   *UserStateRepo
+	usRepo  *UserStateRepo
 }
 
 func NewUserRepo(
-	queries *db.Queries,
+	store storage.UserStore,
 	sRepo *session.SessionRepo,
 	uaRepo *actions.UserActionsRepo,
 	upRepo *permissions.UserPermissionRepo,
@@ -36,23 +36,23 @@ func NewUserRepo(
 	usRepo *UserStateRepo,
 ) *UserRepo {
 	return &UserRepo{
-		queries:     queries,
-		sRepo:    sRepo,
-		uaRepo:   uaRepo,
-		upRepo:   upRepo,
+		store:   store,
+		sRepo:   sRepo,
+		uaRepo:  uaRepo,
+		upRepo:  upRepo,
 		uproRepo: uproRepo,
-		usRepo:   usRepo,
+		usRepo:  usRepo,
 	}
 }
 
 func (s *UserRepo) Count(ctx context.Context) (int64, error) {
-	return s.queries.CountUsers(ctx)
+	return s.store.CountUsers(ctx)
 }
 
 func (s *UserRepo) GetAll(ctx context.Context, pagination *models.Pagination) ([]models.User, error) {
-	rows, err := s.queries.ListUsers(ctx, db.ListUsersParams{
-		Limit:  int32(pagination.GetLimit()),
-		Offset: int32(pagination.GetOffset()),
+	rows, err := s.store.ListUsers(ctx, storage.ListUsersParams{
+		Limit:  int64(pagination.GetLimit()),
+		Offset: int64(pagination.GetOffset()),
 	})
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (s *UserRepo) GetAll(ctx context.Context, pagination *models.Pagination) ([
 }
 
 func (s *UserRepo) GetByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
-	row, err := s.queries.GetUserByID(ctx, models.UUIDPtrToDB(&userID))
+	row, err := s.store.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errs.ErrUserNotFound
@@ -75,7 +75,7 @@ func (s *UserRepo) GetByID(ctx context.Context, userID uuid.UUID) (*models.User,
 		return nil, err
 	}
 
-	dbUser := models.UserFromDB(&row)
+	dbUser := models.UserFromDB(row)
 
 	dbProfile, err := s.uproRepo.GetByUserID(ctx, dbUser.ID)
 	if err != nil {
@@ -103,14 +103,14 @@ func (s *UserRepo) GetByID(ctx context.Context, userID uuid.UUID) (*models.User,
 }
 
 func (s *UserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
-	row, err := s.queries.GetUserByUsername(ctx, username)
+	row, err := s.store.GetUserByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errs.ErrUserNotFound
 		}
 		return nil, err
 	}
-	return models.UserFromDB(&row), nil
+	return models.UserFromDB(row), nil
 }
 
 func (s *UserRepo) CheckUsernameAvailable(ctx context.Context, username string) (bool, error) {
@@ -126,7 +126,7 @@ func (s *UserRepo) CheckUsernameAvailable(ctx context.Context, username string) 
 }
 
 func (s *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
-	row, err := s.queries.GetUserByEmail(ctx, email)
+	row, err := s.store.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errs.ErrUserNotFound
@@ -134,7 +134,7 @@ func (s *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 		return nil, err
 	}
 
-	return models.UserFromDB(&row), nil
+	return models.UserFromDB(row), nil
 }
 
 func (s *UserRepo) CheckEmailAvailable(ctx context.Context, email string) (bool, error) {
@@ -150,7 +150,7 @@ func (s *UserRepo) CheckEmailAvailable(ctx context.Context, email string) (bool,
 }
 
 func (s *UserRepo) GetByUsernameOrEmail(ctx context.Context, value string) (*models.User, error) {
-	row, err := s.queries.GetUserByUsernameOrEmail(ctx, value)
+	row, err := s.store.GetUserByUsernameOrEmail(ctx, value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errs.ErrUserNotFound
@@ -158,7 +158,7 @@ func (s *UserRepo) GetByUsernameOrEmail(ctx context.Context, value string) (*mod
 		return nil, err
 	}
 
-	return models.UserFromDB(&row), nil
+	return models.UserFromDB(row), nil
 }
 
 func (s *UserRepo) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UUID, error) {
@@ -176,7 +176,7 @@ func (s *UserRepo) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UU
 		Role:         models.ROLE_USER,
 	}
 
-	if err := s.queries.CreateUser(ctx, *params.DBCreate()); err != nil {
+	if err := s.store.CreateUser(ctx, *params.DBCreate()); err != nil {
 		return uuid.Nil, err
 	}
 
@@ -232,9 +232,9 @@ func (s *UserRepo) UpdatePassword(ctx context.Context, session *models.Session, 
 		return err
 	}
 
-	if err := s.queries.UpdatePassword(ctx, db.UpdatePasswordParams{
+	if err := s.store.UpdatePassword(ctx, storage.UpdatePasswordParams{
 		PasswordHash: newHash,
-		ID:           models.UUIDPtrToDB(&uid),
+		ID:           uid,
 	}); err != nil {
 		return err
 	}
@@ -255,9 +255,9 @@ func (s *UserRepo) UpdatePassword(ctx context.Context, session *models.Session, 
 }
 
 func (s *UserRepo) UpdatePhoneNumber(ctx context.Context, session *models.Session, phone string, uid uuid.UUID) error {
-	if err := s.queries.UpdatePhoneNumber(ctx, db.UpdatePhoneNumberParams{
+	if err := s.store.UpdatePhoneNumber(ctx, storage.UpdatePhoneNumberParams{
 		PhoneNumber: phone,
-		ID:          models.UUIDPtrToDB(&uid),
+		ID:          uid,
 	}); err != nil {
 		return err
 	}
@@ -274,9 +274,9 @@ func (s *UserRepo) UpdatePhoneNumber(ctx context.Context, session *models.Sessio
 }
 
 func (s *UserRepo) UpdateUsername(ctx context.Context, session *models.Session, username string, uid uuid.UUID) error {
-	if err := s.queries.UpdateUsername(ctx, db.UpdateUsernameParams{
+	if err := s.store.UpdateUsername(ctx, storage.UpdateUsernameParams{
 		Username: username,
-		ID:       models.UUIDPtrToDB(&uid),
+		ID:       uid,
 	}); err != nil {
 		return err
 	}
@@ -293,9 +293,9 @@ func (s *UserRepo) UpdateUsername(ctx context.Context, session *models.Session, 
 }
 
 func (s *UserRepo) UpdateEmail(ctx context.Context, session *models.Session, email string, uid uuid.UUID) error {
-	if err := s.queries.UpdateEmail(ctx, db.UpdateEmailParams{
+	if err := s.store.UpdateEmail(ctx, storage.UpdateEmailParams{
 		Email: email,
-		ID:    models.UUIDPtrToDB(&uid),
+		ID:    uid,
 	}); err != nil {
 		return err
 	}
@@ -312,14 +312,14 @@ func (s *UserRepo) UpdateEmail(ctx context.Context, session *models.Session, ema
 }
 
 func (s *UserRepo) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {
-	return s.queries.UpdateRole(ctx, db.UpdateRoleParams{
+	return s.store.UpdateRole(ctx, storage.UpdateRoleParams{
 		Role: role.ToDB(),
-		ID:   models.UUIDPtrToDB(&userID),
+		ID:   userID,
 	})
 }
 
 func (s *UserRepo) SoftDelete(ctx context.Context, userID uuid.UUID) error {
-	if err := s.queries.SoftDeleteUser(ctx, models.UUIDPtrToDB(&userID)); err != nil {
+	if err := s.store.SoftDeleteUser(ctx, userID); err != nil {
 		return err
 	}
 
@@ -327,11 +327,11 @@ func (s *UserRepo) SoftDelete(ctx context.Context, userID uuid.UUID) error {
 }
 
 func (s *UserRepo) Delete(ctx context.Context, userID uuid.UUID) error {
-	return s.queries.DeleteUser(ctx, models.UUIDPtrToDB(&userID))
+	return s.store.DeleteUser(ctx, userID)
 }
 
 func (r *UserRepo) Restore(ctx context.Context, userID uuid.UUID) error {
-	if err := r.queries.RestoreUser(ctx, models.UUIDPtrToDB(&userID)); err != nil {
+	if err := r.store.RestoreUser(ctx, userID); err != nil {
 		return err
 	}
 

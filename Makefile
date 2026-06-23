@@ -4,7 +4,7 @@
 # Variables
 BINARY_DIR = ./bin
 SERVER_BINARY = $(BINARY_DIR)/diva-server
-SERVER_MAIN = ./cmd/server/main.go
+SERVER_MAIN = ./cmd/server/
 
 .PHONY: help build run test itest clean watch sqlc sqlc-install dev-build dev-up dev-down dev-logs dev-shell prod-build prod-up prod-down prod-logs prod-shell db-shell-dev db-shell-prod rebuild ps
 
@@ -46,10 +46,16 @@ help:
 all: build test
 
 build:
-	@echo "Building server..."
+	@echo "Building server$(if $(BUILD_TAGS), ($(BUILD_TAGS)))..."
 	@mkdir -p $(BINARY_DIR)
-	@go build -o $(SERVER_BINARY) $(SERVER_MAIN)
+	@go build $(if $(BUILD_TAGS),-tags $(BUILD_TAGS)) -o $(SERVER_BINARY) $(SERVER_MAIN)
 	@echo "Server built: $(SERVER_BINARY)"
+
+build-postgres:
+	@echo "Building server (postgres)..."
+	@mkdir -p $(BINARY_DIR)
+	@go build -tags postgres -o $(SERVER_BINARY)-postgres $(SERVER_MAIN)
+	@echo "Server built: $(SERVER_BINARY)-postgres"
 
 # Run targets
 run: build

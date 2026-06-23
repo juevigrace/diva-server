@@ -3,7 +3,7 @@ package models
 import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type User struct {
@@ -127,9 +127,9 @@ func (up *UserPreferences) Response() *responses.UserPreferencesResponse {
 	}
 }
 
-func (u *User) DBCreate() *db.CreateUserParams {
-	return &db.CreateUserParams{
-		ID:           UUIDPtrToDB(&u.ID),
+func (u *User) DBCreate() *storage.CreateUserParams {
+	return &storage.CreateUserParams{
+		ID:           u.ID,
 		Username:     u.Username,
 		Email:        u.Email,
 		PasswordHash: u.PasswordHash,
@@ -137,29 +137,29 @@ func (u *User) DBCreate() *db.CreateUserParams {
 	}
 }
 
-func (up *UserPermission) DBCreate(userID uuid.UUID) *db.CreateUserPermissionParams {
-	return &db.CreateUserPermissionParams{
-		PermissionID: UUIDPtrToDB(&up.Permission.ID),
-		UserID:       UUIDPtrToDB(&userID),
-		GrantedBy:    UUIDPtrToDB(up.GrantedBy),
+func (up *UserPermission) DBCreate(userID uuid.UUID) *storage.CreateUserPermissionParams {
+	return &storage.CreateUserPermissionParams{
+		PermissionID: up.Permission.ID,
+		UserID:       userID,
+		GrantedBy:    up.GrantedBy,
 		Granted:      up.Granted,
-		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
+		ExpiresAt:    up.ExpiresAt,
 	}
 }
 
-func (up *UserPermission) DBUpdate(userID uuid.UUID) *db.UpdateUserPermissionParams {
-	return &db.UpdateUserPermissionParams{
-		PermissionID: UUIDPtrToDB(&up.Permission.ID),
-		UserID:       UUIDPtrToDB(&userID),
+func (up *UserPermission) DBUpdate(userID uuid.UUID) *storage.UpdateUserPermissionParams {
+	return &storage.UpdateUserPermissionParams{
+		PermissionID: up.Permission.ID,
+		UserID:       userID,
 		Granted:      up.Granted,
-		ExpiresAt:    IntPtrToDBTime(up.ExpiresAt),
+		ExpiresAt:    up.ExpiresAt,
 	}
 }
 
-func (up *UserPreferences) DBCreate(userID uuid.UUID) *db.CreateUserPreferencesParams {
-	return &db.CreateUserPreferencesParams{
-		ID:                  UUIDPtrToDB(&up.ID),
-		UserID:              UUIDPtrToDB(&userID),
+func (up *UserPreferences) DBCreate(userID uuid.UUID) *storage.CreateUserPreferencesParams {
+	return &storage.CreateUserPreferencesParams{
+		ID:                  up.ID,
+		UserID:              userID,
 		Device:              up.Device,
 		Theme:               up.Theme.ToDB(),
 		OnboardingCompleted: up.OnboardingCompleted,
@@ -167,101 +167,105 @@ func (up *UserPreferences) DBCreate(userID uuid.UUID) *db.CreateUserPreferencesP
 	}
 }
 
-func (up *UserPreferences) DBUpdate() *db.UpdateUserPreferencesParams {
-	return &db.UpdateUserPreferencesParams{
-		ID:       UUIDPtrToDB(&up.ID),
+func (up *UserPreferences) DBUpdate() *storage.UpdateUserPreferencesParams {
+	return &storage.UpdateUserPreferencesParams{
+		ID:       up.ID,
 		Theme:    up.Theme.ToDB(),
 		Language: up.Language,
 	}
 }
 
-func (up *UserProfile) DBCreate(userID uuid.UUID) *db.CreateUserProfileParams {
-	return &db.CreateUserProfileParams{
-		UserID:    UUIDPtrToDB(&userID),
+func (up *UserProfile) DBCreate(userID uuid.UUID) *storage.CreateUserProfileParams {
+	return &storage.CreateUserProfileParams{
+		UserID:    userID,
 		FirstName: up.FirstName,
 		LastName:  up.LastName,
-		BirthDate: IntPtrToDBTime(&up.BirthDate),
+		BirthDate: &up.BirthDate,
 		Alias:     up.Alias,
 		Bio:       up.Bio,
 	}
 }
 
-func (up *UserProfile) DBUpdate(userID uuid.UUID) *db.UpdateUserProfileParams {
-	return &db.UpdateUserProfileParams{
-		UserID:    UUIDPtrToDB(&userID),
+func (up *UserProfile) DBUpdate(userID uuid.UUID) *storage.UpdateUserProfileParams {
+	return &storage.UpdateUserProfileParams{
+		UserID:    userID,
 		FirstName: up.FirstName,
 		LastName:  up.LastName,
-		BirthDate: IntPtrToDBTime(&up.BirthDate),
+		BirthDate: &up.BirthDate,
 		Alias:     up.Alias,
 		Bio:       up.Bio,
 	}
 }
 
-func UserFromDB(row *db.DivaUser) *User {
+func UserFromDB(row *storage.DivaUser) *User {
 	return &User{
-		ID:           DBUUIDToUUID(row.ID),
+		ID:           row.ID,
 		Username:     row.Username,
 		Email:        row.Email,
 		PhoneNumber:  row.PhoneNumber,
 		PasswordHash: row.PasswordHash,
 		Role:         RoleFromDB(row.Role),
-		CreatedAt:    DBTimeToInt(row.CreatedAt),
-		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
-		DeletedAt:    DBTimeToIntPtr(row.DeletedAt),
+		CreatedAt:    row.CreatedAt,
+		UpdatedAt:    row.UpdatedAt,
+		DeletedAt:    row.DeletedAt,
 	}
 }
 
-func UserPermissionFromDB(row *db.DivaUserPermission, perm *Permission) *UserPermission {
+func UserPermissionFromDB(row *storage.DivaUserPermission, perm *Permission) *UserPermission {
 	return &UserPermission{
 		Permission: *perm,
-		UserID:     DBUUIDToUUID(row.UserID),
-		GrantedBy:  DBUUIDToUUIDPtr(row.GrantedBy),
+		UserID:     row.UserID,
+		GrantedBy:  row.GrantedBy,
 		Granted:    row.Granted,
-		GrantedAt:  DBTimeToInt(row.GrantedAt),
-		ExpiresAt:  DBTimeToIntPtr(row.ExpiresAt),
-		UpdatedAt:  DBTimeToInt(row.UpdatedAt),
+		GrantedAt:  row.GrantedAt,
+		ExpiresAt:  row.ExpiresAt,
+		UpdatedAt:  row.UpdatedAt,
 	}
 }
 
-func UserPrefsFromDB(row *db.DivaUserPreference) *UserPreferences {
+func UserPrefsFromDB(row *storage.DivaUserPreference) *UserPreferences {
 	return &UserPreferences{
-		ID:                  row.ID.Bytes,
-		UserID:              DBUUIDToUUID(row.UserID),
+		ID:                  row.ID,
+		UserID:              row.UserID,
 		Device:              row.Device,
 		Theme:               ThemeFromDB(row.Theme),
 		OnboardingCompleted: row.OnboardingCompleted,
 		Language:            row.Language,
-		LastSyncAt:          DBTimeToInt(row.LastSyncAt),
-		CreatedAt:           DBTimeToInt(row.CreatedAt),
-		UpdatedAt:           DBTimeToInt(row.UpdatedAt),
+		LastSyncAt:          row.LastSyncAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 }
 
-func UserProfileFromDB(row *db.DivaUserProfile) *UserProfile {
+func UserProfileFromDB(row *storage.DivaUserProfile) *UserProfile {
+	birthDate := int64(0)
+	if row.BirthDate != nil {
+		birthDate = *row.BirthDate
+	}
 	return &UserProfile{
-		UserID:    DBUUIDToUUID(row.UserID),
+		UserID:    row.UserID,
 		FirstName: row.FirstName,
 		LastName:  row.LastName,
-		BirthDate: DBTimeToInt(row.BirthDate),
+		BirthDate: birthDate,
 		Alias:     row.Alias,
 		Bio:       row.Bio,
 		Avatar:    row.Avatar,
-		UpdatedAt: DBTimeToInt(row.UpdatedAt),
+		UpdatedAt: row.UpdatedAt,
 	}
 }
 
-func UserStateFromDB(row *db.DivaUserState) *UserState {
+func UserStateFromDB(row *storage.DivaUserState) *UserState {
 	return &UserState{
 		Verified:     row.Verified,
 		Status:       UserStatusFromDB(row.Status),
-		LastActiveAt: DBTimeToInt(row.LastActiveAt),
-		UpdatedAt:    DBTimeToInt(row.UpdatedAt),
+		LastActiveAt: row.LastActiveAt,
+		UpdatedAt:    row.UpdatedAt,
 	}
 }
 
-func (us *UserState) DBCreate(userID uuid.UUID) *db.CreateUserStateParams {
-	return &db.CreateUserStateParams{
-		UserID:   UUIDPtrToDB(&userID),
+func (us *UserState) DBCreate(userID uuid.UUID) *storage.CreateUserStateParams {
+	return &storage.CreateUserStateParams{
+		UserID:   userID,
 		Verified: us.Verified,
 		Status:   us.Status.ToDB(),
 	}

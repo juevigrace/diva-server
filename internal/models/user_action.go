@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type UserAction struct {
@@ -78,26 +78,25 @@ func (ua *UserAction) Response() *responses.UserActionResponse {
 	}
 }
 
-func (ua *UserAction) DBCreate() *db.CreateUserActionParams {
-	return &db.CreateUserActionParams{
-		ID:     UUIDPtrToDB(&ua.ID),
+func (ua *UserAction) DBCreate() *storage.CreateUserActionParams {
+	return &storage.CreateUserActionParams{
+		ID:     ua.ID,
 		Name:   ua.Name.String(),
-		UserID: UUIDPtrToDB(&ua.UserID),
+		UserID: ua.UserID,
 	}
 }
 
-func (uv *UserActionVerification) DBCreate() *db.CreateUserVerificationParams {
-	exp := uv.ExpiresAt.UnixMilli()
-	return &db.CreateUserVerificationParams{
-		ActionID:  UUIDPtrToDB(&uv.Action.ID),
+func (uv *UserActionVerification) DBCreate() *storage.CreateUserVerificationParams {
+	return &storage.CreateUserVerificationParams{
+		ActionID:  uv.Action.ID,
 		Token:     uv.Token,
-		ExpiresAt: IntPtrToDBTime(&exp)}
+		ExpiresAt: uv.ExpiresAt.UnixMilli()}
 }
 
-func UserActionFromDB(row *db.DivaAction) *UserAction {
+func UserActionFromDB(row *storage.DivaAction) *UserAction {
 	return &UserAction{
-		ID:     DBUUIDToUUID(row.ID),
+		ID:     row.ID,
 		Name:   ActionFromString(row.Name),
-		UserID: DBUUIDToUUID(row.UserID),
+		UserID: row.UserID,
 	}
 }

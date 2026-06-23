@@ -25,20 +25,20 @@ import (
 	"github.com/juevigrace/diva-server/storage"
 )
 
-type Server[T any] struct {
+type Server struct {
 	srv      *http.Server
 	serverCh chan error
 
 	config *ServerConfig
 
-	database storage.Storage[T]
+	database storage.Storage
 	router   *chi.Mux
 	mail     *mail.Client
 	files    *filehelper.FileHelper
 }
 
-func NewServer[T any](cfg config.Config, database storage.Storage[T]) (*Server[T], error) {
-	var server *Server[T] = new(Server[T])
+func NewServer(cfg config.Config, database storage.Storage) (*Server, error) {
+	server := new(Server)
 	server.config = cfg.(*ServerConfig)
 	server.config.LoadFromEnv()
 
@@ -47,7 +47,7 @@ func NewServer[T any](cfg config.Config, database storage.Storage[T]) (*Server[T
 	return server, nil
 }
 
-func (s *Server[T]) ListenAndServe(ctx context.Context) error {
+func (s *Server) ListenAndServe(ctx context.Context) error {
 	notifyCtx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -65,13 +65,11 @@ func (s *Server[T]) ListenAndServe(ctx context.Context) error {
 	}
 }
 
-func (s *Server[T]) start() {
+func (s *Server) start() {
 	s.mail = mail.NewClient(s.config.ResendAPIKey, s.config.ResendFromEmail)
 	s.files = filehelper.NewFileHelper(s.config.UploadsDir, make(map[string]string), 0)
-	s.setupApi()
-	s.start()
-
 	s.setupRouter()
+	s.setupApi()
 	s.srv = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.config.Port),
 		Handler: s.router,
@@ -85,15 +83,24 @@ func (s *Server[T]) start() {
 	}()
 }
 
-func (s *Server[T]) setupApi() {
+func (s *Server) setupApi() {
 	apiLimiter := middlewares.NewRateLimiter(60, 1*time.Minute)
 
-	queries := s.database.Queries()
-
-	pModule := permission.NewPermissionModule(queries)
-	sModule := session.NewSessionModule(queries)
-	uModule := user.NewUserModule(queries, pModule.Repo, sModule.Repo, sModule.Handler, s.files)
-	vModule := verification.NewVerificationModule(s.mail, queries, uModule)
+	pModule := permission.NewPermissionModule(s.database.PermissionStore())
+	sModule := session.NewSessionModule(s.database.SessionStore())
+	uModule := user.NewUserModule(
+		s.database.UserStore(),
+		s.database.UserActionStore(),
+		s.database.UserPermissionStore(),
+		s.database.UserPreferenceStore(),
+		s.database.UserProfileStore(),
+		s.database.UserStateStore(),
+		pModule.Repo,
+		sModule.Repo,
+		sModule.Handler,
+		s.files,
+	)
+	vModule := verification.NewVerificationModule(s.mail, s.database.UserStore(), s.database.UserVerificationStore(), uModule)
 	aModule := auth.NewAuthModule(pModule.Repo, sModule.Repo, uModule.URepo, vModule.Repo)
 
 	root := s.router.Route("/", func(root chi.Router) {
@@ -128,7 +135,7 @@ func (s *Server[T]) setupApi() {
 	})
 }
 
-func (s *Server[T]) shutdown(ctx context.Context) error {
+func (s *Server) shutdown(ctx context.Context) error {
 	return concurrency.WithTimeout(ctx, 1*time.Minute, func(ctx context.Context) error {
 		if err := s.database.Close(); err != nil {
 			return err
@@ -141,7 +148,7 @@ func (s *Server[T]) shutdown(ctx context.Context) error {
 	})
 }
 
-func (s *Server[T]) printBanner() {
+func (s *Server) printBanner() {
 	const cyan = "\033[38;5;51m"
 	const reset = "\033[0m"
 

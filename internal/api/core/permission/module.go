@@ -4,7 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/api/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type PermissionModule struct {
@@ -12,8 +12,8 @@ type PermissionModule struct {
 	Repo *PermissionRepo
 }
 
-func NewPermissionModule(queries *db.Queries) *PermissionModule {
-	repo := NewPermissionRepo(queries)
+func NewPermissionModule(store storage.PermissionStore) *PermissionModule {
+	repo := NewPermissionRepo(store)
 	return &PermissionModule{
 		Handler: NewPermissionHandler(repo),
 		Repo: repo,

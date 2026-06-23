@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/api/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type SessionModule struct {
@@ -15,8 +15,8 @@ type SessionModule struct {
 	Repo *SessionRepo
 }
 
-func NewSessionModule(queries *db.Queries) *SessionModule {
-	repo := NewSessionRepo(queries)
+func NewSessionModule(store storage.SessionStore) *SessionModule {
+	repo := NewSessionRepo(store)
 	return &SessionModule{
 		Handler: NewSessionHandler(repo),
 		Repo: repo,

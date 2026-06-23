@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type UserStatus int
@@ -38,26 +38,26 @@ func UserStatusFromString(status string) UserStatus {
 	}
 }
 
-func (s UserStatus) ToDB() db.UserStatusType {
+func (s UserStatus) ToDB() storage.UserStatusType {
 	switch s {
 	case USER_STATUS_ACTIVE:
-		return db.UserStatusTypeACTIVE
+		return storage.UserStatusTypeACTIVE
 	case USER_STATUS_SUSPENDED:
-		return db.UserStatusTypeSUSPENDED
+		return storage.UserStatusTypeSUSPENDED
 	case USER_STATUS_INACTIVE:
-		return db.UserStatusTypeINACTIVE
+		return storage.UserStatusTypeINACTIVE
 	default:
-		return db.UserStatusTypeACTIVE
+		return storage.UserStatusTypeACTIVE
 	}
 }
 
-func UserStatusFromDB(s db.UserStatusType) UserStatus {
+func UserStatusFromDB(s storage.UserStatusType) UserStatus {
 	switch s {
-	case db.UserStatusTypeACTIVE:
+	case storage.UserStatusTypeACTIVE:
 		return USER_STATUS_ACTIVE
-	case db.UserStatusTypeSUSPENDED:
+	case storage.UserStatusTypeSUSPENDED:
 		return USER_STATUS_SUSPENDED
-	case db.UserStatusTypeINACTIVE:
+	case storage.UserStatusTypeINACTIVE:
 		return USER_STATUS_INACTIVE
 	default:
 		return USER_STATUS_ACTIVE

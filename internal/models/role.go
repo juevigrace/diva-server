@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type Role int
@@ -38,26 +38,26 @@ func RoleFromString(role string) Role {
 	}
 }
 
-func (r Role) ToDB() db.RoleType {
+func (r Role) ToDB() storage.RoleType {
 	switch r {
 	case ROLE_ADMIN:
-		return db.RoleTypeADMIN
+		return storage.RoleTypeADMIN
 	case ROLE_MODERATOR:
-		return db.RoleTypeMODERATOR
+		return storage.RoleTypeMODERATOR
 	case ROLE_USER:
-		return db.RoleTypeUSER
+		return storage.RoleTypeUSER
 	default:
-		return db.RoleTypeUSER
+		return storage.RoleTypeUSER
 	}
 }
 
-func RoleFromDB(r db.RoleType) Role {
+func RoleFromDB(r storage.RoleType) Role {
 	switch r {
-	case db.RoleTypeADMIN:
+	case storage.RoleTypeADMIN:
 		return ROLE_ADMIN
-	case db.RoleTypeMODERATOR:
+	case storage.RoleTypeMODERATOR:
 		return ROLE_MODERATOR
-	case db.RoleTypeUSER:
+	case storage.RoleTypeUSER:
 		return ROLE_USER
 	default:
 		return ROLE_USER

@@ -3,7 +3,7 @@ package models
 import (
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models/responses"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type PermissionAction int
@@ -65,9 +65,9 @@ func (p *Permission) Response() *responses.PermissionResponse {
 	}
 }
 
-func (p *Permission) DBCreate() *db.CreatePermissionParams {
-	return &db.CreatePermissionParams{
-		ID:          UUIDPtrToDB(&p.ID),
+func (p *Permission) DBCreate() *storage.CreatePermissionParams {
+	return &storage.CreatePermissionParams{
+		ID:          p.ID,
 		Name:        p.Name,
 		Description: p.Description,
 		Action:      p.Action.String(),
@@ -75,24 +75,24 @@ func (p *Permission) DBCreate() *db.CreatePermissionParams {
 	}
 }
 
-func (p *Permission) DBUpdate() *db.UpdatePermissionParams {
-	return &db.UpdatePermissionParams{
-		ID:          UUIDPtrToDB(&p.ID),
+func (p *Permission) DBUpdate() *storage.UpdatePermissionParams {
+	return &storage.UpdatePermissionParams{
+		ID:          p.ID,
 		Name:        p.Name,
 		Description: p.Description,
 	}
 }
 
-func PermissionFromDB(row *db.DivaPermission) *Permission {
+func PermissionFromDB(row *storage.DivaPermission) *Permission {
 	return &Permission{
-		ID:          DBUUIDToUUID(row.ID),
+		ID:          row.ID,
 		Name:        row.Name,
 		Description: row.Description,
 		Action:      PermissionActionFromString(row.Action),
 		RoleLevel:   RoleFromDB(row.RoleLevel),
-		CreatedAt:   DBTimeToInt(row.CreatedAt),
-		UpdatedAt:   DBTimeToInt(row.UpdatedAt),
-		DeletedAt:   DBTimeToIntPtr(row.DeletedAt),
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+		DeletedAt:   row.DeletedAt,
 	}
 }
 

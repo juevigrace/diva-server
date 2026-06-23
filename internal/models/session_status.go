@@ -1,6 +1,6 @@
 package models
 
-import "github.com/juevigrace/diva-server/storage/db"
+import "github.com/juevigrace/diva-server/storage"
 
 type SessionStatus int
 
@@ -36,26 +36,26 @@ func SessionStatusFromString(status string) SessionStatus {
 	}
 }
 
-func (s SessionStatus) ToDB() db.SessionStatusType {
+func (s SessionStatus) ToDB() storage.SessionStatusType {
 	switch s {
 	case SESSION_CLOSED:
-		return db.SessionStatusTypeCLOSED
+		return storage.SessionStatusTypeCLOSED
 	case SESSION_EXPIRED:
-		return db.SessionStatusTypeEXPIRED
+		return storage.SessionStatusTypeEXPIRED
 	case SESSION_ACTIVE:
-		return db.SessionStatusTypeACTIVE
+		return storage.SessionStatusTypeACTIVE
 	default:
-		return db.SessionStatusTypeACTIVE
+		return storage.SessionStatusTypeACTIVE
 	}
 }
 
-func SessionStatusFromDB(s db.SessionStatusType) SessionStatus {
+func SessionStatusFromDB(s storage.SessionStatusType) SessionStatus {
 	switch s {
-	case db.SessionStatusTypeCLOSED:
+	case storage.SessionStatusTypeCLOSED:
 		return SESSION_CLOSED
-	case db.SessionStatusTypeEXPIRED:
+	case storage.SessionStatusTypeEXPIRED:
 		return SESSION_EXPIRED
-	case db.SessionStatusTypeACTIVE:
+	case storage.SessionStatusTypeACTIVE:
 		return SESSION_ACTIVE
 	default:
 		return SESSION_ACTIVE

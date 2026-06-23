@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/cors"
 )
 
-func (s *Server[T]) setupRouter() {
+func (s *Server) setupRouter() {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)

@@ -1,6 +1,6 @@
 package models
 
-import "github.com/juevigrace/diva-server/storage/db"
+import "github.com/juevigrace/diva-server/storage"
 
 type MediaType int
 
@@ -41,17 +41,17 @@ func MediaTypeFromString(s string) MediaType {
 	}
 }
 
-func (m MediaType) ToDB() db.MediaTypeType {
+func (m MediaType) ToDB() storage.MediaType {
 	switch m {
 	case MEDIA_AUDIO:
-		return db.MediaTypeTypeAUDIO
+		return storage.MediaTypeTypeAUDIO
 	case MEDIA_IMAGE:
-		return db.MediaTypeTypeIMAGE
+		return storage.MediaTypeTypeIMAGE
 	case MEDIA_VIDEO:
-		return db.MediaTypeTypeVIDEO
+		return storage.MediaTypeTypeVIDEO
 	case MEDIA_UNSPECIFIED:
-		return db.MediaTypeTypeUNSPECIFIED
+		return storage.MediaTypeTypeUNSPECIFIED
 	default:
-		return db.MediaTypeTypeUNSPECIFIED
+		return storage.MediaTypeTypeUNSPECIFIED
 	}
 }

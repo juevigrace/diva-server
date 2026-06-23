@@ -14,33 +14,36 @@ import (
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/pkg/otp"
-	"github.com/juevigrace/diva-server/storage/db"
+	"github.com/juevigrace/diva-server/storage"
 )
 
 type VerificationRepo struct {
-	mail    *mail.Client
-	queries *db.Queries
-	uRepo   *user.UserRepo
-	uaRepo  *actions.UserActionsRepo
-	upRepo  *permissions.UserPermissionRepo
-	usRepo  *user.UserStateRepo
+	mail              *mail.Client
+	userStore         storage.UserStore
+	verificationStore storage.UserVerificationStore
+	uRepo             *user.UserRepo
+	uaRepo            *actions.UserActionsRepo
+	upRepo            *permissions.UserPermissionRepo
+	usRepo            *user.UserStateRepo
 }
 
 func NewVerificationRepo(
 	mail *mail.Client,
-	queries *db.Queries,
+	userStore storage.UserStore,
+	verificationStore storage.UserVerificationStore,
 	uRepo *user.UserRepo,
 	uaRepo *actions.UserActionsRepo,
 	upRepo *permissions.UserPermissionRepo,
 	usRepo *user.UserStateRepo,
 ) *VerificationRepo {
 	return &VerificationRepo{
-		mail:    mail,
-		queries: queries,
-		uRepo:   uRepo,
-		uaRepo:  uaRepo,
-		upRepo:  upRepo,
-		usRepo:  usRepo,
+		mail:              mail,
+		userStore:         userStore,
+		verificationStore: verificationStore,
+		uRepo:             uRepo,
+		uaRepo:            uaRepo,
+		upRepo:            upRepo,
+		usRepo:            usRepo,
 	}
 }
 
@@ -50,16 +53,22 @@ func (s *VerificationRepo) GetByID(ctx context.Context, actionID uuid.UUID) (*mo
 		return nil, err
 	}
 
-	row, err := s.queries.GetUserVerification(ctx, models.UUIDPtrToDB(&actionID))
+	row, err := s.verificationStore.GetUserVerification(ctx, actionID)
 	if err != nil {
 		return nil, err
+	}
+
+	var usedAt *time.Time
+	if row.UsedAt != nil {
+		t := time.UnixMilli(*row.UsedAt)
+		usedAt = &t
 	}
 
 	return &models.UserActionVerification{
 		Action:    *dbAction,
 		Token:     row.Token,
-		ExpiresAt: row.ExpiresAt.Time,
-		UsedAt:    &row.UsedAt.Time,
+		ExpiresAt: time.UnixMilli(row.ExpiresAt),
+		UsedAt:    usedAt,
 		Verified:  row.Verified,
 	}, nil
 }
@@ -74,19 +83,12 @@ func (s *VerificationRepo) RequestVerification(
 		return nil, errs.ErrActionNotFound
 	}
 
-	user, err := s.queries.GetUserByEmail(ctx, email)
+	user, err := s.userStore.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
 
-	if !user.ID.Valid {
-		return nil, errs.ErrIDRequired
-	}
-
-	parsedID, err := uuid.Parse(user.ID.String())
-	if err != nil {
-		return nil, err
-	}
+	parsedID := user.ID
 
 	dbAction, err := s.uaRepo.GetOneByName(ctx, parsedID, parsedAction)
 	if err != nil {
@@ -127,7 +129,7 @@ func (s *VerificationRepo) Generate(
 				ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
 			}
 
-			if err := s.queries.CreateUserVerification(ctx, *params.DBCreate()); err != nil {
+			if err := s.verificationStore.CreateUserVerification(ctx, *params.DBCreate()); err != nil {
 				return nil, err
 			}
 
@@ -161,12 +163,10 @@ func (s *VerificationRepo) Verify(ctx context.Context, actionID uuid.UUID, token
 		return errs.ErrTokenInvalid
 	}
 
-	params := db.UpdateUserVerificationParams{
+	if err := s.verificationStore.UpdateUserVerification(ctx, storage.UpdateUserVerificationParams{
 		Verified: true,
-		ActionID: models.UUIDPtrToDB(&actionID),
-	}
-
-	if err := s.queries.UpdateUserVerification(ctx, params); err != nil {
+		ActionID: actionID,
+	}); err != nil {
 		return err
 	}
 
@@ -231,5 +231,5 @@ func (s *VerificationRepo) HandleVerified(ctx context.Context, va *models.UserAc
 }
 
 func (s *VerificationRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.queries.DeleteUserVerification(ctx, models.UUIDPtrToDB(&id))
+	return s.verificationStore.DeleteUserVerification(ctx, id)
 }
