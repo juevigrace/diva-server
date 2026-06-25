@@ -9,14 +9,25 @@ import (
 
 type VerificationModule struct {
 	Handler *VerificationHandler
-	Repo *VerificationRepo
+	Repo    *VerificationRepo
 }
 
-func NewVerificationModule(mail *mail.Client, userStore storage.UserStore, verificationStore storage.UserVerificationStore, uModule *user.UserModule) *VerificationModule {
-	repo := NewVerificationRepo(mail, userStore, verificationStore, uModule.URepo, uModule.UARepo, uModule.UPRepo, uModule.USRepo)
+func NewVerificationModule(
+	mail *mail.Client,
+	verificationStore storage.UserVerificationStore,
+	uModule *user.UserModule,
+) *VerificationModule {
+	repo := NewVerificationRepo(
+		mail,
+		verificationStore,
+		uModule.URepo,
+		uModule.UARepo,
+		uModule.UPRepo,
+		uModule.USRepo,
+	)
 	return &VerificationModule{
 		Handler: NewVerificationHandler(repo),
-		Repo: repo,
+		Repo:    repo,
 	}
 }
 

@@ -27,18 +27,18 @@ func (s *UserStateRepo) GetByUserID(ctx context.Context, userID uuid.UUID) (*mod
 }
 
 func (s *UserStateRepo) Create(ctx context.Context, userID uuid.UUID, us *models.UserState) error {
-	return s.store.CreateUserState(ctx, *us.DBCreate(userID))
+	return s.store.CreateUserState(ctx, us.DBCreate(userID))
 }
 
 func (s *UserStateRepo) UpdateVerified(ctx context.Context, verified bool, userID uuid.UUID) error {
-	return s.store.UpdateUserVerified(ctx, storage.UpdateUserVerifiedParams{
+	return s.store.UpdateUserVerified(ctx, &storage.UpdateUserVerifiedParams{
 		Verified: verified,
 		UserID:   userID,
 	})
 }
 
 func (s *UserStateRepo) UpdateStatus(ctx context.Context, status models.UserStatus, userID uuid.UUID) error {
-	return s.store.UpdateUserStatus(ctx, storage.UpdateUserStatusParams{
+	return s.store.UpdateUserStatus(ctx, &storage.UpdateUserStatusParams{
 		Status: status.ToDB(),
 		UserID: userID,
 	})

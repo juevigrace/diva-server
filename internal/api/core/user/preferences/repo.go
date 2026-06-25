@@ -56,7 +56,7 @@ func (s *UserPreferencesRepo) Create(ctx context.Context, session *models.Sessio
 		OnboardingCompleted: dto.OnboardingCompleted,
 		Language:            dto.Language,
 	}
-	if err := s.store.CreateUserPreferences(ctx, *pref.DBCreate(uid)); err != nil {
+	if err := s.store.CreateUserPreferences(ctx, pref.DBCreate(uid)); err != nil {
 		return err
 	}
 	if session.User.ID == uid {
@@ -76,5 +76,5 @@ func (s *UserPreferencesRepo) Update(ctx context.Context, id uuid.UUID, dto *dto
 		Language: dto.Language,
 	}
 
-	return s.store.UpdateUserPreferences(ctx, *pref.DBUpdate())
+	return s.store.UpdateUserPreferences(ctx, pref.DBUpdate())
 }

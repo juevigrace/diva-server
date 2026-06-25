@@ -42,7 +42,7 @@ func (s *UserPermissionRepo) GetByUser(ctx context.Context, userID uuid.UUID) ([
 }
 
 func (s *UserPermissionRepo) GetOneByPermID(ctx context.Context, userID, permissionID uuid.UUID) (*models.UserPermission, error) {
-	row, err := s.store.GetUserPermission(ctx, storage.GetUserPermissionParams{
+	row, err := s.store.GetUserPermission(ctx, &storage.GetUserPermissionParams{
 		PermissionID: permissionID,
 		UserID:       userID,
 	})
@@ -59,7 +59,7 @@ func (s *UserPermissionRepo) GetOneByPermID(ctx context.Context, userID, permiss
 }
 
 func (s *UserPermissionRepo) GetOneByName(ctx context.Context, userID uuid.UUID, action models.PermissionAction) (*models.UserPermission, error) {
-	row, err := s.store.GetUserPermissionByName(ctx, storage.GetUserPermissionByNameParams{
+	row, err := s.store.GetUserPermissionByName(ctx, &storage.GetUserPermissionByNameParams{
 		UserID: userID,
 		Name:   action.String(),
 	})
@@ -109,7 +109,7 @@ func (s *UserPermissionRepo) CreateByName(
 }
 
 func (s *UserPermissionRepo) Create(ctx context.Context, grantedID uuid.UUID, up *models.UserPermission) error {
-	return s.store.CreateUserPermission(ctx, *up.DBCreate(grantedID))
+	return s.store.CreateUserPermission(ctx, up.DBCreate(grantedID))
 }
 
 func (s *UserPermissionRepo) Update(ctx context.Context, uid, pid uuid.UUID, granted bool, expiresAt *int64) error {
@@ -119,11 +119,11 @@ func (s *UserPermissionRepo) Update(ctx context.Context, uid, pid uuid.UUID, gra
 		ExpiresAt:  expiresAt,
 	}
 
-	return s.store.UpdateUserPermission(ctx, *params.DBUpdate(uid))
+	return s.store.UpdateUserPermission(ctx, params.DBUpdate(uid))
 }
 
 func (s *UserPermissionRepo) Delete(ctx context.Context, uid, pid uuid.UUID) error {
-	return s.store.DeleteUserPermission(ctx, storage.DeleteUserPermissionParams{
+	return s.store.DeleteUserPermission(ctx, &storage.DeleteUserPermissionParams{
 		PermissionID: pid,
 		UserID:       uid,
 	})

@@ -86,7 +86,7 @@ func (h *PermissionHandler) create(w http.ResponseWriter, r *http.Request) {
 
 	requestedLevel := models.RoleFromString(dto.RoleLevel)
 	if session.User.Role < requestedLevel {
-		responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrForbidden.Error()))
+		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrForbidden.Error()))
 		return
 	}
 

@@ -53,10 +53,6 @@ func RespondForbidden(data any, message string) *APIResponse {
 	return Respond(http.StatusForbidden, &data, message)
 }
 
-func RespondForbbiden(data any, message string) *APIResponse {
-	return Respond(http.StatusForbidden, &data, message)
-}
-
 func RespondNotFound(data any, message string) *APIResponse {
 	return Respond(http.StatusNotFound, &data, message)
 }

@@ -41,7 +41,7 @@ func (s *UserProfileRepo) Create(ctx context.Context, session *models.Session, u
 		Alias:     dto.Alias,
 		Bio:       dto.Bio,
 	}
-	if err := s.store.CreateUserProfile(ctx, *profile.DBCreate(uid)); err != nil {
+	if err := s.store.CreateUserProfile(ctx, profile.DBCreate(uid)); err != nil {
 		return err
 	}
 	if session.User.ID == uid {
@@ -62,11 +62,11 @@ func (s *UserProfileRepo) Update(ctx context.Context, userID uuid.UUID, dto *dto
 		Alias:     dto.Alias,
 		Bio:       dto.Bio,
 	}
-	return s.store.UpdateUserProfile(ctx, *profile.DBUpdate(userID))
+	return s.store.UpdateUserProfile(ctx, profile.DBUpdate(userID))
 }
 
 func (s *UserProfileRepo) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatar string) error {
-	return s.store.UpdateUserProfileAvatar(ctx, storage.UpdateUserProfileAvatarParams{
+	return s.store.UpdateUserProfileAvatar(ctx, &storage.UpdateUserProfileAvatarParams{
 		Avatar: avatar,
 		UserID: userID,
 	})

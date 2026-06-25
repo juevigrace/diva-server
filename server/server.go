@@ -100,7 +100,7 @@ func (s *Server) setupApi() {
 		sModule.Handler,
 		s.files,
 	)
-	vModule := verification.NewVerificationModule(s.mail, s.database.UserStore(), s.database.UserVerificationStore(), uModule)
+	vModule := verification.NewVerificationModule(s.mail, s.database.UserVerificationStore(), uModule)
 	aModule := auth.NewAuthModule(pModule.Repo, sModule.Repo, uModule.URepo, vModule.Repo)
 
 	root := s.router.Route("/", func(root chi.Router) {

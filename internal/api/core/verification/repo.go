@@ -10,16 +10,15 @@ import (
 	"github.com/juevigrace/diva-server/internal/api/core/user"
 	"github.com/juevigrace/diva-server/internal/api/core/user/actions"
 	"github.com/juevigrace/diva-server/internal/api/core/user/permissions"
-	"github.com/juevigrace/diva-server/pkg/mail"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/pkg/errs"
+	"github.com/juevigrace/diva-server/pkg/mail"
 	"github.com/juevigrace/diva-server/pkg/otp"
 	"github.com/juevigrace/diva-server/storage"
 )
 
 type VerificationRepo struct {
 	mail              *mail.Client
-	userStore         storage.UserStore
 	verificationStore storage.UserVerificationStore
 	uRepo             *user.UserRepo
 	uaRepo            *actions.UserActionsRepo
@@ -29,7 +28,6 @@ type VerificationRepo struct {
 
 func NewVerificationRepo(
 	mail *mail.Client,
-	userStore storage.UserStore,
 	verificationStore storage.UserVerificationStore,
 	uRepo *user.UserRepo,
 	uaRepo *actions.UserActionsRepo,
@@ -38,7 +36,6 @@ func NewVerificationRepo(
 ) *VerificationRepo {
 	return &VerificationRepo{
 		mail:              mail,
-		userStore:         userStore,
 		verificationStore: verificationStore,
 		uRepo:             uRepo,
 		uaRepo:            uaRepo,
@@ -83,7 +80,7 @@ func (s *VerificationRepo) RequestVerification(
 		return nil, errs.ErrActionNotFound
 	}
 
-	user, err := s.userStore.GetUserByEmail(ctx, email)
+	user, err := s.uRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +126,7 @@ func (s *VerificationRepo) Generate(
 				ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
 			}
 
-			if err := s.verificationStore.CreateUserVerification(ctx, *params.DBCreate()); err != nil {
+			if err := s.verificationStore.CreateUserVerification(ctx, params.DBCreate()); err != nil {
 				return nil, err
 			}
 
@@ -163,7 +160,7 @@ func (s *VerificationRepo) Verify(ctx context.Context, actionID uuid.UUID, token
 		return errs.ErrTokenInvalid
 	}
 
-	if err := s.verificationStore.UpdateUserVerification(ctx, storage.UpdateUserVerificationParams{
+	if err := s.verificationStore.UpdateUserVerification(ctx, &storage.UpdateUserVerificationParams{
 		Verified: true,
 		ActionID: actionID,
 	}); err != nil {

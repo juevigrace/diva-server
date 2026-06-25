@@ -73,7 +73,7 @@ func (s *SessionRepo) Create(ctx context.Context, userID uuid.UUID, sType models
 		ExpiresAt:    expiration.UnixMilli(),
 	}
 
-	if err := s.store.CreateSession(ctx, *session.DBCreate()); err != nil {
+	if err := s.store.CreateSession(ctx, session.DBCreate()); err != nil {
 		return nil, err
 	}
 
@@ -104,7 +104,7 @@ func (s *SessionRepo) Update(ctx context.Context, session *models.Session) (*mod
 	session.RefreshToken = refreshToken
 	session.ExpiresAt = expiration.UnixMilli()
 
-	if err := s.store.UpdateSession(ctx, *session.DBUpdate()); err != nil {
+	if err := s.store.UpdateSession(ctx, session.DBUpdate()); err != nil {
 		return nil, err
 	}
 
@@ -112,7 +112,7 @@ func (s *SessionRepo) Update(ctx context.Context, session *models.Session) (*mod
 }
 
 func (s *SessionRepo) UpdateStatus(ctx context.Context, status models.SessionStatus, sessionID uuid.UUID) error {
-	return s.store.UpdateSessionStatus(ctx, storage.UpdateSessionStatusParams{
+	return s.store.UpdateSessionStatus(ctx, &storage.UpdateSessionStatusParams{
 		Status: status.ToDB(),
 		ID:     sessionID,
 	})

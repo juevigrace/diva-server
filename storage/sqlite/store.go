@@ -16,8 +16,9 @@ func NewUserStore(q *sqli.Queries) *UserStore {
 	return &UserStore{q: q}
 }
 
-func (s *UserStore) CreateUser(ctx context.Context, arg storage.CreateUserParams) error {
-	return s.q.CreateUser(ctx, CreateUserParamsFromStorage(arg))
+func (s *UserStore) CreateUser(ctx context.Context, arg *storage.CreateUserParams) error {
+	params := CreateUserParamsFromStorage(arg)
+	return s.q.CreateUser(ctx, *params)
 }
 
 func (s *UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*storage.DivaUser, error) {
@@ -25,7 +26,7 @@ func (s *UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*storage.Div
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserToStorage(u), nil
+	return DivaUserToStorage(&u), nil
 }
 
 func (s *UserStore) GetUserByEmail(ctx context.Context, email string) (*storage.DivaUser, error) {
@@ -33,7 +34,7 @@ func (s *UserStore) GetUserByEmail(ctx context.Context, email string) (*storage.
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserToStorage(u), nil
+	return DivaUserToStorage(&u), nil
 }
 
 func (s *UserStore) GetUserByUsername(ctx context.Context, username string) (*storage.DivaUser, error) {
@@ -41,7 +42,7 @@ func (s *UserStore) GetUserByUsername(ctx context.Context, username string) (*st
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserToStorage(u), nil
+	return DivaUserToStorage(&u), nil
 }
 
 func (s *UserStore) GetUserByUsernameOrEmail(ctx context.Context, identifier string) (*storage.DivaUser, error) {
@@ -49,17 +50,18 @@ func (s *UserStore) GetUserByUsernameOrEmail(ctx context.Context, identifier str
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserToStorage(u), nil
+	return DivaUserToStorage(&u), nil
 }
 
-func (s *UserStore) ListUsers(ctx context.Context, arg storage.ListUsersParams) ([]storage.DivaUser, error) {
-	rows, err := s.q.ListUsers(ctx, ListUsersParamsFromStorage(arg))
+func (s *UserStore) ListUsers(ctx context.Context, arg *storage.ListUsersParams) ([]storage.DivaUser, error) {
+	params := ListUsersParamsFromStorage(arg)
+	rows, err := s.q.ListUsers(ctx, *params)
 	if err != nil {
 		return nil, err
 	}
 	users := make([]storage.DivaUser, len(rows))
 	for i := range rows {
-		users[i] = *DivaUserToStorage(rows[i])
+		users[i] = *DivaUserToStorage(&rows[i])
 	}
 	return users, nil
 }
@@ -68,24 +70,29 @@ func (s *UserStore) CountUsers(ctx context.Context) (int64, error) {
 	return s.q.CountUsers(ctx)
 }
 
-func (s *UserStore) UpdateUsername(ctx context.Context, arg storage.UpdateUsernameParams) error {
-	return s.q.UpdateUsername(ctx, UpdateUsernameParamsFromStorage(arg))
+func (s *UserStore) UpdateUsername(ctx context.Context, arg *storage.UpdateUsernameParams) error {
+	params := UpdateUsernameParamsFromStorage(arg)
+	return s.q.UpdateUsername(ctx, *params)
 }
 
-func (s *UserStore) UpdateEmail(ctx context.Context, arg storage.UpdateEmailParams) error {
-	return s.q.UpdateEmail(ctx, UpdateEmailParamsFromStorage(arg))
+func (s *UserStore) UpdateEmail(ctx context.Context, arg *storage.UpdateEmailParams) error {
+	params := UpdateEmailParamsFromStorage(arg)
+	return s.q.UpdateEmail(ctx, *params)
 }
 
-func (s *UserStore) UpdatePassword(ctx context.Context, arg storage.UpdatePasswordParams) error {
-	return s.q.UpdatePassword(ctx, UpdatePasswordParamsFromStorage(arg))
+func (s *UserStore) UpdatePassword(ctx context.Context, arg *storage.UpdatePasswordParams) error {
+	params := UpdatePasswordParamsFromStorage(arg)
+	return s.q.UpdatePassword(ctx, *params)
 }
 
-func (s *UserStore) UpdatePhoneNumber(ctx context.Context, arg storage.UpdatePhoneNumberParams) error {
-	return s.q.UpdatePhoneNumber(ctx, UpdatePhoneNumberParamsFromStorage(arg))
+func (s *UserStore) UpdatePhoneNumber(ctx context.Context, arg *storage.UpdatePhoneNumberParams) error {
+	params := UpdatePhoneNumberParamsFromStorage(arg)
+	return s.q.UpdatePhoneNumber(ctx, *params)
 }
 
-func (s *UserStore) UpdateRole(ctx context.Context, arg storage.UpdateRoleParams) error {
-	return s.q.UpdateRole(ctx, UpdateRoleParamsFromStorage(arg))
+func (s *UserStore) UpdateRole(ctx context.Context, arg *storage.UpdateRoleParams) error {
+	params := UpdateRoleParamsFromStorage(arg)
+	return s.q.UpdateRole(ctx, *params)
 }
 
 func (s *UserStore) DeleteUser(ctx context.Context, id uuid.UUID) error {
@@ -108,8 +115,9 @@ func NewPermissionStore(q *sqli.Queries) *PermissionStore {
 	return &PermissionStore{q: q}
 }
 
-func (s *PermissionStore) CreatePermission(ctx context.Context, arg storage.CreatePermissionParams) error {
-	return s.q.CreatePermission(ctx, CreatePermissionParamsFromStorage(arg))
+func (s *PermissionStore) CreatePermission(ctx context.Context, arg *storage.CreatePermissionParams) error {
+	params := CreatePermissionParamsFromStorage(arg)
+	return s.q.CreatePermission(ctx, *params)
 }
 
 func (s *PermissionStore) GetPermissionByID(ctx context.Context, id uuid.UUID) (*storage.DivaPermission, error) {
@@ -117,7 +125,7 @@ func (s *PermissionStore) GetPermissionByID(ctx context.Context, id uuid.UUID) (
 	if err != nil {
 		return nil, err
 	}
-	return DivaPermissionToStorage(p), nil
+	return DivaPermissionToStorage(&p), nil
 }
 
 func (s *PermissionStore) GetPermissionByName(ctx context.Context, name string) (*storage.DivaPermission, error) {
@@ -125,17 +133,18 @@ func (s *PermissionStore) GetPermissionByName(ctx context.Context, name string) 
 	if err != nil {
 		return nil, err
 	}
-	return DivaPermissionToStorage(p), nil
+	return DivaPermissionToStorage(&p), nil
 }
 
-func (s *PermissionStore) ListPermissions(ctx context.Context, arg storage.ListPermissionsParams) ([]storage.DivaPermission, error) {
-	rows, err := s.q.ListPermissions(ctx, ListPermissionsParamsFromStorage(arg))
+func (s *PermissionStore) ListPermissions(ctx context.Context, arg *storage.ListPermissionsParams) ([]storage.DivaPermission, error) {
+	params := ListPermissionsParamsFromStorage(arg)
+	rows, err := s.q.ListPermissions(ctx, *params)
 	if err != nil {
 		return nil, err
 	}
 	perms := make([]storage.DivaPermission, len(rows))
 	for i := range rows {
-		perms[i] = *DivaPermissionToStorage(rows[i])
+		perms[i] = *DivaPermissionToStorage(&rows[i])
 	}
 	return perms, nil
 }
@@ -144,16 +153,19 @@ func (s *PermissionStore) CountPermissions(ctx context.Context) (int64, error) {
 	return s.q.CountPermissions(ctx)
 }
 
-func (s *PermissionStore) UpdatePermission(ctx context.Context, arg storage.UpdatePermissionParams) error {
-	return s.q.UpdatePermission(ctx, UpdatePermissionParamsFromStorage(arg))
+func (s *PermissionStore) UpdatePermission(ctx context.Context, arg *storage.UpdatePermissionParams) error {
+	params := UpdatePermissionParamsFromStorage(arg)
+	return s.q.UpdatePermission(ctx, *params)
 }
 
-func (s *PermissionStore) UpdatePermissionAction(ctx context.Context, arg storage.UpdatePermissionActionParams) error {
-	return s.q.UpdatePermissionAction(ctx, UpdatePermissionActionParamsFromStorage(arg))
+func (s *PermissionStore) UpdatePermissionAction(ctx context.Context, arg *storage.UpdatePermissionActionParams) error {
+	params := UpdatePermissionActionParamsFromStorage(arg)
+	return s.q.UpdatePermissionAction(ctx, *params)
 }
 
-func (s *PermissionStore) UpdatePermissionRoleLevel(ctx context.Context, arg storage.UpdatePermissionRoleLevelParams) error {
-	return s.q.UpdatePermissionRoleLevel(ctx, UpdatePermissionRoleLevelParamsFromStorage(arg))
+func (s *PermissionStore) UpdatePermissionRoleLevel(ctx context.Context, arg *storage.UpdatePermissionRoleLevelParams) error {
+	params := UpdatePermissionRoleLevelParamsFromStorage(arg)
+	return s.q.UpdatePermissionRoleLevel(ctx, *params)
 }
 
 func (s *PermissionStore) DeletePermission(ctx context.Context, id uuid.UUID) error {
@@ -176,8 +188,9 @@ func NewSessionStore(q *sqli.Queries) *SessionStore {
 	return &SessionStore{q: q}
 }
 
-func (s *SessionStore) CreateSession(ctx context.Context, arg storage.CreateSessionParams) error {
-	return s.q.CreateSession(ctx, CreateSessionParamsFromStorage(arg))
+func (s *SessionStore) CreateSession(ctx context.Context, arg *storage.CreateSessionParams) error {
+	params := CreateSessionParamsFromStorage(arg)
+	return s.q.CreateSession(ctx, *params)
 }
 
 func (s *SessionStore) GetSessionByID(ctx context.Context, id uuid.UUID) (*storage.DivaSession, error) {
@@ -185,7 +198,7 @@ func (s *SessionStore) GetSessionByID(ctx context.Context, id uuid.UUID) (*stora
 	if err != nil {
 		return nil, err
 	}
-	return DivaSessionToStorage(ss), nil
+	return DivaSessionToStorage(&ss), nil
 }
 
 func (s *SessionStore) ListSessionsByUser(ctx context.Context, userID uuid.UUID) ([]storage.DivaSession, error) {
@@ -195,17 +208,19 @@ func (s *SessionStore) ListSessionsByUser(ctx context.Context, userID uuid.UUID)
 	}
 	sessions := make([]storage.DivaSession, len(rows))
 	for i := range rows {
-		sessions[i] = *DivaSessionToStorage(rows[i])
+		sessions[i] = *DivaSessionToStorage(&rows[i])
 	}
 	return sessions, nil
 }
 
-func (s *SessionStore) UpdateSession(ctx context.Context, arg storage.UpdateSessionParams) error {
-	return s.q.UpdateSession(ctx, UpdateSessionParamsFromStorage(arg))
+func (s *SessionStore) UpdateSession(ctx context.Context, arg *storage.UpdateSessionParams) error {
+	params := UpdateSessionParamsFromStorage(arg)
+	return s.q.UpdateSession(ctx, *params)
 }
 
-func (s *SessionStore) UpdateSessionStatus(ctx context.Context, arg storage.UpdateSessionStatusParams) error {
-	return s.q.UpdateSessionStatus(ctx, UpdateSessionStatusParamsFromStorage(arg))
+func (s *SessionStore) UpdateSessionStatus(ctx context.Context, arg *storage.UpdateSessionStatusParams) error {
+	params := UpdateSessionStatusParamsFromStorage(arg)
+	return s.q.UpdateSessionStatus(ctx, *params)
 }
 
 func (s *SessionStore) DeleteSession(ctx context.Context, id uuid.UUID) error {
@@ -228,8 +243,9 @@ func NewUserStateStore(q *sqli.Queries) *UserStateStore {
 	return &UserStateStore{q: q}
 }
 
-func (s *UserStateStore) CreateUserState(ctx context.Context, arg storage.CreateUserStateParams) error {
-	return s.q.CreateUserState(ctx, CreateUserStateParamsFromStorage(arg))
+func (s *UserStateStore) CreateUserState(ctx context.Context, arg *storage.CreateUserStateParams) error {
+	params := CreateUserStateParamsFromStorage(arg)
+	return s.q.CreateUserState(ctx, *params)
 }
 
 func (s *UserStateStore) GetUserStateByUserID(ctx context.Context, userID uuid.UUID) (*storage.DivaUserState, error) {
@@ -237,19 +253,21 @@ func (s *UserStateStore) GetUserStateByUserID(ctx context.Context, userID uuid.U
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserStateToStorage(us), nil
+	return DivaUserStateToStorage(&us), nil
 }
 
 func (s *UserStateStore) UpdateLastActiveAt(ctx context.Context, userID uuid.UUID) error {
 	return s.q.UpdateLastActiveAt(ctx, userID.String())
 }
 
-func (s *UserStateStore) UpdateUserStatus(ctx context.Context, arg storage.UpdateUserStatusParams) error {
-	return s.q.UpdateUserStatus(ctx, UpdateUserStatusParamsFromStorage(arg))
+func (s *UserStateStore) UpdateUserStatus(ctx context.Context, arg *storage.UpdateUserStatusParams) error {
+	params := UpdateUserStatusParamsFromStorage(arg)
+	return s.q.UpdateUserStatus(ctx, *params)
 }
 
-func (s *UserStateStore) UpdateUserVerified(ctx context.Context, arg storage.UpdateUserVerifiedParams) error {
-	return s.q.UpdateUserVerified(ctx, UpdateUserVerifiedParamsFromStorage(arg))
+func (s *UserStateStore) UpdateUserVerified(ctx context.Context, arg *storage.UpdateUserVerifiedParams) error {
+	params := UpdateUserVerifiedParamsFromStorage(arg)
+	return s.q.UpdateUserVerified(ctx, *params)
 }
 
 type UserProfileStore struct {
@@ -260,8 +278,9 @@ func NewUserProfileStore(q *sqli.Queries) *UserProfileStore {
 	return &UserProfileStore{q: q}
 }
 
-func (s *UserProfileStore) CreateUserProfile(ctx context.Context, arg storage.CreateUserProfileParams) error {
-	return s.q.CreateUserProfile(ctx, CreateUserProfileParamsFromStorage(arg))
+func (s *UserProfileStore) CreateUserProfile(ctx context.Context, arg *storage.CreateUserProfileParams) error {
+	params := CreateUserProfileParamsFromStorage(arg)
+	return s.q.CreateUserProfile(ctx, *params)
 }
 
 func (s *UserProfileStore) GetUserProfileByUserID(ctx context.Context, userID uuid.UUID) (*storage.DivaUserProfile, error) {
@@ -269,15 +288,17 @@ func (s *UserProfileStore) GetUserProfileByUserID(ctx context.Context, userID uu
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserProfileToStorage(p), nil
+	return DivaUserProfileToStorage(&p), nil
 }
 
-func (s *UserProfileStore) UpdateUserProfile(ctx context.Context, arg storage.UpdateUserProfileParams) error {
-	return s.q.UpdateUserProfile(ctx, UpdateUserProfileParamsFromStorage(arg))
+func (s *UserProfileStore) UpdateUserProfile(ctx context.Context, arg *storage.UpdateUserProfileParams) error {
+	params := UpdateUserProfileParamsFromStorage(arg)
+	return s.q.UpdateUserProfile(ctx, *params)
 }
 
-func (s *UserProfileStore) UpdateUserProfileAvatar(ctx context.Context, arg storage.UpdateUserProfileAvatarParams) error {
-	return s.q.UpdateUserProfileAvatar(ctx, UpdateUserProfileAvatarParamsFromStorage(arg))
+func (s *UserProfileStore) UpdateUserProfileAvatar(ctx context.Context, arg *storage.UpdateUserProfileAvatarParams) error {
+	params := UpdateUserProfileAvatarParamsFromStorage(arg)
+	return s.q.UpdateUserProfileAvatar(ctx, *params)
 }
 
 type UserPreferenceStore struct {
@@ -288,8 +309,9 @@ func NewUserPreferenceStore(q *sqli.Queries) *UserPreferenceStore {
 	return &UserPreferenceStore{q: q}
 }
 
-func (s *UserPreferenceStore) CreateUserPreferences(ctx context.Context, arg storage.CreateUserPreferencesParams) error {
-	return s.q.CreateUserPreferences(ctx, CreateUserPreferencesParamsFromStorage(arg))
+func (s *UserPreferenceStore) CreateUserPreferences(ctx context.Context, arg *storage.CreateUserPreferencesParams) error {
+	params := CreateUserPreferencesParamsFromStorage(arg)
+	return s.q.CreateUserPreferences(ctx, *params)
 }
 
 func (s *UserPreferenceStore) GetPreferencesByID(ctx context.Context, id uuid.UUID) (*storage.DivaUserPreference, error) {
@@ -297,7 +319,7 @@ func (s *UserPreferenceStore) GetPreferencesByID(ctx context.Context, id uuid.UU
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserPreferenceToStorage(p), nil
+	return DivaUserPreferenceToStorage(&p), nil
 }
 
 func (s *UserPreferenceStore) GetPreferencesByUser(ctx context.Context, userID uuid.UUID) ([]storage.DivaUserPreference, error) {
@@ -307,13 +329,14 @@ func (s *UserPreferenceStore) GetPreferencesByUser(ctx context.Context, userID u
 	}
 	prefs := make([]storage.DivaUserPreference, len(rows))
 	for i := range rows {
-		prefs[i] = *DivaUserPreferenceToStorage(rows[i])
+		prefs[i] = *DivaUserPreferenceToStorage(&rows[i])
 	}
 	return prefs, nil
 }
 
-func (s *UserPreferenceStore) UpdateUserPreferences(ctx context.Context, arg storage.UpdateUserPreferencesParams) error {
-	return s.q.UpdateUserPreferences(ctx, UpdateUserPreferencesParamsFromStorage(arg))
+func (s *UserPreferenceStore) UpdateUserPreferences(ctx context.Context, arg *storage.UpdateUserPreferencesParams) error {
+	params := UpdateUserPreferencesParamsFromStorage(arg)
+	return s.q.UpdateUserPreferences(ctx, *params)
 }
 
 type UserPermissionStore struct {
@@ -324,24 +347,27 @@ func NewUserPermissionStore(q *sqli.Queries) *UserPermissionStore {
 	return &UserPermissionStore{q: q}
 }
 
-func (s *UserPermissionStore) CreateUserPermission(ctx context.Context, arg storage.CreateUserPermissionParams) error {
-	return s.q.CreateUserPermission(ctx, CreateUserPermissionParamsFromStorage(arg))
+func (s *UserPermissionStore) CreateUserPermission(ctx context.Context, arg *storage.CreateUserPermissionParams) error {
+	params := CreateUserPermissionParamsFromStorage(arg)
+	return s.q.CreateUserPermission(ctx, *params)
 }
 
-func (s *UserPermissionStore) GetUserPermission(ctx context.Context, arg storage.GetUserPermissionParams) (*storage.DivaUserPermission, error) {
-	p, err := s.q.GetUserPermission(ctx, GetUserPermissionParamsFromStorage(arg))
+func (s *UserPermissionStore) GetUserPermission(ctx context.Context, arg *storage.GetUserPermissionParams) (*storage.DivaUserPermission, error) {
+	params := GetUserPermissionParamsFromStorage(arg)
+	p, err := s.q.GetUserPermission(ctx, *params)
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserPermissionToStorage(p), nil
+	return DivaUserPermissionToStorage(&p), nil
 }
 
-func (s *UserPermissionStore) GetUserPermissionByName(ctx context.Context, arg storage.GetUserPermissionByNameParams) (*storage.DivaUserPermission, error) {
-	p, err := s.q.GetUserPermissionByName(ctx, GetUserPermissionByNameParamsFromStorage(arg))
+func (s *UserPermissionStore) GetUserPermissionByName(ctx context.Context, arg *storage.GetUserPermissionByNameParams) (*storage.DivaUserPermission, error) {
+	params := GetUserPermissionByNameParamsFromStorage(arg)
+	p, err := s.q.GetUserPermissionByName(ctx, *params)
 	if err != nil {
 		return nil, err
 	}
-	return DivaUserPermissionToStorage(p), nil
+	return DivaUserPermissionToStorage(&p), nil
 }
 
 func (s *UserPermissionStore) GetUserPermissions(ctx context.Context, userID uuid.UUID) ([]storage.DivaUserPermission, error) {
@@ -351,17 +377,19 @@ func (s *UserPermissionStore) GetUserPermissions(ctx context.Context, userID uui
 	}
 	perms := make([]storage.DivaUserPermission, len(rows))
 	for i := range rows {
-		perms[i] = *DivaUserPermissionToStorage(rows[i])
+		perms[i] = *DivaUserPermissionToStorage(&rows[i])
 	}
 	return perms, nil
 }
 
-func (s *UserPermissionStore) UpdateUserPermission(ctx context.Context, arg storage.UpdateUserPermissionParams) error {
-	return s.q.UpdateUserPermission(ctx, UpdateUserPermissionParamsFromStorage(arg))
+func (s *UserPermissionStore) UpdateUserPermission(ctx context.Context, arg *storage.UpdateUserPermissionParams) error {
+	params := UpdateUserPermissionParamsFromStorage(arg)
+	return s.q.UpdateUserPermission(ctx, *params)
 }
 
-func (s *UserPermissionStore) DeleteUserPermission(ctx context.Context, arg storage.DeleteUserPermissionParams) error {
-	return s.q.DeleteUserPermission(ctx, DeleteUserPermissionParamsFromStorage(arg))
+func (s *UserPermissionStore) DeleteUserPermission(ctx context.Context, arg *storage.DeleteUserPermissionParams) error {
+	params := DeleteUserPermissionParamsFromStorage(arg)
+	return s.q.DeleteUserPermission(ctx, *params)
 }
 
 type UserActionStore struct {
@@ -372,8 +400,9 @@ func NewUserActionStore(q *sqli.Queries) *UserActionStore {
 	return &UserActionStore{q: q}
 }
 
-func (s *UserActionStore) CreateUserAction(ctx context.Context, arg storage.CreateUserActionParams) error {
-	return s.q.CreateUserAction(ctx, CreateUserActionParamsFromStorage(arg))
+func (s *UserActionStore) CreateUserAction(ctx context.Context, arg *storage.CreateUserActionParams) error {
+	params := CreateUserActionParamsFromStorage(arg)
+	return s.q.CreateUserAction(ctx, *params)
 }
 
 func (s *UserActionStore) GetUserActionByID(ctx context.Context, id uuid.UUID) (*storage.DivaAction, error) {
@@ -381,15 +410,16 @@ func (s *UserActionStore) GetUserActionByID(ctx context.Context, id uuid.UUID) (
 	if err != nil {
 		return nil, err
 	}
-	return DivaActionToStorage(a), nil
+	return DivaActionToStorage(&a), nil
 }
 
-func (s *UserActionStore) GetUserActionByUserAndName(ctx context.Context, arg storage.GetUserActionByUserAndNameParams) (*storage.DivaAction, error) {
-	a, err := s.q.GetUserActionByUserAndName(ctx, GetUserActionByUserAndNameParamsFromStorage(arg))
+func (s *UserActionStore) GetUserActionByUserAndName(ctx context.Context, arg *storage.GetUserActionByUserAndNameParams) (*storage.DivaAction, error) {
+	params := GetUserActionByUserAndNameParamsFromStorage(arg)
+	a, err := s.q.GetUserActionByUserAndName(ctx, *params)
 	if err != nil {
 		return nil, err
 	}
-	return DivaActionToStorage(a), nil
+	return DivaActionToStorage(&a), nil
 }
 
 func (s *UserActionStore) ListActionsByUser(ctx context.Context, userID uuid.UUID) ([]storage.DivaAction, error) {
@@ -399,7 +429,7 @@ func (s *UserActionStore) ListActionsByUser(ctx context.Context, userID uuid.UUI
 	}
 	actions := make([]storage.DivaAction, len(rows))
 	for i := range rows {
-		actions[i] = *DivaActionToStorage(rows[i])
+		actions[i] = *DivaActionToStorage(&rows[i])
 	}
 	return actions, nil
 }
@@ -420,8 +450,9 @@ func NewUserVerificationStore(q *sqli.Queries) *UserVerificationStore {
 	return &UserVerificationStore{q: q}
 }
 
-func (s *UserVerificationStore) CreateUserVerification(ctx context.Context, arg storage.CreateUserVerificationParams) error {
-	return s.q.CreateUserVerification(ctx, CreateUserVerificationParamsFromStorage(arg))
+func (s *UserVerificationStore) CreateUserVerification(ctx context.Context, arg *storage.CreateUserVerificationParams) error {
+	params := CreateUserVerificationParamsFromStorage(arg)
+	return s.q.CreateUserVerification(ctx, *params)
 }
 
 func (s *UserVerificationStore) GetUserVerification(ctx context.Context, actionID uuid.UUID) (*storage.DivaActionVerification, error) {
@@ -429,11 +460,12 @@ func (s *UserVerificationStore) GetUserVerification(ctx context.Context, actionI
 	if err != nil {
 		return nil, err
 	}
-	return DivaActionVerificationToStorage(v), nil
+	return DivaActionVerificationToStorage(&v), nil
 }
 
-func (s *UserVerificationStore) UpdateUserVerification(ctx context.Context, arg storage.UpdateUserVerificationParams) error {
-	return s.q.UpdateUserVerification(ctx, UpdateUserVerificationParamsFromStorage(arg))
+func (s *UserVerificationStore) UpdateUserVerification(ctx context.Context, arg *storage.UpdateUserVerificationParams) error {
+	params := UpdateUserVerificationParamsFromStorage(arg)
+	return s.q.UpdateUserVerification(ctx, *params)
 }
 
 func (s *UserVerificationStore) DeleteUserVerification(ctx context.Context, actionID uuid.UUID) error {

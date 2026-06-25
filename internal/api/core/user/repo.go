@@ -50,7 +50,7 @@ func (s *UserRepo) Count(ctx context.Context) (int64, error) {
 }
 
 func (s *UserRepo) GetAll(ctx context.Context, pagination *models.Pagination) ([]models.User, error) {
-	rows, err := s.store.ListUsers(ctx, storage.ListUsersParams{
+	rows, err := s.store.ListUsers(ctx, &storage.ListUsersParams{
 		Limit:  int64(pagination.GetLimit()),
 		Offset: int64(pagination.GetOffset()),
 	})
@@ -176,7 +176,7 @@ func (s *UserRepo) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UU
 		Role:         models.ROLE_USER,
 	}
 
-	if err := s.store.CreateUser(ctx, *params.DBCreate()); err != nil {
+	if err := s.store.CreateUser(ctx, params.DBCreate()); err != nil {
 		return uuid.Nil, err
 	}
 
@@ -232,7 +232,7 @@ func (s *UserRepo) UpdatePassword(ctx context.Context, session *models.Session, 
 		return err
 	}
 
-	if err := s.store.UpdatePassword(ctx, storage.UpdatePasswordParams{
+	if err := s.store.UpdatePassword(ctx, &storage.UpdatePasswordParams{
 		PasswordHash: newHash,
 		ID:           uid,
 	}); err != nil {
@@ -255,7 +255,7 @@ func (s *UserRepo) UpdatePassword(ctx context.Context, session *models.Session, 
 }
 
 func (s *UserRepo) UpdatePhoneNumber(ctx context.Context, session *models.Session, phone string, uid uuid.UUID) error {
-	if err := s.store.UpdatePhoneNumber(ctx, storage.UpdatePhoneNumberParams{
+	if err := s.store.UpdatePhoneNumber(ctx, &storage.UpdatePhoneNumberParams{
 		PhoneNumber: phone,
 		ID:          uid,
 	}); err != nil {
@@ -274,7 +274,7 @@ func (s *UserRepo) UpdatePhoneNumber(ctx context.Context, session *models.Sessio
 }
 
 func (s *UserRepo) UpdateUsername(ctx context.Context, session *models.Session, username string, uid uuid.UUID) error {
-	if err := s.store.UpdateUsername(ctx, storage.UpdateUsernameParams{
+	if err := s.store.UpdateUsername(ctx, &storage.UpdateUsernameParams{
 		Username: username,
 		ID:       uid,
 	}); err != nil {
@@ -293,7 +293,7 @@ func (s *UserRepo) UpdateUsername(ctx context.Context, session *models.Session, 
 }
 
 func (s *UserRepo) UpdateEmail(ctx context.Context, session *models.Session, email string, uid uuid.UUID) error {
-	if err := s.store.UpdateEmail(ctx, storage.UpdateEmailParams{
+	if err := s.store.UpdateEmail(ctx, &storage.UpdateEmailParams{
 		Email: email,
 		ID:    uid,
 	}); err != nil {
@@ -312,7 +312,7 @@ func (s *UserRepo) UpdateEmail(ctx context.Context, session *models.Session, ema
 }
 
 func (s *UserRepo) UpdateRole(ctx context.Context, role models.Role, userID uuid.UUID) error {
-	return s.store.UpdateRole(ctx, storage.UpdateRoleParams{
+	return s.store.UpdateRole(ctx, &storage.UpdateRoleParams{
 		Role: role.ToDB(),
 		ID:   userID,
 	})

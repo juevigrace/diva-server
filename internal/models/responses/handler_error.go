@@ -22,7 +22,7 @@ func HandleReqError(w http.ResponseWriter, err error) {
 	case errors.Is(err, errs.ErrForbidden),
 		errors.Is(err, errs.ErrPermissionDenied),
 		errors.Is(err, errs.ErrAdminAccessRequired):
-		WriteJSON(w, RespondForbbiden(nil, err.Error()))
+		WriteJSON(w, RespondForbidden(nil, err.Error()))
 	case errors.Is(err, errs.ErrUserNotFound),
 		errors.Is(err, errs.ErrActionNotFound):
 		WriteJSON(w, RespondNotFound(nil, err.Error()))

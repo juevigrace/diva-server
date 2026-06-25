@@ -49,7 +49,7 @@ func (s *UserActionsRepo) GetOneByID(ctx context.Context, id uuid.UUID) (*models
 }
 
 func (s *UserActionsRepo) GetOneByName(ctx context.Context, userID uuid.UUID, action models.Action) (*models.UserAction, error) {
-	row, err := s.store.GetUserActionByUserAndName(ctx, storage.GetUserActionByUserAndNameParams{
+	row, err := s.store.GetUserActionByUserAndName(ctx, &storage.GetUserActionByUserAndNameParams{
 		UserID: userID,
 		Name:   action.String(),
 	})
@@ -67,7 +67,7 @@ func (s *UserActionsRepo) Create(ctx context.Context, userID uuid.UUID, action m
 		UserID: userID,
 	}
 
-	if err := s.store.CreateUserAction(ctx, *params.DBCreate()); err != nil {
+	if err := s.store.CreateUserAction(ctx, params.DBCreate()); err != nil {
 		return nil, err
 	}
 

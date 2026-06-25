@@ -29,7 +29,7 @@ func RequireRole(roles ...models.Role) func(http.Handler) http.Handler {
 			}
 
 			if !slices.Contains(roles, rc.Session.User.Role) {
-				responses.WriteJSON(w, responses.RespondForbbiden(nil, errs.ErrForbidden.Error()))
+				responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrForbidden.Error()))
 				return
 			}
 

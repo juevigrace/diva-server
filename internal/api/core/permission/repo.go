@@ -20,7 +20,7 @@ func NewPermissionRepo(store storage.PermissionStore) *PermissionRepo {
 }
 
 func (s *PermissionRepo) List(ctx context.Context, pagination *models.Pagination) ([]*models.Permission, error) {
-	rows, err := s.store.ListPermissions(ctx, storage.ListPermissionsParams{
+	rows, err := s.store.ListPermissions(ctx, &storage.ListPermissionsParams{
 		Limit:  int64(pagination.GetLimit()),
 		Offset: int64(pagination.GetOffset()),
 	})
@@ -66,7 +66,7 @@ func (s *PermissionRepo) Create(ctx context.Context, dto *dtos.CreatePermissionD
 		Action:      models.PermissionActionFromString(dto.Action),
 		RoleLevel:   models.RoleFromString(dto.RoleLevel),
 	}
-	return s.store.CreatePermission(ctx, *perm.DBCreate())
+	return s.store.CreatePermission(ctx, perm.DBCreate())
 }
 
 func (s *PermissionRepo) Update(ctx context.Context, pid uuid.UUID, dto *dtos.UpdatePermissionDto) error {
@@ -75,7 +75,7 @@ func (s *PermissionRepo) Update(ctx context.Context, pid uuid.UUID, dto *dtos.Up
 		Name:        dto.Name,
 		Description: dto.Description,
 	}
-	return s.store.UpdatePermission(ctx, *perm.DBUpdate())
+	return s.store.UpdatePermission(ctx, perm.DBUpdate())
 }
 
 func (s *PermissionRepo) Delete(ctx context.Context, id uuid.UUID) error {
