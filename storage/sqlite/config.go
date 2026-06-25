@@ -3,7 +3,7 @@ package sqlite
 import (
 	"errors"
 
-	"github.com/juevigrace/diva-server/internal/config"
+	"github.com/juevigrace/diva-server/pkg/config"
 	"github.com/juevigrace/diva-server/pkg/validator"
 )
 

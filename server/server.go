@@ -16,12 +16,13 @@ import (
 	"github.com/juevigrace/diva-server/internal/api/core/user"
 	"github.com/juevigrace/diva-server/internal/api/core/verification"
 	"github.com/juevigrace/diva-server/internal/api/middlewares"
-	"github.com/juevigrace/diva-server/internal/config"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 	"github.com/juevigrace/diva-server/pkg/concurrency"
+	"github.com/juevigrace/diva-server/pkg/config"
 	"github.com/juevigrace/diva-server/pkg/filehelper"
 	"github.com/juevigrace/diva-server/pkg/mail"
+	"github.com/juevigrace/diva-server/pkg/jwt"
 	"github.com/juevigrace/diva-server/storage"
 )
 

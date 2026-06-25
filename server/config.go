@@ -3,7 +3,7 @@ package server
 import (
 	"errors"
 
-	"github.com/juevigrace/diva-server/internal/config"
+	"github.com/juevigrace/diva-server/pkg/config"
 	"github.com/juevigrace/diva-server/pkg/validator"
 )
 
@@ -14,7 +14,6 @@ type ServerConfig struct {
 	Env             config.Env
 	Debug           bool
 	UploadsDir      string
-	JWTSecret       string
 	ResendAPIKey    string
 	ResendFromEmail string
 	RootUsername    string
@@ -47,7 +46,6 @@ func (c *ServerConfig) Merge(from config.Config) error {
 	c.Env = sc.Env
 	c.Debug = sc.Debug
 	c.UploadsDir = sc.UploadsDir
-	c.JWTSecret = sc.JWTSecret
 	c.ResendAPIKey = sc.ResendAPIKey
 	c.ResendFromEmail = sc.ResendFromEmail
 	c.RootUsername = sc.RootUsername
@@ -65,7 +63,6 @@ func (c *ServerConfig) LoadFromEnv() {
 	envStr := config.GetEnvOrDefault(SERVER_ENV_KEY, c.Env.String())
 	c.Env = config.StringToEnv(envStr)
 
-	c.JWTSecret = config.GetEnvOrDefault(JWT_SECRET_KEY, c.JWTSecret)
 	c.ResendAPIKey = config.GetEnvOrDefault(RESEND_API_KEY, c.ResendAPIKey)
 	c.ResendFromEmail = config.GetEnvOrDefault(RESEND_FROM_EMAIL, c.ResendFromEmail)
 	c.RootUsername = config.GetEnvOrDefault(ROOT_USERNAME_KEY, c.RootUsername)

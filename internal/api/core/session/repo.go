@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/juevigrace/diva-server/internal/models"
@@ -45,12 +46,12 @@ func (s *SessionRepo) GetByID(ctx context.Context, sessionID uuid.UUID) (*models
 
 func (s *SessionRepo) Create(ctx context.Context, userID uuid.UUID, sType models.SessionType, dto *dtos.SessionDataDto) (*models.Session, error) {
 	sessionID := uuid.New()
-	accessToken, err := jwt.CreateAccessToken(sessionID)
+	accessToken, err := jwt.CreateToken(sessionID, time.Duration(jwt.AccessExp)*time.Second)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := jwt.CreateRefreshToken(sessionID)
+	refreshToken, err := jwt.CreateToken(sessionID, time.Duration(jwt.RefreshExp)*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -85,12 +86,12 @@ func (s *SessionRepo) CreateTemporal(ctx context.Context, userID uuid.UUID, dto 
 }
 
 func (s *SessionRepo) Update(ctx context.Context, session *models.Session) (*models.Session, error) {
-	accessToken, err := jwt.CreateAccessToken(session.ID)
+	accessToken, err := jwt.CreateToken(session.ID, time.Duration(jwt.AccessExp)*time.Second)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := jwt.CreateRefreshToken(session.ID)
+	refreshToken, err := jwt.CreateToken(session.ID, time.Duration(jwt.RefreshExp)*time.Second)
 	if err != nil {
 		return nil, err
 	}

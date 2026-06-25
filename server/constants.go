@@ -1,6 +1,6 @@
 package server
 
-import "github.com/juevigrace/diva-server/internal/config"
+import "github.com/juevigrace/diva-server/pkg/config"
 
 const (
 	VERSION string = "1.0.0"
@@ -20,16 +20,15 @@ const (
 	UPLOADS_DIR            string     = "./uploads"
 )
 
-const (
-	SERVER_PORT_KEY   string = "PORT"
-	SERVER_DOMAIN_KEY string = "DOMAIN"
-	SERVER_ENV_KEY    string = "SERVER_ENV"
-	SERVER_DEBUG_KEY  string = "DEBUG"
-	JWT_SECRET_KEY    string = "JWT_SECRET"
-	RESEND_API_KEY    string = "RESEND_API_KEY"
-	RESEND_FROM_EMAIL string = "RESEND_FROM_EMAIL"
-	ROOT_USERNAME_KEY string = "ROOT_USERNAME"
-	ROOT_PASSWORD_KEY string = "ROOT_PASSWORD"
-	ROOT_EMAIL_KEY    string = "ROOT_EMAIL"
-	UPLOADS_DIR_KEY   string = "UPLOADS_DIR"
-)
+	const (
+		SERVER_PORT_KEY   string = "PORT"
+		SERVER_DOMAIN_KEY string = "DOMAIN"
+		SERVER_ENV_KEY    string = "SERVER_ENV"
+		SERVER_DEBUG_KEY  string = "DEBUG"
+		RESEND_API_KEY    string = "RESEND_API_KEY"
+		RESEND_FROM_EMAIL string = "RESEND_FROM_EMAIL"
+		ROOT_USERNAME_KEY string = "ROOT_USERNAME"
+		ROOT_PASSWORD_KEY string = "ROOT_PASSWORD"
+		ROOT_EMAIL_KEY    string = "ROOT_EMAIL"
+		UPLOADS_DIR_KEY   string = "UPLOADS_DIR"
+	)
