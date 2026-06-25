@@ -77,7 +77,6 @@ func (c *ServerConfig) LoadDefault() {
 	c.Domain = SERVER_DOMAIN
 	c.Env = SERVER_ENV
 	c.Debug = SERVER_DEBUG
-	c.JWTSecret = JWT_SECRET_DEFAULT
 	c.ResendAPIKey = RESEND_API_KEY_DEFAULT
 	c.ResendFromEmail = RESEND_FROM_EMAIL_DEF
 	c.RootUsername = ROOT_USERNAME

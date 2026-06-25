@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS diva_session (
     status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'EXPIRED', 'CLOSED')),
     ip_address TEXT NOT NULL DEFAULT '',
     user_agent TEXT NOT NULL DEFAULT '',
-    expires_at TIMESTAMP NOT NULL,
+    access_expires_at TIMESTAMP NOT NULL,
+    refresh_expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE

@@ -19,16 +19,17 @@ type CreatePermissionParams struct {
 }
 
 type CreateSessionParams struct {
-	ID           uuid.UUID
-	UserID       uuid.UUID
-	AccessToken  string
-	RefreshToken string
-	Device       string
-	Type         SessionType
-	Status       SessionStatusType
-	IpAddress    string
-	UserAgent    string
-	ExpiresAt    int64
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	AccessToken     string
+	RefreshToken    string
+	Device          string
+	Type            SessionType
+	Status          SessionStatusType
+	IpAddress       string
+	UserAgent       string
+	AccessExpiresAt int64
+	RefreshExpiresAt int64
 }
 
 type CreateUserPermissionParams struct {
@@ -98,11 +99,12 @@ type UpdateUserProfileParams struct {
 }
 
 type UpdateSessionParams struct {
-	ID           uuid.UUID
-	AccessToken  string
-	RefreshToken string
-	IpAddress    string
-	ExpiresAt    int64
+	ID              uuid.UUID
+	AccessToken     string
+	RefreshToken    string
+	IpAddress       string
+	AccessExpiresAt int64
+	RefreshExpiresAt int64
 }
 
 type UpdatePermissionParams struct {

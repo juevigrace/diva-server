@@ -9,7 +9,8 @@ select
     s.status,
     s.ip_address,
     s.user_agent,
-    s.expires_at,
+    s.access_expires_at,
+    s.refresh_expires_at,
     s.created_at,
     s.updated_at
 from diva_session s
@@ -27,7 +28,8 @@ select
     s.status,
     s.ip_address,
     s.user_agent,
-    s.expires_at,
+    s.access_expires_at,
+    s.refresh_expires_at,
     s.created_at,
     s.updated_at
 from diva_session s
@@ -46,8 +48,10 @@ insert into diva_session (
     type,
     ip_address,
     user_agent,
-    expires_at
+    access_expires_at,
+    refresh_expires_at
 ) values (
+    ?,
     ?,
     ?,
     ?,
@@ -65,7 +69,8 @@ update diva_session set
     access_token = ?,
     refresh_token = ?,
     ip_address = ?,
-    expires_at = ?,
+    access_expires_at = ?,
+    refresh_expires_at = ?,
     updated_at = CURRENT_TIMESTAMP
 where id = ?;
 
@@ -87,5 +92,5 @@ where user_id = ?
 
 -- name: DeleteExpiredSessions :exec
 delete from diva_session
-where expires_at < CURRENT_TIMESTAMP
+where refresh_expires_at < CURRENT_TIMESTAMP
 ;

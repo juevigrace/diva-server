@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS diva_session (
     status session_status_type NOT NULL,
     ip_address VARCHAR(45) NOT NULL DEFAULT '',
     user_agent VARCHAR(255) NOT NULL DEFAULT '',
-    expires_at TIMESTAMPTZ NOT NULL,
+    access_expires_at TIMESTAMPTZ NOT NULL,
+    refresh_expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES diva_user(id) ON DELETE CASCADE

@@ -65,18 +65,19 @@ func DivaPermissionToStorage(src *sqli.DivaPermission) *storage.DivaPermission {
 
 func DivaSessionToStorage(src *sqli.DivaSession) *storage.DivaSession {
 	return &storage.DivaSession{
-		ID:           sqliteToUUID(src.ID),
-		UserID:       sqliteToUUID(src.UserID),
-		AccessToken:  src.AccessToken,
-		RefreshToken: src.RefreshToken,
-		Device:       src.Device,
-		Type:         storage.SessionType(src.Type),
-		Status:       storage.SessionStatusType(src.Status),
-		IpAddress:    src.IpAddress,
-		UserAgent:    src.UserAgent,
-		ExpiresAt:    src.ExpiresAt.UnixMilli(),
-		CreatedAt:    src.CreatedAt.UnixMilli(),
-		UpdatedAt:    src.UpdatedAt.UnixMilli(),
+		ID:              sqliteToUUID(src.ID),
+		UserID:          sqliteToUUID(src.UserID),
+		AccessToken:     src.AccessToken,
+		RefreshToken:    src.RefreshToken,
+		Device:          src.Device,
+		Type:            storage.SessionType(src.Type),
+		Status:          storage.SessionStatusType(src.Status),
+		IpAddress:       src.IpAddress,
+		UserAgent:       src.UserAgent,
+		AccessExpiresAt: src.AccessExpiresAt.UnixMilli(),
+		RefreshExpiresAt: src.RefreshExpiresAt.UnixMilli(),
+		CreatedAt:       src.CreatedAt.UnixMilli(),
+		UpdatedAt:       src.UpdatedAt.UnixMilli(),
 	}
 }
 
@@ -169,16 +170,17 @@ func CreatePermissionParamsFromStorage(src *storage.CreatePermissionParams) *sql
 
 func CreateSessionParamsFromStorage(src *storage.CreateSessionParams) *sqli.CreateSessionParams {
 	return &sqli.CreateSessionParams{
-		ID:           src.ID.String(),
-		UserID:       src.UserID.String(),
-		AccessToken:  src.AccessToken,
-		RefreshToken: src.RefreshToken,
-		Device:       src.Device,
-		Type:         string(src.Type),
-		Status:       string(src.Status),
-		IpAddress:    src.IpAddress,
-		UserAgent:    src.UserAgent,
-		ExpiresAt:    time.UnixMilli(src.ExpiresAt),
+		ID:              src.ID.String(),
+		UserID:          src.UserID.String(),
+		AccessToken:     src.AccessToken,
+		RefreshToken:    src.RefreshToken,
+		Device:          src.Device,
+		Type:            string(src.Type),
+		Status:          string(src.Status),
+		IpAddress:       src.IpAddress,
+		UserAgent:       src.UserAgent,
+		AccessExpiresAt: time.UnixMilli(src.AccessExpiresAt),
+		RefreshExpiresAt: time.UnixMilli(src.RefreshExpiresAt),
 	}
 }
 
@@ -288,11 +290,12 @@ func UpdateUserProfileParamsFromStorage(src *storage.UpdateUserProfileParams) *s
 
 func UpdateSessionParamsFromStorage(src *storage.UpdateSessionParams) *sqli.UpdateSessionParams {
 	return &sqli.UpdateSessionParams{
-		ID:           src.ID.String(),
-		AccessToken:  src.AccessToken,
-		RefreshToken: src.RefreshToken,
-		IpAddress:    src.IpAddress,
-		ExpiresAt:    time.UnixMilli(src.ExpiresAt),
+		ID:              src.ID.String(),
+		AccessToken:     src.AccessToken,
+		RefreshToken:    src.RefreshToken,
+		IpAddress:       src.IpAddress,
+		AccessExpiresAt: time.UnixMilli(src.AccessExpiresAt),
+		RefreshExpiresAt: time.UnixMilli(src.RefreshExpiresAt),
 	}
 }
 

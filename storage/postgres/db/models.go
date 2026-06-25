@@ -295,18 +295,19 @@ type DivaPermission struct {
 }
 
 type DivaSession struct {
-	ID           pgtype.UUID
-	UserID       pgtype.UUID
-	AccessToken  string
-	RefreshToken string
-	Device       string
-	Type         SessionType
-	Status       SessionStatusType
-	IpAddress    string
-	UserAgent    string
-	ExpiresAt    pgtype.Timestamptz
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID               pgtype.UUID
+	UserID           pgtype.UUID
+	AccessToken      string
+	RefreshToken     string
+	Device           string
+	Type             SessionType
+	Status           SessionStatusType
+	IpAddress        string
+	UserAgent        string
+	AccessExpiresAt  pgtype.Timestamptz
+	RefreshExpiresAt pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 }
 
 type DivaUser struct {

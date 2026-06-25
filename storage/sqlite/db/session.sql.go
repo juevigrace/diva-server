@@ -23,8 +23,10 @@ insert into diva_session (
     type,
     ip_address,
     user_agent,
-    expires_at
+    access_expires_at,
+    refresh_expires_at
 ) values (
+    ?,
     ?,
     ?,
     ?,
@@ -39,16 +41,17 @@ insert into diva_session (
 `
 
 type CreateSessionParams struct {
-	ID           string
-	UserID       string
-	AccessToken  string
-	RefreshToken string
-	Device       string
-	Status       string
-	Type         string
-	IpAddress    string
-	UserAgent    string
-	ExpiresAt    time.Time
+	ID               string
+	UserID           string
+	AccessToken      string
+	RefreshToken     string
+	Device           string
+	Status           string
+	Type             string
+	IpAddress        string
+	UserAgent        string
+	AccessExpiresAt  time.Time
+	RefreshExpiresAt time.Time
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
@@ -62,7 +65,8 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 		arg.Type,
 		arg.IpAddress,
 		arg.UserAgent,
-		arg.ExpiresAt,
+		arg.AccessExpiresAt,
+		arg.RefreshExpiresAt,
 	)
 	return err
 }
@@ -71,7 +75,7 @@ const deleteExpiredSessions = `-- name: DeleteExpiredSessions :exec
 ;
 
 delete from diva_session
-where expires_at < CURRENT_TIMESTAMP
+where refresh_expires_at < CURRENT_TIMESTAMP
 `
 
 func (q *Queries) DeleteExpiredSessions(ctx context.Context) error {
@@ -112,7 +116,8 @@ select
     s.status,
     s.ip_address,
     s.user_agent,
-    s.expires_at,
+    s.access_expires_at,
+    s.refresh_expires_at,
     s.created_at,
     s.updated_at
 from diva_session s
@@ -132,7 +137,8 @@ func (q *Queries) GetSessionByID(ctx context.Context, id string) (DivaSession, e
 		&i.Status,
 		&i.IpAddress,
 		&i.UserAgent,
-		&i.ExpiresAt,
+		&i.AccessExpiresAt,
+		&i.RefreshExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -152,7 +158,8 @@ select
     s.status,
     s.ip_address,
     s.user_agent,
-    s.expires_at,
+    s.access_expires_at,
+    s.refresh_expires_at,
     s.created_at,
     s.updated_at
 from diva_session s
@@ -179,7 +186,8 @@ func (q *Queries) ListSessionsByUser(ctx context.Context, userID string) ([]Diva
 			&i.Status,
 			&i.IpAddress,
 			&i.UserAgent,
-			&i.ExpiresAt,
+			&i.AccessExpiresAt,
+			&i.RefreshExpiresAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -201,17 +209,19 @@ update diva_session set
     access_token = ?,
     refresh_token = ?,
     ip_address = ?,
-    expires_at = ?,
+    access_expires_at = ?,
+    refresh_expires_at = ?,
     updated_at = CURRENT_TIMESTAMP
 where id = ?
 `
 
 type UpdateSessionParams struct {
-	AccessToken  string
-	RefreshToken string
-	IpAddress    string
-	ExpiresAt    time.Time
-	ID           string
+	AccessToken      string
+	RefreshToken     string
+	IpAddress        string
+	AccessExpiresAt  time.Time
+	RefreshExpiresAt time.Time
+	ID               string
 }
 
 func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) error {
@@ -219,7 +229,8 @@ func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) er
 		arg.AccessToken,
 		arg.RefreshToken,
 		arg.IpAddress,
-		arg.ExpiresAt,
+		arg.AccessExpiresAt,
+		arg.RefreshExpiresAt,
 		arg.ID,
 	)
 	return err

@@ -56,22 +56,27 @@ func (s *SessionRepo) Create(ctx context.Context, userID uuid.UUID, sType models
 		return nil, err
 	}
 
-	expiration, err := jwt.GetTokenExpiration(refreshToken)
+	accessExpiration, err := jwt.GetTokenExpiration(accessToken)
+	if err != nil {
+		return nil, err
+	}
+	refreshExpiration, err := jwt.GetTokenExpiration(refreshToken)
 	if err != nil {
 		return nil, err
 	}
 
 	session := &models.Session{
-		ID:           sessionID,
-		User:         models.User{ID: userID},
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		Device:       dto.Device,
-		IpAddress:    dto.IpAddress,
-		UserAgent:    dto.UserAgent,
-		Status:       models.SESSION_ACTIVE,
-		Type:         sType,
-		ExpiresAt:    expiration.UnixMilli(),
+		ID:              sessionID,
+		User:            models.User{ID: userID},
+		AccessToken:     accessToken,
+		RefreshToken:    refreshToken,
+		Device:          dto.Device,
+		IpAddress:       dto.IpAddress,
+		UserAgent:       dto.UserAgent,
+		Status:          models.SESSION_ACTIVE,
+		Type:            sType,
+		AccessExpiresAt:  accessExpiration.UnixMilli(),
+		RefreshExpiresAt: refreshExpiration.UnixMilli(),
 	}
 
 	if err := s.store.CreateSession(ctx, session.DBCreate()); err != nil {
@@ -96,14 +101,19 @@ func (s *SessionRepo) Update(ctx context.Context, session *models.Session) (*mod
 		return nil, err
 	}
 
-	expiration, err := jwt.GetTokenExpiration(refreshToken)
+	accessExpiration, err := jwt.GetTokenExpiration(accessToken)
+	if err != nil {
+		return nil, err
+	}
+	refreshExpiration, err := jwt.GetTokenExpiration(refreshToken)
 	if err != nil {
 		return nil, err
 	}
 
 	session.AccessToken = accessToken
 	session.RefreshToken = refreshToken
-	session.ExpiresAt = expiration.UnixMilli()
+	session.AccessExpiresAt = accessExpiration.UnixMilli()
+	session.RefreshExpiresAt = refreshExpiration.UnixMilli()
 
 	if err := s.store.UpdateSession(ctx, session.DBUpdate()); err != nil {
 		return nil, err
