@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/api/middlewares"
+	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"
 )

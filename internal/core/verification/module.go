@@ -2,7 +2,7 @@ package verification
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/juevigrace/diva-server/internal/api/core/user"
+	"github.com/juevigrace/diva-server/internal/core/user"
 	"github.com/juevigrace/diva-server/pkg/mail"
 	"github.com/juevigrace/diva-server/storage"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/api/core/permission"
+	"github.com/juevigrace/diva-server/internal/core/permission"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/storage"

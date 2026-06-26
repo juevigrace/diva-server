@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/juevigrace/diva-server/internal/api/core/user"
-	"github.com/juevigrace/diva-server/internal/api/core/user/actions"
-	"github.com/juevigrace/diva-server/internal/api/core/user/permissions"
+	"github.com/juevigrace/diva-server/internal/core/user"
+	"github.com/juevigrace/diva-server/internal/core/user/actions"
+	"github.com/juevigrace/diva-server/internal/core/user/permissions"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/pkg/errs"
 	"github.com/juevigrace/diva-server/pkg/mail"

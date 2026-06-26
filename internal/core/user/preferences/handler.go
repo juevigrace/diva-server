@@ -6,8 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/juevigrace/diva-server/internal/api/core/user/permissions"
-	"github.com/juevigrace/diva-server/internal/api/middlewares"
+	"github.com/juevigrace/diva-server/internal/core/user/permissions"
+	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/internal/models/responses"

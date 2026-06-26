@@ -2,11 +2,11 @@ package auth
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/juevigrace/diva-server/internal/api/core/permission"
-	"github.com/juevigrace/diva-server/internal/api/core/session"
-	"github.com/juevigrace/diva-server/internal/api/core/user"
-	"github.com/juevigrace/diva-server/internal/api/core/verification"
-	"github.com/juevigrace/diva-server/internal/api/middlewares"
+	"github.com/juevigrace/diva-server/internal/core/permission"
+	"github.com/juevigrace/diva-server/internal/core/session"
+	"github.com/juevigrace/diva-server/internal/core/user"
+	"github.com/juevigrace/diva-server/internal/core/verification"
+	"github.com/juevigrace/diva-server/internal/middlewares"
 )
 
 type AuthModule struct {
