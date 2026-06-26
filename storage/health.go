@@ -4,13 +4,6 @@ import (
 	"time"
 )
 
-type HealthStatus struct {
-	IsHealthy    bool
-	LastCheck    time.Time
-	FailureCount int
-	LastError    error
-}
-
 type HealthResult struct {
 	Status       string            `json:"status"`
 	Message      string            `json:"message"`

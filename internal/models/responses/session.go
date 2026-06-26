@@ -1,5 +1,6 @@
 package responses
 
+// TODO: i might need to change this because of the expiration times
 type SessionResponse struct {
 	SessionId        string `json:"session_id"`
 	UserId           string `json:"user_id"`
