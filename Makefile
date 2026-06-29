@@ -54,8 +54,8 @@ build:
 build-postgres:
 	@echo "Building server (postgres)..."
 	@mkdir -p $(BINARY_DIR)
-	@go build -tags postgres -o $(SERVER_BINARY)-postgres $(SERVER_MAIN)
-	@echo "Server built: $(SERVER_BINARY)-postgres"
+	@go build -tags postgres -o $(SERVER_BINARY) $(SERVER_MAIN)
+	@echo "Server built: $(SERVER_BINARY)"
 
 # Run targets
 run: build
