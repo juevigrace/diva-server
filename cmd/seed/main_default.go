@@ -10,6 +10,7 @@ import (
 	"github.com/juevigrace/diva-server/internal/core/permission"
 	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/core/user"
+	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
 	"github.com/juevigrace/diva-server/server"
 	"github.com/juevigrace/diva-server/storage/sqlite"
@@ -42,6 +43,9 @@ func main() {
 
 	pModule := permission.NewPermissionModule(database.PermissionStore())
 	sModule := session.NewSessionModule(database.SessionStore())
+
+	seedAllPermissions(context.Background(), database.PermissionStore())
+
 	uModule := user.NewUserModule(
 		database.UserStore(),
 		database.UserActionStore(),
@@ -63,6 +67,10 @@ func main() {
 
 	id, err := uModule.URepo.Create(context.Background(), &userDto)
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := uModule.URepo.UpdateRole(context.Background(), models.ROLE_ADMIN, id); err != nil {
 		log.Fatal(err)
 	}
 
