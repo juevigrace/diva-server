@@ -129,8 +129,8 @@ func (s *PermissionStore) GetPermissionByID(ctx context.Context, id uuid.UUID) (
 	return DivaPermissionToStorage(&p), nil
 }
 
-func (s *PermissionStore) GetPermissionByName(ctx context.Context, name string) (*storage.DivaPermission, error) {
-	p, err := s.q.GetPermissionByName(ctx, name)
+func (s *PermissionStore) GetPermissionByName(ctx context.Context, action string) (*storage.DivaPermission, error) {
+	p, err := s.q.GetPermissionByName(ctx, action)
 	if err != nil {
 		return nil, err
 	}

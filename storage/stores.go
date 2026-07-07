@@ -27,7 +27,7 @@ type UserStore interface {
 type PermissionStore interface {
 	CreatePermission(ctx context.Context, arg *CreatePermissionParams) error
 	GetPermissionByID(ctx context.Context, id uuid.UUID) (*DivaPermission, error)
-	GetPermissionByName(ctx context.Context, name string) (*DivaPermission, error)
+	GetPermissionByName(ctx context.Context, action string) (*DivaPermission, error)
 	ListPermissions(ctx context.Context, arg *ListPermissionsParams) ([]DivaPermission, error)
 	CountPermissions(ctx context.Context) (int64, error)
 	UpdatePermission(ctx context.Context, arg *UpdatePermissionParams) error

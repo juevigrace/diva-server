@@ -113,11 +113,11 @@ select
     p.updated_at,
     p.deleted_at
 from diva_permissions p
-where p.name = ?
+where p.action = ?
 `
 
-func (q *Queries) GetPermissionByName(ctx context.Context, name string) (DivaPermission, error) {
-	row := q.db.QueryRowContext(ctx, getPermissionByName, name)
+func (q *Queries) GetPermissionByName(ctx context.Context, action string) (DivaPermission, error) {
+	row := q.db.QueryRowContext(ctx, getPermissionByName, action)
 	var i DivaPermission
 	err := row.Scan(
 		&i.ID,

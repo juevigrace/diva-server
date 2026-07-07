@@ -23,7 +23,7 @@ select
     p.updated_at,
     p.deleted_at
 from diva_permissions p
-where p.name = ?
+where p.action = ?
 ;
 
 -- name: ListPermissions :many

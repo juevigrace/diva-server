@@ -42,6 +42,9 @@ func main() {
 
 	pModule := permission.NewPermissionModule(database.PermissionStore())
 	sModule := session.NewSessionModule(database.SessionStore())
+
+	seedAllPermissions(context.Background(), database.PermissionStore())
+
 	uModule := user.NewUserModule(
 		database.UserStore(),
 		database.UserActionStore(),
@@ -68,4 +71,3 @@ func main() {
 
 	log.Println(id)
 }
-

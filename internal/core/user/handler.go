@@ -269,6 +269,12 @@ func (h *UserHandler) updatePhone(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) updateRole(w http.ResponseWriter, r *http.Request) {
+	rc, err := middlewares.GetRequestContext(r.Context())
+	if err != nil {
+		responses.HandleReqError(w, err)
+		return
+	}
+
 	id, err := middlewares.GetUUIDFromURL(r, "uid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
@@ -281,7 +287,13 @@ func (h *UserHandler) updateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = h.uRepo.UpdateRole(r.Context(), models.RoleFromString(dto.Role), id); err != nil {
+	targetRole := models.RoleFromString(dto.Role)
+	if rc.Session.User.Role < targetRole {
+		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrPermissionDenied.Error()))
+		return
+	}
+
+	if err = h.uRepo.UpdateRole(r.Context(), targetRole, id); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
