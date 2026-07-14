@@ -2,8 +2,11 @@ package user
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/storage"
 )
@@ -21,6 +24,9 @@ func NewUserStateRepo(store storage.UserStateStore) *UserStateRepo {
 func (s *UserStateRepo) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.UserState, error) {
 	row, err := s.store.GetUserStateByUserID(ctx, userID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return models.UserStateFromDB(row), nil
