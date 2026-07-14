@@ -61,6 +61,10 @@ func (s *UserRepo) GetAll(ctx context.Context, pagination *models.Pagination) ([
 	users := make([]models.User, len(rows))
 	for i := range rows {
 		users[i] = *models.UserFromDB(&rows[i])
+		state, err := s.usRepo.GetByUserID(ctx, rows[i].ID)
+		if err == nil && state != nil {
+			users[i].State = state
+		}
 	}
 
 	return users, nil
