@@ -58,17 +58,6 @@ func (s *PermissionRepo) GetByName(ctx context.Context, action models.Permission
 	return models.PermissionFromDB(row), nil
 }
 
-func (s *PermissionRepo) Create(ctx context.Context, dto *dtos.CreatePermissionDto) error {
-	perm := &models.Permission{
-		ID:          uuid.New(),
-		Name:        dto.Name,
-		Description: dto.Description,
-		Action:      models.PermissionActionFromString(dto.Action),
-		RoleLevel:   models.RoleFromString(dto.RoleLevel),
-	}
-	return s.store.CreatePermission(ctx, perm.DBCreate())
-}
-
 func (s *PermissionRepo) Update(ctx context.Context, pid uuid.UUID, dto *dtos.UpdatePermissionDto) error {
 	perm := &models.Permission{
 		ID:          pid,
@@ -78,14 +67,9 @@ func (s *PermissionRepo) Update(ctx context.Context, pid uuid.UUID, dto *dtos.Up
 	return s.store.UpdatePermission(ctx, perm.DBUpdate())
 }
 
-func (s *PermissionRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.store.DeletePermission(ctx, id)
-}
-
-func (s *PermissionRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
-	return s.store.SoftDeletePermission(ctx, id)
-}
-
-func (s *PermissionRepo) Restore(ctx context.Context, id uuid.UUID) error {
-	return s.store.RestorePermission(ctx, id)
+func (s *PermissionRepo) UpdateRoleLevel(ctx context.Context, pid uuid.UUID, role models.Role) error {
+	return s.store.UpdatePermissionRoleLevel(ctx, &storage.UpdatePermissionRoleLevelParams{
+		ID:        pid,
+		RoleLevel: role.ToDB(),
+	})
 }

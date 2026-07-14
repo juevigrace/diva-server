@@ -35,24 +35,14 @@ func (m *PermissionModule) Routes(r chi.Router, sCall middlewares.SessionCall, u
 				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_READ),
 			).Get("/", m.Handler.getByID)
 
-			pid.Group(func(wg chi.Router) {
-				wg.Use(
-					middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-					middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
-				)
-				wg.Put("/", m.Handler.update)
-				wg.Patch("/restore", m.Handler.restore)
-			})
-			pid.Group(func(wg chi.Router) {
-				wg.Use(middlewares.RequireRole(models.ROLE_ADMIN))
-				wg.Delete("/", m.Handler.softDelete)
-				wg.Delete("/forever", m.Handler.delete)
-			})
-		})
+			pid.With(
+				middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
+				middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
+			).Put("/", m.Handler.update)
 
-		p.With(
-			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
-			middlewares.RequirePermission(models.PERMISSION_PERMISSIONS_WRITE),
-		).Post("/", m.Handler.create)
+			pid.With(
+				middlewares.RequireRole(models.ROLE_ADMIN),
+			).Patch("/level", m.Handler.updateRoleLevel)
+		})
 	})
 }

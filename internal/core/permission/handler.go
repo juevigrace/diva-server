@@ -71,33 +71,6 @@ func (h *PermissionHandler) getByID(w http.ResponseWriter, r *http.Request) {
 	responses.WriteJSON(w, responses.RespondOk(perm.Response(), "permission retrieved"))
 }
 
-func (h *PermissionHandler) create(w http.ResponseWriter, r *http.Request) {
-	var dto dtos.CreatePermissionDto
-	if err := middlewares.ValidateBody(&dto, r); err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	session, ok := middlewares.GetSessionFromContext(r.Context())
-	if !ok {
-		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
-		return
-	}
-
-	requestedLevel := models.RoleFromString(dto.RoleLevel)
-	if session.User.Role < requestedLevel {
-		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrForbidden.Error()))
-		return
-	}
-
-	if err := h.pRepo.Create(r.Context(), &dto); err != nil {
-		responses.HandleReqError(w, err)
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondCreated(nil, "permission created"))
-}
-
 func (h *PermissionHandler) update(w http.ResponseWriter, r *http.Request) {
 	pid, err := middlewares.GetUUIDFromURL(r, "pid")
 	if err != nil {
@@ -119,47 +92,41 @@ func (h *PermissionHandler) update(w http.ResponseWriter, r *http.Request) {
 	responses.WriteJSON(w, responses.RespondOk(nil, "permission updated"))
 }
 
-func (h *PermissionHandler) restore(w http.ResponseWriter, r *http.Request) {
+func (h *PermissionHandler) updateRoleLevel(w http.ResponseWriter, r *http.Request) {
 	pid, err := middlewares.GetUUIDFromURL(r, "pid")
 	if err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.pRepo.Restore(r.Context(), pid); err != nil {
-		responses.HandleReqError(w, err)
-		return
-	}
-
-	responses.WriteJSON(w, responses.RespondOk(nil, "permission restored"))
-}
-
-func (h *PermissionHandler) softDelete(w http.ResponseWriter, r *http.Request) {
-	pid, err := middlewares.GetUUIDFromURL(r, "pid")
-	if err != nil {
+	var dto dtos.UpdatePermissionRoleLevelDto
+	if err := middlewares.ValidateBody(&dto, r); err != nil {
 		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
 		return
 	}
 
-	if err := h.pRepo.SoftDelete(r.Context(), pid); err != nil {
+	session, ok := middlewares.GetSessionFromContext(r.Context())
+	if !ok {
+		responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
+		return
+	}
+
+	targetLevel := models.RoleFromString(dto.Level)
+	if session.User.Role < targetLevel {
+		responses.WriteJSON(w, responses.RespondForbidden(nil, errs.ErrForbidden.Error()))
+		return
+	}
+
+	if err := h.pRepo.UpdateRoleLevel(r.Context(), pid, targetLevel); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(nil, "permission deleted"))
-}
-
-func (h *PermissionHandler) delete(w http.ResponseWriter, r *http.Request) {
-	pid, err := middlewares.GetUUIDFromURL(r, "pid")
+	perm, err := h.pRepo.GetByID(r.Context(), pid)
 	if err != nil {
-		responses.WriteJSON(w, responses.RespondBadRequest(nil, err.Error()))
-		return
-	}
-
-	if err := h.pRepo.Delete(r.Context(), pid); err != nil {
 		responses.HandleReqError(w, err)
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(nil, "permission deleted"))
+	responses.WriteJSON(w, responses.RespondOk(perm.Response(), "permission role level updated"))
 }

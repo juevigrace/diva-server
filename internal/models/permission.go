@@ -65,16 +65,6 @@ func (p *Permission) Response() *responses.PermissionResponse {
 	}
 }
 
-func (p *Permission) DBCreate() *storage.CreatePermissionParams {
-	return &storage.CreatePermissionParams{
-		ID:          p.ID,
-		Name:        p.Name,
-		Description: p.Description,
-		Action:      p.Action.String(),
-		RoleLevel:   p.RoleLevel.ToDB(),
-	}
-}
-
 func (p *Permission) DBUpdate() *storage.UpdatePermissionParams {
 	return &storage.UpdatePermissionParams{
 		ID:          p.ID,
