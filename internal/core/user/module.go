@@ -57,7 +57,7 @@ func NewUserModule(
 
 	usRepo := NewUserStateRepo(stateStore)
 	uRepo := NewUserRepo(userStore, sRepo, uaRepo, upRepo, uproRepo, usRepo)
-	uHandler := NewUserHandler(uRepo, usRepo)
+	uHandler := NewUserHandler(uRepo, usRepo, uaRepo)
 
 	return &UserModule{
 		sRepo:    sRepo,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/juevigrace/diva-server/internal/core/user/actions"
 	"github.com/juevigrace/diva-server/internal/middlewares"
 	"github.com/juevigrace/diva-server/internal/models"
 	"github.com/juevigrace/diva-server/internal/models/dtos"
@@ -16,15 +17,18 @@ import (
 type UserHandler struct {
 	uRepo  *UserRepo
 	usRepo *UserStateRepo
+	uaRepo *actions.UserActionsRepo
 }
 
 func NewUserHandler(
 	uRepo *UserRepo,
 	usRepo *UserStateRepo,
+	uaRepo *actions.UserActionsRepo,
 ) *UserHandler {
 	return &UserHandler{
 		uRepo:  uRepo,
 		usRepo: usRepo,
+		uaRepo: uaRepo,
 	}
 }
 
@@ -317,6 +321,13 @@ func (h *UserHandler) updateVerified(w http.ResponseWriter, r *http.Request) {
 	if err = h.usRepo.UpdateVerified(r.Context(), dto.Verified, id); err != nil {
 		responses.HandleReqError(w, err)
 		return
+	}
+
+	if dto.Verified {
+		action, err := h.uaRepo.GetOneByName(r.Context(), id, models.ActionUserVerification)
+		if err == nil {
+			_ = h.uaRepo.Delete(r.Context(), action.ID)
+		}
 	}
 
 	responses.WriteJSON(w, responses.RespondAccepted(nil, "verified updated"))

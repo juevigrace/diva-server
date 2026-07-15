@@ -90,6 +90,11 @@ func (h *UserProfileHandler) getOne(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if dbProfile == nil {
+		responses.WriteJSON(w, responses.RespondOk(nil, "profile retrieved"))
+		return
+	}
+
 	responses.WriteJSON(w, responses.RespondOk(dbProfile.Response(), "profile retrieved"))
 }
 

@@ -43,6 +43,10 @@ func extractSession(r *http.Request, sessionCall SessionCall, userCall UserCall)
 		return nil, err
 	}
 
+	if session.Status != models.SESSION_ACTIVE {
+		return nil, errs.ErrNotAuthorized
+	}
+
 	user, err := userCall(r.Context(), session.User.ID)
 	if err != nil {
 		return nil, err

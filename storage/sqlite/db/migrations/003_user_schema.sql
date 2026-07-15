@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS diva_user_permissions (
 CREATE TABLE IF NOT EXISTS diva_user_preferences (
     id TEXT NOT NULL PRIMARY KEY,
     user_id TEXT NOT NULL,
-    device TEXT NOT NULL UNIQUE,
+    device TEXT NOT NULL,
     theme TEXT NOT NULL DEFAULT 'SYSTEM' CHECK (theme IN ('LIGHT', 'DARK', 'SYSTEM')),
     onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE,
     language TEXT NOT NULL DEFAULT 'en',
