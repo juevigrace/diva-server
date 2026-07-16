@@ -125,3 +125,22 @@ func RequirePermission(actions ...models.PermissionAction) func(http.Handler) ht
 		})
 	}
 }
+
+func RequireVerified() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rc, err := GetRequestContext(r.Context())
+			if err != nil {
+				responses.WriteJSON(w, responses.RespondUnauthorized(nil, errs.ErrSessionNotFound.Error()))
+				return
+			}
+
+			if rc.Session.User.State == nil || !rc.Session.User.State.Verified {
+				responses.WriteJSON(w, responses.RespondForbidden(nil, "email not verified"))
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}

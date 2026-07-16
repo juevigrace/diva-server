@@ -12,20 +12,20 @@ import (
 
 type SessionModule struct {
 	Handler *SessionHandler
-	Repo *SessionRepo
+	Repo    *SessionRepo
 }
 
 func NewSessionModule(store storage.SessionStore) *SessionModule {
 	repo := NewSessionRepo(store)
 	return &SessionModule{
 		Handler: NewSessionHandler(repo),
-		Repo: repo,
+		Repo:    repo,
 	}
 }
 
 func (m *SessionModule) Routes(r chi.Router, uCall middlewares.UserCall) {
 	r.Route("/sessions", func(s chi.Router) {
-		s.Use(middlewares.RequiresSession(m.Repo.GetByID, uCall))
+		s.Use(middlewares.RequiresSession(m.Repo.GetByID, uCall), middlewares.RequireVerified())
 
 		s.Route("/{sid}", func(sid chi.Router) {
 			sid.With(middlewares.RequireResourceOwner(

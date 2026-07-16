@@ -9,20 +9,20 @@ import (
 
 type PermissionModule struct {
 	Handler *PermissionHandler
-	Repo *PermissionRepo
+	Repo    *PermissionRepo
 }
 
 func NewPermissionModule(store storage.PermissionStore) *PermissionModule {
 	repo := NewPermissionRepo(store)
 	return &PermissionModule{
 		Handler: NewPermissionHandler(repo),
-		Repo: repo,
+		Repo:    repo,
 	}
 }
 
 func (m *PermissionModule) Routes(r chi.Router, sCall middlewares.SessionCall, uCall middlewares.UserCall) {
 	r.Route("/permissions", func(p chi.Router) {
-		p.Use(middlewares.RequiresSession(sCall, uCall))
+		p.Use(middlewares.RequiresSession(sCall, uCall), middlewares.RequireVerified())
 
 		p.With(
 			middlewares.RequireRole(models.ROLE_ADMIN, models.ROLE_MODERATOR),
