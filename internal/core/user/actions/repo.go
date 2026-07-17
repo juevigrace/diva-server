@@ -54,7 +54,11 @@ func (s *UserActionsRepo) GetOneByName(ctx context.Context, userID uuid.UUID, ac
 		Name:   action.String(),
 	})
 	if err != nil {
-		return nil, err
+		if ok := errors.Is(err, pgx.ErrNoRows); ok {
+			return nil, errs.ErrActionNotFound
+		} else {
+			return nil, err
+		}
 	}
 
 	return models.UserActionFromDB(row), nil

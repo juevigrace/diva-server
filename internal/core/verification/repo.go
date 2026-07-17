@@ -85,11 +85,20 @@ func (s *VerificationRepo) RequestVerification(
 		return nil, err
 	}
 
-	parsedID := user.ID
-
-	dbAction, err := s.uaRepo.GetOneByName(ctx, parsedID, parsedAction)
+	dbAction, err := s.uaRepo.GetOneByName(ctx, user.ID, parsedAction)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, errs.ErrActionNotFound) {
+			id, err := s.uaRepo.Create(ctx, user.ID, parsedAction)
+			if err != nil {
+				return nil, err
+			}
+			dbAction, err = s.uaRepo.GetOneByID(ctx, *id)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	verification, err := s.Generate(ctx, dbAction)
