@@ -121,5 +121,5 @@ func (h *AuthHandler) forgotPasswordConfirm(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	responses.WriteJSON(w, responses.RespondOk(session, "Success"))
+	responses.WriteJSON(w, responses.RespondOk(session.Response(), "Success"))
 }

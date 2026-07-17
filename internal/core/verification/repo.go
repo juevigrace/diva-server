@@ -196,7 +196,6 @@ func (s *VerificationRepo) HandleVerified(ctx context.Context, va *models.UserAc
 		if err := s.uRepo.Restore(ctx, va.Action.UserID); err != nil {
 			return err
 		}
-
 	case models.ActionUserVerification:
 		if err := s.usRepo.UpdateVerified(ctx, true, va.Action.UserID); err != nil {
 			return err

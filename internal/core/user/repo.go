@@ -19,12 +19,12 @@ import (
 )
 
 type UserRepo struct {
-	store   storage.UserStore
-	sRepo   *session.SessionRepo
-	uaRepo  *actions.UserActionsRepo
-	upRepo  *permissions.UserPermissionRepo
+	store    storage.UserStore
+	sRepo    *session.SessionRepo
+	uaRepo   *actions.UserActionsRepo
+	upRepo   *permissions.UserPermissionRepo
 	uproRepo *profile.UserProfileRepo
-	usRepo  *UserStateRepo
+	usRepo   *UserStateRepo
 }
 
 func NewUserRepo(
@@ -36,12 +36,12 @@ func NewUserRepo(
 	usRepo *UserStateRepo,
 ) *UserRepo {
 	return &UserRepo{
-		store:   store,
-		sRepo:   sRepo,
-		uaRepo:  uaRepo,
-		upRepo:  upRepo,
+		store:    store,
+		sRepo:    sRepo,
+		uaRepo:   uaRepo,
+		upRepo:   upRepo,
 		uproRepo: uproRepo,
-		usRepo:  usRepo,
+		usRepo:   usRepo,
 	}
 }
 
@@ -210,8 +210,19 @@ func (s *UserRepo) Create(ctx context.Context, dto *dtos.CreateUserDto) (uuid.UU
 
 func (s *UserRepo) UpdatePasswordConfirm(ctx context.Context, aid, uid uuid.UUID) error {
 	exp := time.Now().UTC().Add(15 * time.Minute).UnixMilli()
-	if err := s.upRepo.CreateByName(ctx, models.PERMISSION_USERS_PASSWORD_WRITE, nil, true, &exp, uid); err != nil {
-		return err
+
+	existing, err := s.upRepo.GetOneByName(ctx, uid, models.PERMISSION_USERS_PASSWORD_WRITE)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		if err := s.upRepo.CreateByName(ctx, models.PERMISSION_USERS_PASSWORD_WRITE, nil, true, &exp, uid); err != nil {
+			return err
+		}
+	} else {
+		if err := s.upRepo.Update(ctx, uid, existing.Permission.ID, true, &exp); err != nil {
+			return err
+		}
 	}
 
 	if err := s.uaRepo.Delete(ctx, aid); err != nil {
@@ -243,7 +254,7 @@ func (s *UserRepo) UpdatePassword(ctx context.Context, session *models.Session, 
 		return err
 	}
 
-	if err := s.sRepo.Close(ctx, uid); err != nil {
+	if err := s.sRepo.CloseAllByUser(ctx, uid); err != nil {
 		return err
 	}
 
