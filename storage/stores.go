@@ -47,6 +47,7 @@ type SessionStore interface {
 	DeleteSession(ctx context.Context, id uuid.UUID) error
 	DeleteSessionsByUser(ctx context.Context, userID uuid.UUID) error
 	DeleteExpiredSessions(ctx context.Context) error
+	CloseExpiredSessions(ctx context.Context) error
 }
 
 type UserStateStore interface {
@@ -78,6 +79,7 @@ type UserPermissionStore interface {
 	GetUserPermissions(ctx context.Context, userID uuid.UUID) ([]DivaUserPermission, error)
 	UpdateUserPermission(ctx context.Context, arg *UpdateUserPermissionParams) error
 	DeleteUserPermission(ctx context.Context, arg *DeleteUserPermissionParams) error
+	DeleteExpiredUserPermissions(ctx context.Context) error
 }
 
 type UserActionStore interface {
@@ -87,6 +89,7 @@ type UserActionStore interface {
 	ListActionsByUser(ctx context.Context, userID uuid.UUID) ([]DivaAction, error)
 	DeleteUserAction(ctx context.Context, id uuid.UUID) error
 	DeleteUserActionByUser(ctx context.Context, userID uuid.UUID) error
+	DeleteExpiredActions(ctx context.Context) error
 }
 
 type UserVerificationStore interface {

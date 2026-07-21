@@ -66,3 +66,8 @@ where permission_id = $3 and user_id = $4;
 delete from diva_user_permissions
 where permission_id = $1 and user_id = $2
 ;
+
+-- name: DeleteExpiredUserPermissions :exec
+delete from diva_user_permissions
+where expires_at is not null and expires_at < now()
+;

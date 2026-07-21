@@ -36,3 +36,11 @@ where id = $1
 delete from diva_action
 where user_id = $1
 ;
+
+-- name: DeleteExpiredActions :exec
+delete from diva_action
+where id in (
+    select action_id from diva_action_verification
+    where expires_at < now() and verified = false
+)
+;

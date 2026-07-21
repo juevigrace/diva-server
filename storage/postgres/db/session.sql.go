@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const closeExpiredSessions = `-- name: CloseExpiredSessions :exec
+update diva_session set
+    status = 'CLOSED',
+    updated_at = now()
+where refresh_expires_at < now() and status != 'CLOSED'
+`
+
+func (q *Queries) CloseExpiredSessions(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, closeExpiredSessions)
+	return err
+}
+
 const createSession = `-- name: CreateSession :exec
 insert into diva_session (
     id,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/juevigrace/diva-server/internal/core/auth"
+	"github.com/juevigrace/diva-server/internal/core/cleanup"
 	"github.com/juevigrace/diva-server/internal/core/permission"
 	"github.com/juevigrace/diva-server/internal/core/session"
 	"github.com/juevigrace/diva-server/internal/core/user"
@@ -35,6 +36,7 @@ type Server struct {
 	router   *chi.Mux
 	mail     *mail.Client
 	files    *filehelper.FileHelper
+	cleanup  *cleanup.CleanupService
 }
 
 func NewServer(cfg config.Config, database storage.Storage) (*Server, error) {
@@ -103,6 +105,13 @@ func (s *Server) setupApi() {
 	vModule := verification.NewVerificationModule(s.mail, s.database.UserVerificationStore(), uModule)
 	aModule := auth.NewAuthModule(pModule.Repo, sModule.Repo, uModule.URepo, vModule.Repo)
 
+	s.cleanup = cleanup.NewCleanupService(
+		s.database.SessionStore(),
+		s.database.UserPermissionStore(),
+		s.database.UserActionStore(),
+	)
+	s.cleanup.Start()
+
 	root := s.router.Route("/", func(root chi.Router) {
 		root.Use(apiLimiter.Middleware)
 		root.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +145,8 @@ func (s *Server) setupApi() {
 }
 
 func (s *Server) shutdown(ctx context.Context) error {
+	s.cleanup.Stop()
+
 	return concurrency.WithTimeout(ctx, 1*time.Minute, func(ctx context.Context) error {
 		if err := s.database.Close(); err != nil {
 			return err

@@ -47,6 +47,18 @@ func (q *Queries) CreateUserPermission(ctx context.Context, arg CreateUserPermis
 	return err
 }
 
+const deleteExpiredUserPermissions = `-- name: DeleteExpiredUserPermissions :exec
+;
+
+delete from diva_user_permissions
+where expires_at is not null and expires_at < CURRENT_TIMESTAMP
+`
+
+func (q *Queries) DeleteExpiredUserPermissions(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteExpiredUserPermissions)
+	return err
+}
+
 const deleteUserPermission = `-- name: DeleteUserPermission :exec
 delete from diva_user_permissions
 where permission_id = ? and user_id = ?

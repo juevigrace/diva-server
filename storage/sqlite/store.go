@@ -235,6 +235,10 @@ func (s *SessionStore) DeleteExpiredSessions(ctx context.Context) error {
 	return s.q.DeleteExpiredSessions(ctx)
 }
 
+func (s *SessionStore) CloseExpiredSessions(ctx context.Context) error {
+	return s.q.CloseExpiredSessions(ctx)
+}
+
 type UserStateStore struct {
 	q *sqli.Queries
 }
@@ -392,6 +396,10 @@ func (s *UserPermissionStore) DeleteUserPermission(ctx context.Context, arg *sto
 	return s.q.DeleteUserPermission(ctx, *params)
 }
 
+func (s *UserPermissionStore) DeleteExpiredUserPermissions(ctx context.Context) error {
+	return s.q.DeleteExpiredUserPermissions(ctx)
+}
+
 type UserActionStore struct {
 	q *sqli.Queries
 }
@@ -440,6 +448,10 @@ func (s *UserActionStore) DeleteUserAction(ctx context.Context, id uuid.UUID) er
 
 func (s *UserActionStore) DeleteUserActionByUser(ctx context.Context, userID uuid.UUID) error {
 	return s.q.DeleteUserActionByUser(ctx, userID.String())
+}
+
+func (s *UserActionStore) DeleteExpiredActions(ctx context.Context) error {
+	return s.q.DeleteExpiredActions(ctx)
 }
 
 type UserVerificationStore struct {

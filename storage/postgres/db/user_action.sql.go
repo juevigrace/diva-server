@@ -34,6 +34,19 @@ func (q *Queries) CreateUserAction(ctx context.Context, arg CreateUserActionPara
 	return err
 }
 
+const deleteExpiredActions = `-- name: DeleteExpiredActions :exec
+delete from diva_action
+where id in (
+    select action_id from diva_action_verification
+    where expires_at < now() and verified = false
+)
+`
+
+func (q *Queries) DeleteExpiredActions(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredActions)
+	return err
+}
+
 const deleteUserAction = `-- name: DeleteUserAction :exec
 delete from diva_action
 where id = $1

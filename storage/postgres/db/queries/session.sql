@@ -94,3 +94,10 @@ where user_id = $1
 delete from diva_session
 where refresh_expires_at < now()
 ;
+
+-- name: CloseExpiredSessions :exec
+update diva_session set
+    status = 'CLOSED',
+    updated_at = now()
+where refresh_expires_at < now() and status != 'CLOSED'
+;

@@ -10,6 +10,20 @@ import (
 	"time"
 )
 
+const closeExpiredSessions = `-- name: CloseExpiredSessions :exec
+;
+
+update diva_session set
+    status = 'CLOSED',
+    updated_at = CURRENT_TIMESTAMP
+where refresh_expires_at < CURRENT_TIMESTAMP and status != 'CLOSED'
+`
+
+func (q *Queries) CloseExpiredSessions(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, closeExpiredSessions)
+	return err
+}
+
 const createSession = `-- name: CreateSession :exec
 ;
 
